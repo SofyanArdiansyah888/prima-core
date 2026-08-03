@@ -1,0 +1,73 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand-50: #f0f5ff;
+  --color-brand-100: #e0ebff;
+  --color-brand-200: #c7dafe;
+  --color-brand-300: #94b5fd;
+  --color-brand-400: #608afa;
+  --color-brand-500: #1d4ed8;
+  --color-brand-600: #0f2c59;
+  --color-brand-700: #0b1e3f;
+  --color-brand-800: #071328;
+  --color-brand-900: #040b17;
+  --color-brand-950: #02060e;
+
+  --color-accent-400: #fbbf24;
+  --color-accent-500: #f59e0b;
+  --color-accent-600: #d97706;
+  --color-accent-700: #b45309;
+
+  --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  
+  --shadow-glow: 0 0 25px rgba(245, 158, 11, 0.35);
+  --shadow-card: 0 4px 20px -2px rgba(15, 44, 89, 0.08);
+  --shadow-premium: 0 10px 30px -5px rgba(15, 44, 89, 0.15);
+}
+
+body {
+  background-color: #f8fafc;
+  font-family: var(--font-sans);
+  -webkit-tap-highlight-color: transparent;
+  color: #1e293b;
+}
+
+/* Custom Scrollbar */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Keyframes */
+@keyframes truck-move {
+  0% { transform: translate(0, 0); }
+  25% { transform: translate(60px, -15px); }
+  50% { transform: translate(140px, 20px); }
+  75% { transform: translate(220px, 5px); }
+  100% { transform: translate(280px, 40px); }
+}
+
+.animate-truck-path {
+  animation: truck-move 12s infinite linear;
+}
