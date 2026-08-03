@@ -1,35 +1,49 @@
 @import "tailwindcss";
 
 @theme {
-  --color-brand-50: #f0f5ff;
-  --color-brand-100: #e0ebff;
-  --color-brand-200: #c7dafe;
-  --color-brand-300: #94b5fd;
-  --color-brand-400: #608afa;
-  --color-brand-500: #1d4ed8;
-  --color-brand-600: #0f2c59;
-  --color-brand-700: #0b1e3f;
-  --color-brand-800: #071328;
-  --color-brand-900: #040b17;
-  --color-brand-950: #02060e;
+  /* ── Merah Indonesia (Primary Brand) ── */
+  --color-brand-50:  #fff0f1;
+  --color-brand-100: #ffe0e3;
+  --color-brand-200: #ffc5cb;
+  --color-brand-300: #fe969f;
+  --color-brand-400: #fb5a68;
+  --color-brand-500: #f42638;
+  --color-brand-600: #ce1126;   /* Merah Indonesia */
+  --color-brand-700: #a30a1c;
+  --color-brand-800: #870b1b;
+  --color-brand-900: #74101d;
+  --color-brand-950: #410208;
 
-  --color-accent-400: #fbbf24;
-  --color-accent-500: #f59e0b;
-  --color-accent-600: #d97706;
-  --color-accent-700: #b45309;
+  /* ── Emas Nusantara (Accent) ── */
+  --color-accent-400: #f8c830;
+  --color-accent-500: #F4A900;  /* Emas Nusantara */
+  --color-accent-600: #d4900a;
+  --color-accent-700: #a86e05;
 
+  /* ── Nusantara Palette ── */
+  --color-nusantara-gold:   #F4A900;
+  --color-nusantara-cream:  #FFF8F0;
+  --color-nusantara-earth:  #6B3A2A;
+  --color-nusantara-sand:   #E8D5B7;
+  --color-nusantara-forest: #1A5C38;
+  --color-nusantara-batik:  #8B1A1A;
+
+  /* ── Typography ── */
   --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-  
-  --shadow-glow: 0 0 25px rgba(245, 158, 11, 0.35);
-  --shadow-card: 0 4px 20px -2px rgba(15, 44, 89, 0.08);
-  --shadow-premium: 0 10px 30px -5px rgba(15, 44, 89, 0.15);
+
+  /* ── Shadows ── */
+  --shadow-glow:    0 0 25px rgba(244, 169, 0, 0.35);
+  --shadow-glow-red:0 0 25px rgba(206, 17, 38, 0.3);
+  --shadow-card:    0 4px 20px -2px rgba(100, 10, 20, 0.08);
+  --shadow-premium: 0 10px 30px -5px rgba(100, 10, 20, 0.15);
+  --shadow-nusa:    0 8px 32px -4px rgba(206, 17, 38, 0.18);
 }
 
 body {
-  background-color: #f8fafc;
+  background-color: #fdf5f5;   /* krem merah sangat lembut */
   font-family: var(--font-sans);
   -webkit-tap-highlight-color: transparent;
-  color: #1e293b;
+  color: #1e1014;
 }
 
 /* Custom Scrollbar */
@@ -47,27 +61,44 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: #f1f5f9;
+  background: #fff0f1;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: #fca5a5;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: #ce1126;
 }
 
 /* Keyframes */
 @keyframes truck-move {
-  0% { transform: translate(0, 0); }
-  25% { transform: translate(60px, -15px); }
-  50% { transform: translate(140px, 20px); }
-  75% { transform: translate(220px, 5px); }
+  0%   { transform: translate(0, 0); }
+  25%  { transform: translate(60px, -15px); }
+  50%  { transform: translate(140px, 20px); }
+  75%  { transform: translate(220px, 5px); }
   100% { transform: translate(280px, 40px); }
 }
 
 .animate-truck-path {
   animation: truck-move 12s infinite linear;
+}
+
+/* Batik-inspired subtle pattern overlay for premium sections */
+@keyframes shimmer-nusa {
+  0%   { background-position: -200% center; }
+  100% { background-position:  200% center; }
+}
+
+.nusa-shimmer {
+  background: linear-gradient(
+    90deg,
+    transparent 25%,
+    rgba(244, 169, 0, 0.15) 50%,
+    transparent 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer-nusa 2.5s infinite linear;
 }

@@ -23,15 +23,15 @@ export default function Header({
   setIsCartOpen
 }) {
   return (
-    <header className="bg-gradient-to-r from-brand-800 via-brand-600 to-brand-900 text-white shadow-xl sticky top-0 z-40 border-b border-brand-500/30">
+    <header className="bg-gradient-to-r from-brand-900 via-brand-700 to-brand-800 text-white shadow-xl sticky top-0 z-40 border-b border-brand-600/40">
       
       {/* Top Bar for Mode Switching & Slide Presentation Toggle */}
-      <div className="bg-brand-900/90 backdrop-blur-md px-4 py-1.5 text-xs border-b border-brand-700/50 flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center space-x-2 text-slate-300">
-          <span className="bg-red-600 text-white font-extrabold px-1.5 py-0.5 rounded text-[10px] tracking-wider uppercase">
-            SIG Group
+      <div className="bg-brand-950/80 backdrop-blur-md px-4 py-1.5 text-xs border-b border-brand-800/60 flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center space-x-2 text-red-200">
+          <span className="bg-gradient-to-r from-brand-600 to-brand-500 text-white font-extrabold px-2 py-0.5 rounded text-[10px] tracking-widest uppercase border border-brand-400/50 shadow">
+            🇮🇩 SIG Group
           </span>
-          <span className="font-medium text-[11px] hidden sm:inline text-slate-200">
+          <span className="font-medium text-[11px] hidden sm:inline text-red-100/80">
             PT Prima Karya Manunggal — Anak Perusahaan PT Semen Tonasa
           </span>
         </div>

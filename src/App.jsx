@@ -112,7 +112,7 @@ export default function App() {
   }, [cart]);
 
   return (
-    <div className="min-h-screen bg-slate-100 flex flex-col pb-24 md:pb-8 font-sans">
+    <div className="min-h-screen bg-[#fdf5f5] flex flex-col pb-24 md:pb-8 font-sans">
       
       {/* Header Bar */}
       <Header 
@@ -213,7 +213,7 @@ export default function App() {
 
       {/* Toast Notification Popup */}
       {showToast && (
-        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 bg-slate-900/95 text-white px-5 py-3 rounded-2xl text-xs font-bold shadow-2xl border border-amber-500/40 flex items-center space-x-2 animate-in fade-in slide-in-from-bottom-4 duration-200">
+        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 bg-gradient-to-r from-brand-800 to-brand-700 text-white px-5 py-3 rounded-2xl text-xs font-bold shadow-2xl border border-brand-500/50 flex items-center space-x-2 animate-in fade-in slide-in-from-bottom-4 duration-200">
           <CheckCircle2 className="w-4 h-4 text-amber-400" />
           <span>{toastMessage}</span>
         </div>
@@ -221,7 +221,7 @@ export default function App() {
 
       {/* MOBILE BOTTOM NAVIGATION BAR */}
       {portalMode === 'client' && activeTab !== 'presentation' && (
-        <div className="fixed bottom-0 left-0 right-0 bg-white backdrop-blur-md border-t border-slate-200 z-40 py-1.5 px-2 flex justify-around items-center text-[10px] font-bold text-slate-400 shadow-2xl">
+        <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-red-100 z-40 py-1.5 px-2 flex justify-around items-center text-[10px] font-bold text-slate-400 shadow-2xl">
           
           {[
             { tab: 'catalog', label: 'Katalog', icon: Layers },
