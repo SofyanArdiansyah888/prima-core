@@ -8,45 +8,43 @@ export default {
     extend: {
       colors: {
         brand: {
-          50: '#fff0f1',
-          100: '#ffe0e3',
-          200: '#ffc5cb',
-          300: '#fe969f',
-          400: '#fb5a68',
-          500: '#f42638',
-          600: '#ce1126', // Merah Indonesia
-          700: '#a30a1c',
-          800: '#870b1b',
-          900: '#74101d',
-          950: '#410208',
+          50:  '#fff5f6',
+          100: '#ffe4e6',
+          200: '#fecdd2',
+          300: '#fda4af',
+          400: '#fb6c7a',
+          500: '#f43f52',
+          600: '#B91C2E', // Merah Indonesia — balanced, tidak terlalu terang
+          700: '#8F1422',
+          800: '#6B0F1A',
+          900: '#420910',
+          950: '#200408',
         },
         nusantara: {
-          gold:    '#F4A900', // Emas Nusantara
-          cream:   '#FFF8F0', // Krem hangat
-          earth:   '#6B3A2A', // Tanah Mahoni
-          sand:    '#E8D5B7', // Pasir Pantai
-          forest:  '#1A5C38', // Hijau Rimba
-          batik:   '#8B1A1A', // Merah Batik gelap
+          gold:   '#B8860B', // Batik gold — muted, klasik
+          cream:  '#F9F4EE', // Kertas batik
+          sand:   '#E2D0B8', // Pasir hangat
+          earth:  '#5C3D2E', // Tanah cokelat
+          teak:   '#8B6914', // Kayu jati
+          sage:   '#4A6741', // Hijau sage
         },
         accent: {
-          400: '#f8c830',
-          500: '#F4A900', // Emas Nusantara
-          600: '#d4900a',
-          700: '#a86e05',
+          300: '#E8C97A',
+          400: '#D4A843',
+          500: '#B8860B', // Batik gold utama
+          600: '#96700A',
+          700: '#735508',
         },
-        slate: {
-          850: '#1a1520',
-        }
       },
       fontFamily: {
         sans: ['Plus Jakarta Sans', 'Inter', 'sans-serif'],
       },
       boxShadow: {
-        'glow':        '0 0 25px rgba(244, 169, 0, 0.35)',
-        'glow-red':    '0 0 25px rgba(206, 17, 38, 0.3)',
-        'card':        '0 4px 20px -2px rgba(100, 10, 20, 0.08)',
-        'premium':     '0 10px 30px -5px rgba(100, 10, 20, 0.15)',
-        'nusa':        '0 8px 32px -4px rgba(206, 17, 38, 0.18)',
+        'glow':       '0 0 20px rgba(185, 28, 46, 0.25)',
+        'glow-brand': '0 0 20px rgba(185, 28, 46, 0.2)',
+        'card':       '0 4px 20px -2px rgba(80, 10, 20, 0.07)',
+        'premium':    '0 10px 30px -5px rgba(80, 10, 20, 0.12)',
+        'nusa':       '0 6px 24px -4px rgba(185, 28, 46, 0.15)',
       }
     },
   },

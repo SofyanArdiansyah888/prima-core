@@ -11,20 +11,20 @@ import CheckoutModal from './components/CheckoutModal';
 import AdminDashboard from './components/AdminDashboard';
 import PresentationView from './components/PresentationView';
 
-import { 
-  PRODUCTS_DATA, 
-  BATCHING_PLANTS, 
-  INITIAL_ORDERS, 
-  B2B_PARTNER_INFO 
+import {
+  PRODUCTS_DATA,
+  BATCHING_PLANTS,
+  INITIAL_ORDERS,
+  B2B_PARTNER_INFO
 } from './data/mockData';
 
-import { 
-  Layers, 
-  Calculator, 
-  Truck, 
-  FileText, 
-  Building2, 
-  ShoppingCart, 
+import {
+  Layers,
+  Calculator,
+  Truck,
+  FileText,
+  Building2,
+  ShoppingCart,
   CheckCircle2,
   ShieldCheck,
   UserCheck,
@@ -34,7 +34,7 @@ import {
 export default function App() {
   const [portalMode, setPortalMode] = useState('client'); // 'client' or 'admin'
   const [activeTab, setActiveTab] = useState('presentation'); // Default to presentation slide deck view or 'catalog', 'calculator', 'tracking', 'digital-docs'
-  
+
   const [products] = useState(PRODUCTS_DATA);
   const [plants] = useState(BATCHING_PLANTS);
   const [orders, setOrders] = useState(INITIAL_ORDERS);
@@ -112,10 +112,10 @@ export default function App() {
   }, [cart]);
 
   return (
-    <div className="min-h-screen bg-[#fdf5f5] flex flex-col pb-24 md:pb-8 font-sans">
-      
+    <div className="min-h-screen bg-[#FAF7F7] flex flex-col pb-24 md:pb-8 font-sans">
+
       {/* Header Bar */}
-      <Header 
+      <Header
         portalMode={portalMode}
         setPortalMode={setPortalMode}
         activeTab={activeTab}
@@ -125,26 +125,26 @@ export default function App() {
       />
 
       {/* PWA Prompt Banner */}
-      {activeTab !== 'presentation' && <PWABanner triggerToast={triggerToast} />}
+      {/* {activeTab !== 'presentation' && <PWABanner triggerToast={triggerToast} />} */}
 
       {/* Main Content Area */}
       <main className="max-w-6xl mx-auto px-4 py-6 flex-grow w-full">
-        
+
         {activeTab === 'presentation' ? (
-          <PresentationView 
+          <PresentationView
             setActiveTab={setActiveTab}
             setPortalMode={setPortalMode}
           />
         ) : portalMode === 'admin' ? (
-          <AdminDashboard 
-            plants={plants} 
-            orders={orders} 
-            triggerToast={triggerToast} 
+          <AdminDashboard
+            plants={plants}
+            orders={orders}
+            triggerToast={triggerToast}
           />
         ) : (
           <>
             {activeTab === 'catalog' && (
-              <CatalogView 
+              <CatalogView
                 products={products}
                 addToCart={addToCart}
                 setActiveTab={setActiveTab}
@@ -153,7 +153,7 @@ export default function App() {
             )}
 
             {activeTab === 'calculator' && (
-              <CalculatorView 
+              <CalculatorView
                 products={products}
                 calcData={calcData}
                 setCalcData={setCalcData}
@@ -163,7 +163,7 @@ export default function App() {
             )}
 
             {activeTab === 'tracking' && (
-              <TrackingView 
+              <TrackingView
                 orders={orders}
                 setActiveTab={setActiveTab}
                 setSelectedDocOrder={setSelectedDocOrder}
@@ -171,14 +171,14 @@ export default function App() {
             )}
 
             {activeTab === 'digital-docs' && (
-              <DigitalDocsView 
+              <DigitalDocsView
                 order={selectedDocOrder || orders[0]}
                 triggerToast={triggerToast}
               />
             )}
 
             {activeTab === 'b2b-profile' && (
-              <B2BProfileView 
+              <B2BProfileView
                 partner={b2bPartner}
                 triggerToast={triggerToast}
               />
@@ -189,7 +189,7 @@ export default function App() {
       </main>
 
       {/* Slide-out Cart Drawer */}
-      <CartDrawer 
+      <CartDrawer
         isOpen={isCartOpen}
         onClose={() => setIsCartOpen(false)}
         cart={cart}
@@ -202,7 +202,7 @@ export default function App() {
       />
 
       {/* Checkout & Location Pinpoint Modal */}
-      <CheckoutModal 
+      <CheckoutModal
         isOpen={isCheckoutOpen}
         onClose={() => setIsCheckoutOpen(false)}
         cart={cart}
@@ -221,8 +221,8 @@ export default function App() {
 
       {/* MOBILE BOTTOM NAVIGATION BAR */}
       {portalMode === 'client' && activeTab !== 'presentation' && (
-        <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-red-100 z-40 py-1.5 px-2 flex justify-around items-center text-[10px] font-bold text-slate-400 shadow-2xl">
-          
+        <div className="fixed bottom-0 left-0 right-0 bg-[#FDF8F3]/95 backdrop-blur-md border-t border-[#E2D0B8] z-40 py-1.5 px-2 flex justify-around items-center text-[10px] font-bold text-stone-400 shadow-2xl">
+
           {[
             { tab: 'catalog', label: 'Katalog', icon: Layers },
             { tab: 'calculator', label: 'Kalkulator', icon: Calculator },
@@ -234,11 +234,10 @@ export default function App() {
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`relative flex flex-col items-center py-1.5 px-4 rounded-xl transition-all duration-200 ${
-                  isActive
-                    ? 'text-brand-700 bg-brand-50'
-                    : 'text-slate-400 hover:text-slate-700'
-                }`}
+                className={`relative flex flex-col items-center py-1.5 px-4 rounded-xl transition-all duration-200 ${isActive
+                  ? 'text-brand-700 bg-brand-50'
+                  : 'text-slate-400 hover:text-slate-700'
+                  }`}
               >
                 {/* Active top accent bar */}
                 {isActive && (
@@ -254,9 +253,8 @@ export default function App() {
                   <Icon className={`w-5 h-5 ${isActive ? 'text-brand-600' : ''}`} />
                 )}
 
-                <span className={`mt-0.5 text-[10px] font-extrabold ${
-                  isActive ? 'text-brand-700' : ''
-                }`}>{label}</span>
+                <span className={`mt-0.5 text-[10px] font-extrabold ${isActive ? 'text-brand-700' : ''
+                  }`}>{label}</span>
               </button>
             );
           })}

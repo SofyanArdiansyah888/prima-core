@@ -1,18 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  ChevronLeft, 
-  ChevronRight, 
-  Play, 
-  Pause, 
-  Sparkles, 
-  Layers, 
-  Calculator, 
-  Truck, 
-  FileText, 
-  Building2, 
-  CheckCircle2, 
-  MapPin, 
-  ShieldCheck, 
+import {
+  ChevronLeft,
+  ChevronRight,
+  Play,
+  Pause,
+  Sparkles,
+  Layers,
+  Calculator,
+  Truck,
+  FileText,
+  Building2,
+  CheckCircle2,
+  MapPin,
+  ShieldCheck,
   ArrowRight,
   Presentation
 } from 'lucide-react';
@@ -40,25 +40,17 @@ export default function PresentationView({ setActiveTab, setPortalMode }) {
           </h1>
 
           <p className="text-slate-300 text-xs md:text-sm leading-relaxed">
-            Solusi platform digital terpadu untuk memudahkan pemesanan beton curah (<span className="text-amber-400 font-bold">Ready Mix</span>), material pertambangan (<span className="text-amber-400 font-bold">Pasir & Batu Split</span>), produk cetakan (<span className="text-amber-400 font-bold">Precast</span>), hingga penyewaan pompa beton secara langsung, transparan, dan efisien.
+            Solusi platform digital terpadu untuk memudahkan pemesanan <span className="text-amber-400 font-bold">Ready Mix</span> (beton curah mutu K-100 s/d K-500) dan <span className="text-amber-400 font-bold">Semen & Beton Instan</span> (Semen Tonasa & Produk Mortar) secara langsung, transparan, dan efisien.
           </p>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-4 text-left">
-            <div className="bg-brand-900/90 p-3.5 rounded-2xl border border-brand-700">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-4 text-left">
+            <div className="bg-slate-900/90 p-3.5 rounded-2xl border border-red-800">
               <span className="text-amber-400 font-black text-xs block">01. Ready Mix</span>
               <span className="text-slate-300 text-[11px] font-medium">Beton Mutu K-100 s/d K-500</span>
             </div>
-            <div className="bg-brand-900/90 p-3.5 rounded-2xl border border-brand-700">
-              <span className="text-amber-400 font-black text-xs block">02. Pertambangan</span>
-              <span className="text-slate-300 text-[11px] font-medium">Pasir Tambang & Batu Split</span>
-            </div>
-            <div className="bg-brand-900/90 p-3.5 rounded-2xl border border-brand-700">
-              <span className="text-amber-400 font-black text-xs block">03. Precast</span>
-              <span className="text-slate-300 text-[11px] font-medium">Paving Block & Kanstin</span>
-            </div>
-            <div className="bg-brand-900/90 p-3.5 rounded-2xl border border-brand-700">
-              <span className="text-amber-400 font-black text-xs block">04. Sewa Alat</span>
-              <span className="text-slate-300 text-[11px] font-medium">Concrete Pump Boom</span>
+            <div className="bg-slate-900/90 p-3.5 rounded-2xl border border-red-800">
+              <span className="text-amber-400 font-black text-xs block">02. Semen & Beton Instan</span>
+              <span className="text-slate-300 text-[11px] font-medium">Semen Tonasa & Produk Mortar</span>
             </div>
           </div>
         </div>
@@ -87,7 +79,7 @@ export default function PresentationView({ setActiveTab, setPortalMode }) {
             <ul className="space-y-2 text-xs text-slate-200">
               <li className="flex items-start space-x-2">
                 <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
-                <span>Katalog Lengkap Produk Ready Mix, Material & Sewa Alat</span>
+                <span>Katalog Lengkap Produk Ready Mix &amp; Semen Tonasa</span>
               </li>
               <li className="flex items-start space-x-2">
                 <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
@@ -127,7 +119,7 @@ export default function PresentationView({ setActiveTab, setPortalMode }) {
               </li>
               <li className="flex items-start space-x-2">
                 <CheckCircle2 className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
-                <span>Monitoring Stok Silo Semen Tonasa, Pasir & Batu Split</span>
+                <span>Monitoring Stok Silo Semen Tonasa &amp; Bahan Baku</span>
               </li>
               <li className="flex items-start space-x-2">
                 <CheckCircle2 className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
@@ -156,7 +148,7 @@ export default function PresentationView({ setActiveTab, setPortalMode }) {
         <div className="space-y-6 max-w-4xl mx-auto w-full">
           <div className="grid grid-cols-1 sm:grid-cols-5 gap-3 text-white text-xs">
             {[
-              { num: '01', title: 'Pilih Produk', desc: 'Mutu beton K-100 s/d K-500, pasir, split atau sewa pompa.', icon: Layers },
+              { num: '01', title: 'Pilih Produk', desc: 'Pilih mutu beton K-100 s/d K-500 atau Semen & Beton Instan.', icon: Layers },
               { num: '02', title: 'Hitung Volume', desc: 'Gunakan kalkulator kubikasi agar pas tanpa sisa.', icon: Calculator },
               { num: '03', title: 'Lokasi & Bayar', desc: 'Pilih titik lokasi proyek & bayar via Virtual Account.', icon: MapPin },
               { num: '04', title: 'Lacak Live GPS', desc: 'Pantau posisi mobil molen yang sedang di jalan.', icon: Truck },
@@ -239,23 +231,19 @@ export default function PresentationView({ setActiveTab, setPortalMode }) {
     {
       id: 5,
       tag: 'FITUR UNGGULAN #2',
-      title: 'Pelacakan Live GPS & Sensor Telematika',
+      title: 'Pelacakan Live GPS Truk Mixer',
       subtitle: 'Memantau posisi mobil truk molen dari pabrik hingga tiba di lokasi proyek',
       bgClass: 'bg-gradient-to-br from-slate-900 via-brand-900 to-slate-950',
       content: (
         <div className="space-y-5 max-w-4xl mx-auto w-full text-white text-xs">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="bg-brand-900/90 p-4 rounded-2xl border border-brand-700 shadow-md">
               <span className="text-amber-400 font-bold text-xs block mb-1">📍 Peta GPS Live</span>
               <p className="text-slate-300 text-[11px] leading-relaxed">Ikon mobil molen bergerak di peta mengikuti rute dari Batching Plant Pangkep/Makassar ke titik proyek.</p>
             </div>
             <div className="bg-brand-900/90 p-4 rounded-2xl border border-brand-700 shadow-md">
-              <span className="text-emerald-400 font-bold text-xs block mb-1">🔄 Sensor Drum & Suhu</span>
-              <p className="text-slate-300 text-[11px] leading-relaxed">Memantau kecepatan putaran drum molen (RPM), suhu adonan beton (°C), dan sertifikat slump.</p>
-            </div>
-            <div className="bg-brand-900/90 p-4 rounded-2xl border border-brand-700 shadow-md">
-              <span className="text-amber-400 font-bold text-xs block mb-1">📞 Kontak Driver & ETA</span>
-              <p className="text-slate-300 text-[11px] leading-relaxed">Informasi plat truk (misal DD 8912 PKM), nama sopir Pak Syamsuddin, dan estimasi jam tiba di lokasi.</p>
+              <span className="text-amber-400 font-bold text-xs block mb-1">📞 Kontak Driver &amp; ETA</span>
+              <p className="text-slate-300 text-[11px] leading-relaxed">Informasi plat truk, nama sopir, dan estimasi jam tiba di lokasi proyek.</p>
             </div>
           </div>
 
@@ -283,7 +271,7 @@ export default function PresentationView({ setActiveTab, setPortalMode }) {
       content: (
         <div className="space-y-5 max-w-4xl mx-auto w-full text-white text-xs">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            
+
             <div className="bg-brand-900/90 p-5 rounded-2xl border border-brand-700 space-y-2 shadow-md">
               <span className="text-amber-400 font-black text-xs uppercase">Step A. Penerimaan Order</span>
               <h4 className="font-extrabold text-white text-sm">Masuk Ke Sistem Dispatcher</h4>
@@ -301,10 +289,10 @@ export default function PresentationView({ setActiveTab, setPortalMode }) {
             </div>
 
             <div className="bg-brand-900/90 p-5 rounded-2xl border border-brand-700 space-y-2 shadow-md">
-              <span className="text-amber-400 font-black text-xs uppercase">Step C. Pengadukan & Pengisian</span>
-              <h4 className="font-extrabold text-white text-sm">Loading Silo & Keberangkatan</h4>
+              <span className="text-amber-400 font-black text-xs uppercase">Step C. Pengadukan &amp; Pengisian</span>
+              <h4 className="font-extrabold text-white text-sm">Loading Silo &amp; Keberangkatan</h4>
               <p className="text-slate-300 text-[11px] leading-relaxed">
-                Beton cair dimuat dari silo Semen Tonasa & agregat pasir/split, lalu truk berangkat menuju lokasi proyek.
+                Beton cair dimuat dari silo Semen Tonasa, lalu truk berangkat menuju lokasi proyek.
               </p>
             </div>
 
@@ -333,19 +321,19 @@ export default function PresentationView({ setActiveTab, setPortalMode }) {
       bgClass: 'bg-gradient-to-br from-brand-900 via-brand-950 to-slate-900',
       content: (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto w-full text-white text-xs">
-          
+
           <div className="bg-emerald-950/90 p-6 rounded-2xl border border-emerald-500/40 space-y-3 shadow-lg">
             <span className="bg-emerald-500 text-white font-black px-2.5 py-1 rounded text-[10px] uppercase">
               TAHAP 1 (FOKUS SAAT INI)
             </span>
             <h3 className="font-extrabold text-base text-white">Digitalisasi Toko Online & Operasional Plant</h3>
             <ul className="space-y-2 text-slate-300 list-disc pl-4">
-              <li>Katalog Produk Ready Mix, Material & Sewa Alat</li>
+              <li>Katalog Produk Ready Mix &amp; Semen Tonasa</li>
               <li>Kalkulator Kubikasi Beton Presisi</li>
-              <li>Pemesanan Direct Customer & Pembayaran Virtual Account</li>
-              <li>Live Telematics GPS Tracking Truk Mixer</li>
-              <li>Surat Jalan & Nota Timbangan Digital</li>
-              <li>Dashboard Pengendalian Stok Silo & Dispatcher Truk</li>
+              <li>Pemesanan Direct Customer &amp; Pembayaran Virtual Account</li>
+              <li>Live GPS Tracking Truk Mixer</li>
+              <li>Surat Jalan &amp; Nota Timbangan Digital</li>
+              <li>Dashboard Pengendalian Stok Silo &amp; Dispatcher Truk</li>
             </ul>
           </div>
 
@@ -381,10 +369,10 @@ export default function PresentationView({ setActiveTab, setPortalMode }) {
 
   return (
     <div className="max-w-5xl mx-auto space-y-6 font-sans">
-      
+
       {/* Slide Presentation Canvas Container */}
       <div className={`relative min-h-[520px] rounded-3xl ${activeSlideData.bgClass} text-white p-6 md:p-10 shadow-2xl border border-brand-700 overflow-hidden flex flex-col justify-between transition-all duration-300`}>
-        
+
         {/* Slide Top Navigation Info Bar */}
         <div className="flex justify-between items-center border-b border-brand-700 pb-4 mb-4">
           <div className="flex items-center space-x-3">
@@ -415,16 +403,15 @@ export default function PresentationView({ setActiveTab, setPortalMode }) {
 
         {/* Slide Bottom Controls */}
         <div className="pt-4 border-t border-brand-700 flex flex-col sm:flex-row justify-between items-center gap-3 text-xs mt-4">
-          
+
           {/* Progress Indicators */}
           <div className="flex items-center space-x-2">
             {slides.map((s, idx) => (
               <button
                 key={s.id}
                 onClick={() => setCurrentSlide(idx)}
-                className={`h-2.5 rounded-full transition-all ${
-                  currentSlide === idx ? 'w-8 bg-amber-400' : 'w-2.5 bg-brand-800 hover:bg-slate-700'
-                }`}
+                className={`h-2.5 rounded-full transition-all ${currentSlide === idx ? 'w-8 bg-amber-400' : 'w-2.5 bg-brand-800 hover:bg-slate-700'
+                  }`}
                 title={`Slide ${idx + 1}`}
               />
             ))}
@@ -434,9 +421,8 @@ export default function PresentationView({ setActiveTab, setPortalMode }) {
           <div className="flex items-center space-x-2">
             <button
               onClick={() => setIsAutoPlay(!isAutoPlay)}
-              className={`px-3.5 py-1.5 rounded-xl font-extrabold text-xs flex items-center space-x-1.5 transition-all ${
-                isAutoPlay ? 'bg-amber-500 text-brand-950 shadow-glow' : 'bg-brand-900 text-white hover:bg-brand-800 border border-brand-700'
-              }`}
+              className={`px-3.5 py-1.5 rounded-xl font-extrabold text-xs flex items-center space-x-1.5 transition-all ${isAutoPlay ? 'bg-amber-500 text-brand-950 shadow-glow' : 'bg-brand-900 text-white hover:bg-brand-800 border border-brand-700'
+                }`}
             >
               {isAutoPlay ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
               <span>{isAutoPlay ? 'Pause' : 'Auto Play'}</span>

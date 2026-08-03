@@ -23,15 +23,15 @@ export default function Header({
   setIsCartOpen
 }) {
   return (
-    <header className="bg-gradient-to-r from-brand-900 via-brand-700 to-brand-800 text-white shadow-xl sticky top-0 z-40 border-b border-brand-600/40">
+    <header className="bg-gradient-to-r from-brand-950 via-brand-900 to-brand-800 text-white shadow-xl sticky top-0 z-40 border-b border-brand-700/50">
       
       {/* Top Bar for Mode Switching & Slide Presentation Toggle */}
-      <div className="bg-brand-950/80 backdrop-blur-md px-4 py-1.5 text-xs border-b border-brand-800/60 flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center space-x-2 text-red-200">
-          <span className="bg-gradient-to-r from-brand-600 to-brand-500 text-white font-extrabold px-2 py-0.5 rounded text-[10px] tracking-widest uppercase border border-brand-400/50 shadow">
+      <div className="bg-black/40 backdrop-blur-md px-4 py-1.5 text-xs border-b border-brand-800/40 flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center space-x-2 text-stone-300">
+          <span className="bg-brand-700/80 text-white font-extrabold px-2 py-0.5 rounded text-[10px] tracking-widest uppercase border border-brand-500/40">
             🇮🇩 SIG Group
           </span>
-          <span className="font-medium text-[11px] hidden sm:inline text-red-100/80">
+          <span className="font-medium text-[11px] hidden sm:inline text-stone-400">
             PT Prima Karya Manunggal — Anak Perusahaan PT Semen Tonasa
           </span>
         </div>
@@ -107,7 +107,7 @@ export default function Header({
               </h1>
             </div>
             <p className="text-[11px] text-amber-300 font-semibold tracking-wide flex items-center gap-1">
-              <span>Ready Mix, Material & Sewa Alat</span>
+              <span>Ready Mix & Semen Tonasa</span>
               <ChevronRight className="w-3 h-3 text-amber-400" />
             </p>
           </div>

@@ -1,49 +1,49 @@
 @import "tailwindcss";
 
 @theme {
-  /* ── Merah Indonesia (Primary Brand) ── */
-  --color-brand-50:  #fff0f1;
-  --color-brand-100: #ffe0e3;
-  --color-brand-200: #ffc5cb;
-  --color-brand-300: #fe969f;
-  --color-brand-400: #fb5a68;
-  --color-brand-500: #f42638;
-  --color-brand-600: #ce1126;   /* Merah Indonesia */
-  --color-brand-700: #a30a1c;
-  --color-brand-800: #870b1b;
-  --color-brand-900: #74101d;
-  --color-brand-950: #410208;
+  /* ── Deep Garnet (Primary Brand) ── */
+  --color-brand-50:  #fff5f6;
+  --color-brand-100: #ffe4e6;
+  --color-brand-200: #fecdd2;
+  --color-brand-300: #fda4af;
+  --color-brand-400: #fb6c7a;
+  --color-brand-500: #f43f52;
+  --color-brand-600: #B91C2E;   /* Merah Indonesia — balanced */
+  --color-brand-700: #8F1422;
+  --color-brand-800: #6B0F1A;
+  --color-brand-900: #420910;
+  --color-brand-950: #200408;
 
-  /* ── Emas Nusantara (Accent) ── */
-  --color-accent-400: #f8c830;
-  --color-accent-500: #F4A900;  /* Emas Nusantara */
-  --color-accent-600: #d4900a;
-  --color-accent-700: #a86e05;
+  /* ── Batik Gold (Accent) ── */
+  --color-accent-300: #E8C97A;
+  --color-accent-400: #D4A843;
+  --color-accent-500: #B8860B;  /* Muted batik gold */
+  --color-accent-600: #96700A;
+  --color-accent-700: #735508;
 
   /* ── Nusantara Palette ── */
-  --color-nusantara-gold:   #F4A900;
-  --color-nusantara-cream:  #FFF8F0;
-  --color-nusantara-earth:  #6B3A2A;
-  --color-nusantara-sand:   #E8D5B7;
-  --color-nusantara-forest: #1A5C38;
-  --color-nusantara-batik:  #8B1A1A;
+  --color-nusantara-gold:  #B8860B;
+  --color-nusantara-cream: #F9F4EE;
+  --color-nusantara-sand:  #E2D0B8;
+  --color-nusantara-earth: #5C3D2E;
+  --color-nusantara-teak:  #8B6914;
+  --color-nusantara-sage:  #4A6741;
 
   /* ── Typography ── */
   --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
 
   /* ── Shadows ── */
-  --shadow-glow:    0 0 25px rgba(244, 169, 0, 0.35);
-  --shadow-glow-red:0 0 25px rgba(206, 17, 38, 0.3);
-  --shadow-card:    0 4px 20px -2px rgba(100, 10, 20, 0.08);
-  --shadow-premium: 0 10px 30px -5px rgba(100, 10, 20, 0.15);
-  --shadow-nusa:    0 8px 32px -4px rgba(206, 17, 38, 0.18);
+  --shadow-glow:       0 0 20px rgba(184, 134, 11, 0.25);
+  --shadow-glow-brand: 0 0 20px rgba(122, 34, 50, 0.2);
+  --shadow-card:       0 4px 20px -2px rgba(60, 15, 25, 0.07);
+  --shadow-premium:    0 10px 30px -5px rgba(60, 15, 25, 0.12);
 }
 
 body {
-  background-color: #fdf5f5;   /* krem merah sangat lembut */
+  background-color: #FAF7F7;   /* warm white — sedikit kemerahan, tidak mengganggu */
   font-family: var(--font-sans);
   -webkit-tap-highlight-color: transparent;
-  color: #1e1014;
+  color: #1a1014;
 }
 
 /* Custom Scrollbar */
@@ -61,16 +61,16 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: #fff0f1;
+  background: #F0EAE2;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #fca5a5;
+  background: #D97886;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #ce1126;
+  background: #B91C2E;
 }
 
 /* Keyframes */
@@ -86,7 +86,7 @@ body {
   animation: truck-move 12s infinite linear;
 }
 
-/* Batik-inspired subtle pattern overlay for premium sections */
+/* Subtle gold shimmer for premium sections */
 @keyframes shimmer-nusa {
   0%   { background-position: -200% center; }
   100% { background-position:  200% center; }
@@ -96,7 +96,7 @@ body {
   background: linear-gradient(
     90deg,
     transparent 25%,
-    rgba(244, 169, 0, 0.15) 50%,
+    rgba(184, 134, 11, 0.12) 50%,
     transparent 75%
   );
   background-size: 200% 100%;
