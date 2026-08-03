@@ -1,24 +1,24 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Truck, 
-  MapPin, 
-  Clock, 
-  CheckCircle2, 
-  Navigation, 
-  PhoneCall, 
-  Thermometer, 
-  Activity, 
-  FileText, 
+import {
+  Truck,
+  MapPin,
+  Clock,
+  CheckCircle2,
+  Navigation,
+  PhoneCall,
+  Thermometer,
+  Activity,
+  FileText,
   Building,
   RotateCw,
   ShieldCheck,
   AlertCircle
 } from 'lucide-react';
 
-export default function TrackingView({ 
-  orders, 
-  setActiveTab, 
-  setSelectedDocOrder 
+export default function TrackingView({
+  orders,
+  setActiveTab,
+  setSelectedDocOrder
 }) {
   const [selectedOrderId, setSelectedOrderId] = useState(orders[0]?.id || '');
   const [mapTruckProgress, setMapTruckProgress] = useState(65); // percentage along route
@@ -39,7 +39,7 @@ export default function TrackingView({
         <Truck className="w-12 h-12 text-slate-300 mx-auto" />
         <h3 className="font-bold text-slate-800 text-base">Belum Ada Pesanan Aktif</h3>
         <p className="text-xs text-slate-400">Silakan buat pesanan baru melalui katalog produk PKM.</p>
-        <button 
+        <button
           onClick={() => setActiveTab('catalog')}
           className="bg-brand-600 text-white text-xs font-bold px-4 py-2 rounded-xl"
         >
@@ -59,7 +59,7 @@ export default function TrackingView({
 
   return (
     <div className="space-y-6">
-      
+
       {/* Header Selector */}
       <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
@@ -78,7 +78,7 @@ export default function TrackingView({
         {/* Order Dropdown Picker */}
         <div className="w-full md:w-auto">
           <label className="text-[10px] text-slate-400 font-bold uppercase block mb-1">Pilih Nomor Invoice:</label>
-          <select 
+          <select
             value={selectedOrderId}
             onChange={(e) => setSelectedOrderId(e.target.value)}
             className="w-full bg-slate-50 border border-slate-200 text-slate-800 font-extrabold text-xs rounded-xl p-2.5 outline-none focus:border-brand-500"
@@ -94,10 +94,10 @@ export default function TrackingView({
 
       {/* Main Grid: Status Timeline + Live Map */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        
+
         {/* Left Column: Delivery Status & Truck Telematics (5 cols) */}
         <div className="lg:col-span-5 space-y-4">
-          
+
           {/* Order Info Card */}
           <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4">
             <div className="bg-brand-900 text-white p-4 rounded-xl flex items-center justify-between">
@@ -105,9 +105,8 @@ export default function TrackingView({
                 <span className="text-[10px] text-amber-400 font-extrabold uppercase">Nomor Pesanan PKM</span>
                 <div className="text-base font-black tracking-wide text-white">{activeOrder.id}</div>
               </div>
-              <span className={`px-2.5 py-1 rounded-lg text-[10px] font-extrabold uppercase ${
-                activeOrder.statusStep === 5 ? 'bg-emerald-500 text-white' : 'bg-amber-500 text-brand-950 animate-pulse'
-              }`}>
+              <span className={`px-2.5 py-1 rounded-lg text-[10px] font-extrabold uppercase ${activeOrder.statusStep === 5 ? 'bg-emerald-500 text-white' : 'bg-amber-500 text-brand-950 animate-pulse'
+                }`}>
                 {activeOrder.statusStep === 5 ? 'Selesai' : 'Dalam Pengiriman'}
               </span>
             </div>
@@ -130,16 +129,15 @@ export default function TrackingView({
               <span className="text-[10px] text-slate-400 font-extrabold uppercase tracking-wider block">
                 Tahapan Status Pengiriman
               </span>
-              
+
               <div className="relative pl-6 space-y-4 before:content-[''] before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200">
                 {steps.map((step) => {
                   const isDone = activeOrder.statusStep >= step.num;
                   const isCurrent = activeOrder.statusStep === step.num;
                   return (
                     <div key={step.num} className="relative flex items-center justify-between text-xs">
-                      <div className={`absolute -left-6 w-5 h-5 rounded-full flex items-center justify-center font-bold text-[10px] transition-all ${
-                        isDone ? 'bg-emerald-500 text-white' : 'bg-slate-200 text-slate-500'
-                      }`}>
+                      <div className={`absolute -left-6 w-5 h-5 rounded-full flex items-center justify-center font-bold text-[10px] transition-all ${isDone ? 'bg-emerald-500 text-white' : 'bg-slate-200 text-slate-500'
+                        }`}>
                         {isDone ? '✓' : step.num}
                       </div>
 
@@ -154,83 +152,13 @@ export default function TrackingView({
             </div>
           </div>
 
-          {/* Telematics Gauge Card */}
-          <div className="bg-gradient-to-b from-brand-900 via-brand-850 to-brand-950 text-white rounded-2xl p-5 shadow-lg border border-brand-700 space-y-4">
-            <div className="flex justify-between items-center border-b border-brand-700 pb-2">
-              <span className="text-xs font-black text-amber-400 uppercase tracking-wide flex items-center space-x-1.5">
-                <Activity className="w-4 h-4" />
-                <span>Telematik & Sensor Drum Ready Mix</span>
-              </span>
-              <span className="bg-emerald-500/20 text-emerald-400 text-[10px] font-extrabold px-2 py-0.5 rounded border border-emerald-500/40">
-                Live Sensor
-              </span>
-            </div>
 
-            <div className="grid grid-cols-2 gap-3 text-xs">
-              <div className="bg-brand-800/80 p-3 rounded-xl border border-brand-700">
-                <span className="text-[10px] text-slate-400 font-medium">Putaran Drum:</span>
-                <div className="text-base font-extrabold text-amber-400 flex items-center space-x-1 mt-0.5">
-                  <RotateCw className="w-4 h-4 animate-spin text-amber-400" />
-                  <span>{activeOrder.telematics.drumRotationRpm} RPM</span>
-                </div>
-              </div>
-
-              <div className="bg-brand-800/80 p-3 rounded-xl border border-brand-700">
-                <span className="text-[10px] text-slate-400 font-medium">Suhu Adonan Beton:</span>
-                <div className="text-base font-extrabold text-emerald-400 flex items-center space-x-1 mt-0.5">
-                  <Thermometer className="w-4 h-4" />
-                  <span>{activeOrder.telematics.concreteTempC}°C (Ideal)</span>
-                </div>
-              </div>
-
-              <div className="bg-brand-800/80 p-3 rounded-xl border border-brand-700">
-                <span className="text-[10px] text-slate-400 font-medium">Sertifikat Slump:</span>
-                <div className="text-base font-extrabold text-white mt-0.5">
-                  {activeOrder.telematics.slumpValue}
-                </div>
-              </div>
-
-              <div className="bg-brand-800/80 p-3 rounded-xl border border-brand-700">
-                <span className="text-[10px] text-slate-400 font-medium">Kecepatan Truk:</span>
-                <div className="text-base font-extrabold text-white mt-0.5">
-                  {activeOrder.telematics.speedKm} km/jam
-                </div>
-              </div>
-            </div>
-
-            {/* Driver & Truck Info */}
-            <div className="bg-brand-800/50 p-3.5 rounded-xl border border-brand-700 flex items-center justify-between">
-              <div>
-                <div className="font-extrabold text-white text-xs">{activeOrder.mixerTruckNumber}</div>
-                <div className="text-slate-300 text-[11px]">Driver: {activeOrder.driverName}</div>
-              </div>
-              <a 
-                href={`tel:${activeOrder.driverPhone}`}
-                className="bg-amber-500 hover:bg-amber-400 text-brand-950 font-extrabold px-3 py-1.5 rounded-lg text-xs flex items-center space-x-1"
-              >
-                <PhoneCall className="w-3.5 h-3.5" />
-                <span>Hubungi</span>
-              </a>
-            </div>
-
-            {/* Link to Digital Documents */}
-            <button
-              onClick={() => {
-                setSelectedDocOrder(activeOrder);
-                setActiveTab('digital-docs');
-              }}
-              className="w-full py-2.5 bg-brand-700 hover:bg-brand-600 text-white font-bold text-xs rounded-xl flex items-center justify-center space-x-2 border border-brand-500/40 transition-colors"
-            >
-              <FileText className="w-4 h-4 text-amber-400" />
-              <span>Buka e-Faktur, Surat Jalan & Nota Timbangan Digital</span>
-            </button>
-          </div>
 
         </div>
 
         {/* Right Column: Interactive Live Route Map (7 cols) */}
         <div className="lg:col-span-7 bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4 flex flex-col justify-between">
-          
+
           <div className="flex justify-between items-center">
             <div>
               <h3 className="font-extrabold text-slate-900 text-base flex items-center space-x-2">
@@ -249,7 +177,7 @@ export default function TrackingView({
 
           {/* SVG Simulated Interactive Map Container */}
           <div className="relative w-full h-[400px] bg-slate-900 rounded-xl overflow-hidden border border-slate-800 shadow-inner flex items-center justify-center">
-            
+
             {/* Map Canvas Illustration */}
             <svg className="w-full h-full object-cover" viewBox="0 0 600 400">
               <defs>
@@ -262,7 +190,7 @@ export default function TrackingView({
                   <stop offset="100%" stopColor="#10b981" />
                 </linearGradient>
               </defs>
-              
+
               {/* Background Map Grid */}
               <rect width="600" height="400" fill="#0f172a" />
               <rect width="600" height="400" fill="url(#grid)" />
@@ -275,12 +203,12 @@ export default function TrackingView({
               <path d="M 0 350 Q 200 320 400 380 L 600 400 L 0 400 Z" fill="#0369a1" opacity="0.3" />
 
               {/* Road Path (Batching Plant to Site) */}
-              <path 
+              <path
                 id="deliveryPath"
-                d="M 80 80 Q 200 120 300 220 T 500 300" 
-                fill="none" 
-                stroke="url(#routeGrad)" 
-                strokeWidth="6" 
+                d="M 80 80 Q 200 120 300 220 T 500 300"
+                fill="none"
+                stroke="url(#routeGrad)"
+                strokeWidth="6"
                 strokeDasharray="8 4"
               />
 
@@ -307,7 +235,7 @@ export default function TrackingView({
                 <circle r="24" fill="#f59e0b" opacity="0.35" className="animate-ping" />
                 <rect x="-18" y="-14" width="36" height="28" rx="6" fill="#f59e0b" stroke="#ffffff" strokeWidth="2" />
                 <text x="0" y="4" fill="#0f2c59" fontSize="12" fontWeight="900" textAnchor="middle">🚚</text>
-                
+
                 {/* Truck Badge Floating */}
                 <g transform="translate(0, -25)">
                   <rect x="-55" y="-12" width="110" height="18" rx="4" fill="#0f2c59" stroke="#f59e0b" strokeWidth="1" />
