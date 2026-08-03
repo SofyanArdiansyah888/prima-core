@@ -29,7 +29,7 @@ export default function CheckoutModal({
   const [selectedPlant, setSelectedPlant] = useState('plant-pangkep');
   const [deliveryDate, setDeliveryDate] = useState('2026-08-05');
   const [timeSlot, setTimeSlot] = useState('Pagi (08:00 - 12:00 WITA)');
-  const [paymentMethod, setPaymentMethod] = useState('B2B_CREDIT'); // 'B2B_CREDIT', 'VA_BANK'
+  const [paymentMethod, setPaymentMethod] = useState('VA_BANK'); // 'B2B_CREDIT', 'VA_BANK' — Tahap 1 fokus direct customer via VA
   const [selectedBank, setSelectedBank] = useState('Bank Mandiri');
   const [poNumber, setPoNumber] = useState('PO-MKU/PKM/2026/089');
   const [slumpReq, setSlumpReq] = useState('12 ± 2 cm');
@@ -227,31 +227,7 @@ export default function CheckoutModal({
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               
-              {/* Option A: B2B TOP Credit */}
-              <label className={`p-3.5 rounded-xl border-2 cursor-pointer transition-all ${
-                paymentMethod === 'B2B_CREDIT' 
-                  ? 'border-brand-600 bg-brand-50/70 shadow-sm' 
-                  : 'border-slate-200 bg-slate-50 hover:bg-slate-100'
-              }`}>
-                <div className="flex items-center justify-between mb-1">
-                  <div className="flex items-center space-x-2">
-                    <input 
-                      type="radio" 
-                      name="payMethod"
-                      checked={paymentMethod === 'B2B_CREDIT'}
-                      onChange={() => setPaymentMethod('B2B_CREDIT')}
-                      className="accent-brand-600"
-                    />
-                    <span className="font-extrabold text-brand-900">Kredit B2B (TOP 30 Hari PKM)</span>
-                  </div>
-                  <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                </div>
-                <p className="text-[10px] text-slate-500 ml-5">
-                  Gunakan plafond kredit B2B korporat. Sisa limit: <span className="font-bold text-emerald-700">Rp {availableCredit.toLocaleString('id-ID')}</span>
-                </p>
-              </label>
-
-              {/* Option B: Virtual Account */}
+            {/* Option B: Virtual Account — DEFAULT Tahap 1 */}
               <label className={`p-3.5 rounded-xl border-2 cursor-pointer transition-all ${
                 paymentMethod === 'VA_BANK' 
                   ? 'border-brand-600 bg-brand-50/70 shadow-sm' 
@@ -267,11 +243,37 @@ export default function CheckoutModal({
                       className="accent-brand-600"
                     />
                     <span className="font-extrabold text-slate-900">Virtual Account / Transfer Bank</span>
+                    <span className="bg-emerald-100 text-emerald-700 text-[9px] font-black px-1.5 py-0.5 rounded-full border border-emerald-300">TERSEDIA</span>
                   </div>
                   <Building className="w-4 h-4 text-brand-600" />
                 </div>
                 <p className="text-[10px] text-slate-500 ml-5">
                   Pembayaran langsung via VA Bank Mandiri, BRI, BNI, BCA.
+                </p>
+              </label>
+
+              {/* Option A: B2B TOP Credit — Tahap 2 */}
+              <label className={`p-3.5 rounded-xl border-2 cursor-pointer transition-all ${
+                paymentMethod === 'B2B_CREDIT' 
+                  ? 'border-brand-600 bg-brand-50/70 shadow-sm' 
+                  : 'border-slate-200 bg-slate-50 hover:bg-slate-100'
+              }`}>
+                <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center space-x-2">
+                    <input 
+                      type="radio" 
+                      name="payMethod"
+                      checked={paymentMethod === 'B2B_CREDIT'}
+                      onChange={() => setPaymentMethod('B2B_CREDIT')}
+                      className="accent-brand-600"
+                    />
+                    <span className="font-extrabold text-brand-900">Kredit B2B (TOP 30 Hari PKM)</span>
+                    <span className="bg-brand-100 text-brand-700 text-[9px] font-black px-1.5 py-0.5 rounded-full border border-brand-300">TAHAP 2</span>
+                  </div>
+                  <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                </div>
+                <p className="text-[10px] text-slate-500 ml-5">
+                  Gunakan plafond kredit B2B korporat. Sisa limit: <span className="font-bold text-emerald-700">Rp {availableCredit.toLocaleString('id-ID')}</span>
                 </p>
               </label>
 

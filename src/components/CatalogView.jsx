@@ -1,25 +1,28 @@
 import React, { useState, useMemo } from 'react';
-import { 
-  Search, 
-  Calculator, 
-  Check, 
-  Info, 
-  Plus, 
-  ShieldAlert, 
-  Layers, 
-  Box, 
-  Truck, 
+import {
+  Search,
+  Calculator,
+  Check,
+  Info,
+  Plus,
+  ShieldAlert,
+  Layers,
   Building,
+  Truck,
   SlidersHorizontal,
   ChevronRight,
-  Sparkles
+  Sparkles,
+  Package,
+  MapPin,
+  FileText
 } from 'lucide-react';
 
-export default function CatalogView({ 
-  products, 
-  addToCart, 
-  setActiveTab, 
-  setCalcData 
+
+export default function CatalogView({
+  products,
+  addToCart,
+  setActiveTab,
+  setCalcData
 }) {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -29,17 +32,16 @@ export default function CatalogView({
 
   const categories = [
     { id: 'all', label: 'Semua Produk', icon: Layers },
-    { id: 'readymix', label: 'Ready Mix Beton', icon: Building },
-    { id: 'material', label: 'Material Curah & Tambang', icon: Box },
-    { id: 'precast', label: 'Precast & Paving', icon: Layers },
-    { id: 'rental', label: 'Sewa Alat & Armada', icon: Truck },
+    { id: 'readymix', label: 'Ready Mix Beton', icon: Layers },
+    { id: 'cement', label: 'Semen & Beton Instan', icon: Package },
   ];
+
 
   const filteredProducts = useMemo(() => {
     return products.filter(product => {
       const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory;
-      const matchesSearch = 
-        product.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+      const matchesSearch =
+        product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         product.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
         product.recommendedFor.toLowerCase().includes(searchQuery.toLowerCase()) ||
         product.tag.toLowerCase().includes(searchQuery.toLowerCase());
@@ -49,7 +51,7 @@ export default function CatalogView({
 
   return (
     <div className="space-y-6">
-      
+
       {/* Hero Banner for PT PKM */}
       <div className="relative rounded-2xl bg-gradient-to-r from-brand-900 via-brand-800 to-brand-700 text-white p-6 md:p-8 overflow-hidden shadow-premium border border-brand-500/20">
         <div className="absolute -right-10 -bottom-10 opacity-10 pointer-events-none">
@@ -59,7 +61,7 @@ export default function CatalogView({
         <div className="relative z-10 max-w-2xl space-y-3">
           <div className="inline-flex items-center space-x-2 bg-amber-500/20 border border-amber-400/40 text-amber-300 px-3 py-1 rounded-full text-xs font-bold backdrop-blur-md">
             <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-            <span>Penyedia Beton & Agregat Terpercaya Sulawesi Selatan</span>
+            <span>Ready Mix & Semen Tonasa — Sulawesi Selatan</span>
           </div>
 
           <h2 className="text-2xl md:text-3xl font-black tracking-tight text-white leading-tight">
@@ -67,11 +69,11 @@ export default function CatalogView({
           </h2>
 
           <p className="text-slate-300 text-xs md:text-sm font-medium leading-relaxed">
-            Pesan Ready Mix Mutu K-100 s/d K-500, Material Pertambangan Pasir & Split, Precast Paving, hingga Sewa Pompa Beton secara real-time dengan jaminan kepastian pengiriman.
+            Pesan <span className="text-amber-300 font-bold">Ready Mix Mutu K-175 s/d K-500</span> dan <span className="text-amber-300 font-bold">Semen Tonasa & Beton Instan (Mortar)</span> secara real-time dengan jaminan kepastian pengiriman langsung ke lokasi proyek.
           </p>
 
           <div className="pt-2 flex flex-wrap items-center gap-3">
-            <button 
+            <button
               onClick={() => setActiveTab('calculator')}
               className="bg-amber-500 hover:bg-amber-400 text-brand-950 font-extrabold text-xs px-4 py-2.5 rounded-xl flex items-center space-x-2 shadow-glow transition-all active:scale-95"
             >
@@ -79,7 +81,7 @@ export default function CatalogView({
               <span>Buka Kalkulator Volume Beton</span>
               <ChevronRight className="w-4 h-4" />
             </button>
-            <button 
+            <button
               onClick={() => setActiveTab('tracking')}
               className="bg-white/10 hover:bg-white/20 text-white border border-white/20 font-bold text-xs px-4 py-2.5 rounded-xl flex items-center space-x-2 backdrop-blur-md transition-all"
             >
@@ -90,14 +92,45 @@ export default function CatalogView({
         </div>
       </div>
 
+      {/* Onboarding Strip: 5 Langkah Pemesanan (Slide 3 Presentasi) */}
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4">
+        <div className="flex items-center justify-between mb-3">
+          <span className="text-[11px] font-extrabold text-slate-500 uppercase tracking-widest">Alur Pemesanan Ready Mix PKM — 5 Langkah Mudah</span>
+          <span className="text-[10px] text-amber-600 font-bold bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">Transparan & Tanpa Telepon ke Pabrik</span>
+        </div>
+        <div className="grid grid-cols-5 gap-1.5 relative">
+          {/* Connecting line */}
+          <div className="absolute top-5 left-[10%] right-[10%] h-0.5 bg-gradient-to-r from-brand-300 via-amber-300 to-emerald-300 hidden sm:block" />
+          {[
+            { num: '01', label: 'Pilih Produk', icon: Layers, color: 'bg-brand-600', desc: 'Ready Mix atau Semen' },
+            { num: '02', label: 'Hitung Kubik', icon: Calculator, color: 'bg-brand-500', desc: 'Kalkulator Otomatis' },
+            { num: '03', label: 'Lokasi & Bayar', icon: MapPin, color: 'bg-amber-500', desc: 'Pinpoint + VA Bank' },
+            { num: '04', label: 'Lacak Live GPS', icon: Truck, color: 'bg-amber-600', desc: 'Posisi Truk Mixer' },
+            { num: '05', label: 'Dokumen Digital', icon: FileText, color: 'bg-emerald-600', desc: 'e-Faktur & Surat Jalan' },
+          ].map((step, idx) => {
+            const Icon = step.icon;
+            return (
+              <div key={idx} className="flex flex-col items-center text-center space-y-1.5 relative z-10">
+                <div className={`w-10 h-10 ${step.color} text-white rounded-xl flex items-center justify-center shadow-md flex-shrink-0`}>
+                  <Icon className="w-4 h-4" />
+                </div>
+                <span className="text-[9px] font-extrabold text-brand-700 bg-brand-50 px-1.5 py-0.5 rounded uppercase tracking-wide">{step.num}</span>
+                <span className="text-[10px] font-extrabold text-slate-800 leading-tight hidden sm:block">{step.label}</span>
+                <span className="text-[9px] text-slate-400 font-medium leading-tight hidden md:block">{step.desc}</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
       {/* Search & Category Filter Controls */}
       <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-        
+
         <div className="flex flex-col sm:flex-row gap-3">
           {/* Search Box */}
           <div className="relative flex-grow">
             <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input 
+            <input
               type="text"
               placeholder="Cari mutu beton (misal: K-300), material pasir, split, atau sewa armada..."
               value={searchQuery}
@@ -105,7 +138,7 @@ export default function CatalogView({
               className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-2.5 text-xs md:text-sm font-medium text-slate-800 outline-none focus:border-brand-500 focus:bg-white transition-colors"
             />
             {searchQuery && (
-              <button 
+              <button
                 onClick={() => setSearchQuery('')}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs font-bold"
               >
@@ -136,11 +169,10 @@ export default function CatalogView({
               <button
                 key={cat.id}
                 onClick={() => setSelectedCategory(cat.id)}
-                className={`flex items-center space-x-2 px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all border ${
-                  isSelected
+                className={`flex items-center space-x-2 px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all border ${isSelected
                     ? 'bg-brand-600 text-white border-brand-600 shadow-md'
                     : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100 hover:text-slate-900'
-                }`}
+                  }`}
               >
                 <Icon className={`w-3.5 h-3.5 ${isSelected ? 'text-amber-400' : 'text-slate-500'}`} />
                 <span>{cat.label}</span>
@@ -153,7 +185,7 @@ export default function CatalogView({
       {/* Product Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredProducts.map(product => (
-          <div 
+          <div
             key={product.id}
             className="bg-white rounded-2xl border border-slate-200/80 hover:border-brand-300 shadow-card hover:shadow-premium transition-all duration-200 p-5 flex flex-col justify-between group"
           >
@@ -257,7 +289,7 @@ export default function CatalogView({
       {selectedProductDetail && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white w-full max-w-lg rounded-2xl overflow-hidden shadow-2xl space-y-4">
-            
+
             <div className="bg-brand-700 text-white p-5 flex justify-between items-start">
               <div>
                 <span className="bg-amber-500 text-brand-950 font-extrabold px-2 py-0.5 rounded text-[10px] uppercase">
@@ -267,7 +299,7 @@ export default function CatalogView({
                   {selectedProductDetail.name}
                 </h3>
               </div>
-              <button 
+              <button
                 onClick={() => setSelectedProductDetail(null)}
                 className="text-slate-300 hover:text-white text-lg font-bold p-1"
               >

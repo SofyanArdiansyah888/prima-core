@@ -136,189 +136,93 @@ export const PRODUCTS_DATA = [
     }
   },
 
-  // --- MATERIAL PERTAMBANGAN & PERDAGANGAN ---
+  // --- SEMEN TONASA & BETON INSTAN (MORTAR) ---
   {
-    id: 'mat-pasir-pasang',
-    code: 'MAT-PSR',
-    name: 'Pasir Tambang Sungai (Pasir Pasang)',
-    category: 'material',
-    unit: 'm³',
-    price: 185000,
+    id: 'semen-opc-50kg',
+    code: 'ST-OPC',
+    name: 'Semen Tonasa OPC Type I (50 kg/Sak)',
+    category: 'cement',
+    unit: 'Sak',
+    price: 78000,
     slump: 'N/A',
-    recommendedFor: 'Pekerjaan Pasangan Batako, Plesteran, & Cor',
-    description: 'Pasir tambang sungai kadar lumpur <3% dari kuari resmi PKM, disaring presisi untuk kekuatan spesifikasi tinggi.',
+    recommendedFor: 'Konstruksi Umum, Pondasi, Kolom, Beton Struktural',
+    description: 'Semen Portland Ordinary tipe I produksi PT Semen Tonasa (SIG). Kuat tekan tinggi untuk pekerjaan struktural umum, cocok sebagai campuran beton cor di lokasi.',
     inStock: true,
     featured: true,
-    minOrder: 7,
-    tag: 'Material Curah',
+    minOrder: 50,
+    tag: 'Semen Tonasa',
     specs: {
-      moisture: '4.2%',
-      siltContent: '2.1%',
-      origin: 'Kuari Bontoa Pangkep'
+      type: 'OPC Type I (SNI 15-2049)',
+      strengthClass: '52.5 MPa (28 Hari)',
+      packSize: '50 kg / Sak',
+      origin: 'Pabrik Semen Tonasa, Pangkep'
     }
   },
   {
-    id: 'mat-split-12',
-    code: 'MAT-SPL12',
-    name: 'Batu Split Pecah (Ukuran 1/2 cm)',
-    category: 'material',
-    unit: 'm³',
-    price: 225000,
+    id: 'semen-pcc-50kg',
+    code: 'ST-PCC',
+    name: 'Semen Tonasa PCC (Portland Composite Cement) — 50 kg',
+    category: 'cement',
+    unit: 'Sak',
+    price: 73000,
     slump: 'N/A',
-    recommendedFor: 'Cor Beton Presisi & Precast',
-    description: 'Batu pecah ukuran halus 10-20mm hasil olahan mesin stone crusher PKM dengan kubisitas seragam.',
+    recommendedFor: 'Plesteran, Pasangan Bata, Dak, Pekerjaan Finishing',
+    description: 'Semen Portland Komposit (PCC) Semen Tonasa dengan hidrasi lebih lambat & panas rendah. Pilihan ekonomis untuk pekerjaan plesteran, pasangan bata, dan finishing perumahan.',
+    inStock: true,
+    featured: true,
+    minOrder: 50,
+    tag: 'Semen Tonasa',
+    specs: {
+      type: 'PCC (SNI 7064)',
+      strengthClass: '42.5 MPa (28 Hari)',
+      packSize: '50 kg / Sak',
+      origin: 'Pabrik Semen Tonasa, Pangkep'
+    }
+  },
+  {
+    id: 'mortar-beton-instan-40kg',
+    code: 'MORTAR-BI',
+    name: 'Mortar Beton Instan Semen Tonasa (40 kg/Sak)',
+    category: 'cement',
+    unit: 'Sak',
+    price: 68000,
+    slump: 'N/A',
+    recommendedFor: 'Pasangan Batako, Pemasangan Keramik, Plesteran Presisi',
+    description: 'Campuran semen-pasir instan pra-campur berstandar Tonasa Group. Tinggal tambah air, tidak perlu takaran manual. Hemat waktu dan mengurangi waste material di lapangan.',
     inStock: true,
     featured: false,
-    minOrder: 7,
-    tag: 'Pertambangan',
-    specs: {
-      size: '10 - 20 mm',
-      abrasion: '18%',
-      origin: 'Crusher Unit PKM Pangkep'
-    }
-  },
-  {
-    id: 'mat-split-23',
-    code: 'MAT-SPL23',
-    name: 'Batu Split Pecah (Ukuran 2/3 cm)',
-    category: 'material',
-    unit: 'm³',
-    price: 210000,
-    slump: 'N/A',
-    recommendedFor: 'Cor Beton Struktur & Base Course Jalan',
-    description: 'Batu split standar agregat kasar 20-30mm untuk campuran Ready Mix dan pembuatan pondasi cor.',
-    inStock: true,
-    featured: true,
-    minOrder: 7,
-    tag: 'Pertambangan',
-    specs: {
-      size: '20 - 30 mm',
-      abrasion: '19.5%',
-      origin: 'Crusher Unit PKM Pangkep'
-    }
-  },
-  {
-    id: 'mat-abu-batu',
-    code: 'MAT-ABU',
-    name: 'Abu Batu Crushed Dust Fine',
-    category: 'material',
-    unit: 'm³',
-    price: 165000,
-    slump: 'N/A',
-    recommendedFor: 'Pengisian Paving Block & Campuran Hotmix',
-    description: 'Agregat halus sisa pengolahan stone crusher untuk landasan paving block dan campuran aspal.',
-    inStock: true,
-    featured: false,
-    minOrder: 7,
-    tag: 'Agregat Halus',
-    specs: {
-      size: '0 - 5 mm',
-      origin: 'Crusher Unit PKM Pangkep'
-    }
-  },
-
-  // --- PRECAST CONCRETE ---
-  {
-    id: 'pre-paving-8cm',
-    code: 'PRE-PV8',
-    name: 'Paving Block K-300 Tebal 8cm (Bata/Holland)',
-    category: 'precast',
-    unit: 'm²',
-    price: 85000,
-    slump: 'N/A',
-    recommendedFor: 'Area Parkir Truk & Pelabuhan/Industri',
-    description: 'Paving block pres hidrolik otomatis tingkat kerapatan tinggi dengan daya tahan tekanan berat.',
-    inStock: true,
-    featured: true,
     minOrder: 20,
-    tag: 'Precast PKM',
+    tag: 'Beton Instan',
     specs: {
-      strength: 'K-300',
-      thickness: '8 cm',
-      piecesPerM2: '44 Pcs'
+      type: 'Mortar Instan Semen Tonasa',
+      composition: 'Semen Tonasa PCC + Pasir Silika Graded',
+      packSize: '40 kg / Sak',
+      coverage: '±1.2 m² / Sak (tebal 3cm)'
     }
   },
   {
-    id: 'pre-kanstin-dki',
-    code: 'PRE-KNS',
-    name: 'Kanstin Beton K-250 Type DKI (40x15x50cm)',
-    category: 'precast',
-    unit: 'Pcs',
-    price: 52000,
+    id: 'grout-non-shrink-25kg',
+    code: 'GROUT-NS',
+    name: 'Grout Non-Shrink Semen Tonasa (25 kg/Sak)',
+    category: 'cement',
+    unit: 'Sak',
+    price: 125000,
     slump: 'N/A',
-    recommendedFor: 'Pembatas Pembatas Jalan & Trotoar',
-    description: 'Kanstin beton cetak pembatas bahu jalan presisi tinggi.',
+    recommendedFor: 'Grouting Pondasi Mesin, Pengisian Celah Kolom Baja Presisi',
+    description: 'Grouting semen non-susut mutu tinggi untuk pengisian presisi di bawah baseplate kolom baja, pondasi mesin berat, dan celah precast. Tidak menyusut setelah setting.',
     inStock: true,
     featured: false,
-    minOrder: 30,
-    tag: 'Precast PKM',
+    minOrder: 5,
+    tag: 'Non-Shrink Grout',
     specs: {
-      strength: 'K-250',
-      dimension: '40 x 15 x 50 cm'
+      type: 'Cementitious Grout Non-Shrink',
+      compressiveStrength: '≥ 35 MPa (28 Hari)',
+      packSize: '25 kg / Sak',
+      workingTime: '30 - 60 Menit'
     }
   },
-
-  // --- SEWA ALAT BERAT & ARMADA LOGISTIK ---
-  {
-    id: 'sewa-pump-standard',
-    code: 'SEWA-CP28',
-    name: 'Sewa Concrete Pump / Pompa Beton Standard (28m)',
-    category: 'rental',
-    unit: 'Shift (8 Jam)',
-    price: 3500000,
-    slump: 'N/A',
-    recommendedFor: 'Penuangan Lantai 2 s/d 4 Gedung/Rumah',
-    description: 'Sewa pompa beton tipe boom 28 meter include operator profesional & BBM untuk penuangan cepat.',
-    inStock: true,
-    featured: true,
-    minOrder: 1,
-    tag: 'Sewa Armada',
-    specs: {
-      reach: '28 Meter Vertical',
-      capacity: '60 m³/jam',
-      crew: '1 Operator + 2 Helper'
-    }
-  },
-  {
-    id: 'sewa-pump-longboom',
-    code: 'SEWA-CP36',
-    name: 'Sewa Concrete Pump Long Boom (36m)',
-    category: 'rental',
-    unit: 'Shift (8 Jam)',
-    price: 4800000,
-    slump: 'N/A',
-    recommendedFor: 'Gedung Bertingkat 5+ & Area Sempit',
-    description: 'Pompa beton jangkauan ekstra panjang 36 meter untuk penuangan elevasi tinggi.',
-    inStock: true,
-    featured: false,
-    minOrder: 1,
-    tag: 'Sewa Armada',
-    specs: {
-      reach: '36 Meter Vertical',
-      capacity: '90 m³/jam',
-      crew: '1 Operator + 3 Helper'
-    }
-  },
-  {
-    id: 'sewa-dump-truck',
-    code: 'SEWA-DT20',
-    name: 'Sewa Dump Truck Tronton 20 Ton (PKM Fleet)',
-    category: 'rental',
-    unit: 'Hari / Rit',
-    price: 1800000,
-    slump: 'N/A',
-    recommendedFor: 'Angkutan Material Tambang & Land Clearing',
-    description: 'Armada dump truck kapasitas 20 ton untuk pengangkutan pasir, split, atau tanah proyek.',
-    inStock: true,
-    featured: false,
-    minOrder: 1,
-    tag: 'Sewa Armada',
-    specs: {
-      capacity: '20 Ton / 14 m³',
-      fuel: 'Include / Exclude BBM'
-    }
-  }
 ];
+
 
 export const BATCHING_PLANTS = [
   {
@@ -389,12 +293,11 @@ export const INITIAL_ORDERS = [
     projectAddress: 'Jl. Poros Tonasa II, Bontoa, Kab. Pangkep',
     pinpointCoords: { lat: -4.805, lng: 119.561 },
     items: [
-      { id: 'rm-k300', code: 'K-300', name: 'Ready Mix Beton Mutu K-300', quantity: 14, unit: 'm³', price: 890000, notes: 'Slump 12cm, Pompa Standard Requested' },
-      { id: 'sewa-pump-standard', code: 'SEWA-CP28', name: 'Sewa Concrete Pump Standard 28m', quantity: 1, unit: 'Shift', price: 3500000, notes: 'Include Operator Pak Ruslan' }
+      { id: 'rm-k300', code: 'K-300', name: 'Ready Mix Beton Mutu K-300', quantity: 14, unit: 'm³', price: 890000, notes: 'Slump 12cm' }
     ],
-    subtotal: 15960000,
-    ppn: 1755600,
-    totalPrice: 17715600,
+    subtotal: 12460000,
+    ppn: 1370600,
+    totalPrice: 13830600,
     paymentMethod: 'Kredit B2B (TOP 30 Hari PKM)',
     paymentStatus: 'APPROVED_CREDIT',
     poNumber: 'PO-MKU/PKM/2026/042',
