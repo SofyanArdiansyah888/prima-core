@@ -125,7 +125,7 @@ export default function App() {
       />
 
       {/* PWA Prompt Banner */}
-      {/* {activeTab !== 'presentation' && <PWABanner triggerToast={triggerToast} />} */}
+      {activeTab !== 'presentation' && <PWABanner triggerToast={triggerToast} />}
 
       {/* Main Content Area */}
       <main className="max-w-6xl mx-auto px-4 py-6 flex-grow w-full">
