@@ -2,5 +2,10 @@
     "Shared": true,
     "Branch": true,
     "BatchingPlant": true,
-    "User": true
+    "User": true,
+    "Product": true,
+    "Order": true,
+    "WorkOrder": true,
+    "Dispatch": true,
+    "DeliveryRate": true
 }

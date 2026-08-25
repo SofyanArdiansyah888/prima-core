@@ -48,4 +48,9 @@ class BatchingPlant extends Model
     {
         return $this->belongsToMany(User::class)->withTimestamps();
     }
+
+    public function deliveryRates(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(\Modules\DeliveryRate\Models\PlantDeliveryRate::class);
+    }
 }

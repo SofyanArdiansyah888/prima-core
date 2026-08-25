@@ -37,6 +37,44 @@ class CodeGenerator
         return sprintf('EMP-%s-%d%s', $short, $year, $seq);
     }
 
+    public function nextOrderCode(?string $region = null): string
+    {
+        $reg = $region ? strtoupper(preg_replace('/[^A-Z0-9]/', '', $region) ?? '') : 'HQ';
+        $reg = substr($reg ?: 'HQ', 0, 6);
+        $yearMonth = (int) date('Ym');
+        $seq = $this->nextNumber('order', $reg, $yearMonth, 5);
+
+        return sprintf('SO-%s-%d%s', $reg, $yearMonth, $seq);
+    }
+
+    public function nextWorkOrderCode(string $plantCode): string
+    {
+        $clean = strtoupper(preg_replace('/[^A-Z0-9]/', '', $plantCode) ?? 'PLANT');
+        $clean = substr($clean, -8);
+        $yearMonth = (int) date('Ym');
+        $seq = $this->nextNumber('work_order', $clean, $yearMonth, 4);
+
+        return sprintf('WO-%s-%d%s', $clean, $yearMonth, $seq);
+    }
+
+    public function nextSuratJalanCode(string $plantCode): string
+    {
+        $clean = strtoupper(preg_replace('/[^A-Z0-9]/', '', $plantCode) ?? 'PLANT');
+        $clean = substr($clean, -8);
+        $yearMonth = (int) date('Ym');
+        $seq = $this->nextNumber('surat_jalan', $clean, $yearMonth, 4);
+
+        return sprintf('SJ-%s-%d%s', $clean, $yearMonth, $seq);
+    }
+
+    public function nextProductCode(string $category): string
+    {
+        $cat = strtoupper(substr(preg_replace('/[^A-Z0-9]/', '', $category) ?? 'GEN', 0, 4));
+        $seq = $this->nextNumber('product', $cat, null, 3);
+
+        return sprintf('PRD-%s-%s', $cat, $seq);
+    }
+
     /**
      * Branch region segment from BR-{REGION}-{NN}.
      */

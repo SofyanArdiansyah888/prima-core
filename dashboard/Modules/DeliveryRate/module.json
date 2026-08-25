@@ -1,0 +1,11 @@
+{
+    "name": "DeliveryRate",
+    "alias": "deliveryrate",
+    "description": "",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\DeliveryRate\\Providers\\DeliveryRateServiceProvider"
+    ],
+    "files": []
+}

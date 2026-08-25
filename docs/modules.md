@@ -29,6 +29,46 @@
 - Pages: `resources/js/pages/modules/user/{index,form}.tsx`
 - Sync: `batching_plant_ids[]` → pivot `batching_plant_user`
 
+## Product
+
+- Routes: `/master/products`
+- Controller: `Modules\Product\Http\Controllers\ProductController`
+- Model: `Modules\Product\Models\Product`
+- Pages: `resources/js/pages/modules/product/{index,form}.tsx`
+- Fitur: Manajemen katalog ready mix & semen, setting kapasitas batas armada (`max_trip_capacity`), dan aturan penggabungan muatan (`allow_combined_delivery`).
+
+## DeliveryRate
+
+- Routes: `/master/delivery-rates`, `POST /api/delivery-rates/calculate-nearest`
+- Controller: `Modules\DeliveryRate\Http\Controllers\DeliveryRateController`
+- Model: `Modules\DeliveryRate\Models\PlantDeliveryRate`
+- Service: `Modules\DeliveryRate\Services\PlantDistanceService` (Haversine distance & rate calculation)
+- Pages: `resources/js/pages/modules/delivery-rate/{index,form}.tsx`
+
+## Order
+
+- Routes: `/sales/orders`
+- Controller: `Modules\Order\Http\Controllers\OrderController`
+- Model: `Modules\Order\Models\Order`, `Modules\Order\Models\OrderItem`
+- Pages: `resources/js/pages/modules/order/{index,form,show}.tsx`
+- Fitur: Sales Order pemesanan, auto-select batching plant terdekat, hitung ongkir otomatis, tracking pemenuhan per item.
+
+## WorkOrder
+
+- Routes: `/production/work-orders`
+- Controller: `Modules\WorkOrder\Http\Controllers\WorkOrderController`
+- Model: `Modules\WorkOrder\Models\WorkOrder`
+- Pages: `resources/js/pages/modules/work-order/{index,form,show}.tsx`
+- Fitur: Surat Perintah Kerja (SPK) produksi berbasis Sales Order, penjadwalan batching, formula resep mix design, dan slump target.
+
+## Dispatch
+
+- Routes: `/dispatch/surat-jalan`, `/dispatch/surat-jalan/{uuid}/print`
+- Controller: `Modules\Dispatch\Http\Controllers\DispatchController`
+- Model: `Modules\Dispatch\Models\SuratJalan`, `Modules\Dispatch\Models\SuratJalanItem`
+- Pages: `resources/js/pages/modules/dispatch/{index,form,show,print}.tsx`
+- Fitur: Ritase armada, jembatan timbang (gross/tare/netto), telematics IoT, partial delivery, multi-drop combined customer, dan cetak Surat Jalan resmi Tonasa.
+
 ## Core app
 
 - Dashboard: `App\Http\Controllers\DashboardController` → `pages/dashboard.tsx`

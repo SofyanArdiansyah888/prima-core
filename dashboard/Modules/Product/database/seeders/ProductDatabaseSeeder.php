@@ -1,0 +1,166 @@
+<?php
+
+namespace Modules\Product\Database\Seeders;
+
+use Illuminate\Database\Seeder;
+use Modules\Product\Models\Product;
+
+class ProductDatabaseSeeder extends Seeder
+{
+    public function run(): void
+    {
+        $products = [
+            [
+                'code' => 'RM-K175',
+                'name' => 'Ready Mix Beton Mutu K-175',
+                'category' => 'readymix',
+                'unit' => 'm³',
+                'base_price' => 780000,
+                'max_trip_capacity' => 7.00,
+                'allow_combined_delivery' => false,
+                'min_order' => 3,
+                'slump' => '12 ± 2 cm',
+                'tag' => 'Non-Struktural',
+                'recommended_for' => 'Lantai Kerja & Pondasi Ringan',
+                'description' => 'Beton non-struktural ideal untuk pembentukan lantai kerja (lean concrete), jalan lingkungan ringan, dan pengisian dasar.',
+                'specs' => ['fcMpa' => '14.5 MPa', 'aggregateSize' => '20 mm', 'settingTime' => '3 - 4 Jam', 'cementBrand' => 'Semen Tonasa PCC'],
+                'is_active' => true,
+            ],
+            [
+                'code' => 'RM-K225',
+                'name' => 'Ready Mix Beton Mutu K-225',
+                'category' => 'readymix',
+                'unit' => 'm³',
+                'base_price' => 840000,
+                'max_trip_capacity' => 7.00,
+                'allow_combined_delivery' => false,
+                'min_order' => 3,
+                'slump' => '12 ± 2 cm',
+                'tag' => 'Perumahan',
+                'recommended_for' => 'Rumah Tinggal & Ruko 2 Lantai',
+                'description' => 'Beton standar struktural kelas II untuk dak lantai perumahan, sloof, kolom, dan ring balk ruko.',
+                'specs' => ['fcMpa' => '18.7 MPa', 'aggregateSize' => '20 mm', 'settingTime' => '3.5 - 4.5 Jam', 'cementBrand' => 'Semen Tonasa PCC'],
+                'is_active' => true,
+            ],
+            [
+                'code' => 'RM-K300',
+                'name' => 'Ready Mix Beton Mutu K-300',
+                'category' => 'readymix',
+                'unit' => 'm³',
+                'base_price' => 890000,
+                'max_trip_capacity' => 7.00,
+                'allow_combined_delivery' => false,
+                'min_order' => 3,
+                'slump' => '12 ± 2 cm',
+                'tag' => 'Terpopuler',
+                'recommended_for' => 'Pelat Lantai, Kolom Utama, & Jalan Desa',
+                'description' => 'Beton struktural favorit dengan daya tekan tinggi untuk gedung bertingkat, slab lantai, dan perkerasan kaku.',
+                'specs' => ['fcMpa' => '24.9 MPa', 'aggregateSize' => '20 mm', 'settingTime' => '3.5 - 5 Jam', 'cementBrand' => 'Semen Tonasa Type I / PCC'],
+                'is_active' => true,
+            ],
+            [
+                'code' => 'RM-K350',
+                'name' => 'Ready Mix Beton Mutu K-350',
+                'category' => 'readymix',
+                'unit' => 'm³',
+                'base_price' => 940000,
+                'max_trip_capacity' => 7.00,
+                'allow_combined_delivery' => false,
+                'min_order' => 5,
+                'slump' => '12 ± 2 cm',
+                'tag' => 'Heavy Duty',
+                'recommended_for' => 'Jalan Rigid, Toll Road, & Kawasan Industri',
+                'description' => 'Didesain khusus untuk struktur yang menahan lalu lintas beban berat, pergudangan, dan jalan tol rigid pavement.',
+                'specs' => ['fcMpa' => '29.0 MPa', 'aggregateSize' => '20 mm', 'settingTime' => '4 - 5 Jam', 'cementBrand' => 'Semen Tonasa OPC Type I'],
+                'is_active' => true,
+            ],
+            [
+                'code' => 'RM-K500',
+                'name' => 'Ready Mix Beton Mutu K-500 (High Strength)',
+                'category' => 'readymix',
+                'unit' => 'm³',
+                'base_price' => 1180000,
+                'max_trip_capacity' => 7.00,
+                'allow_combined_delivery' => false,
+                'min_order' => 6,
+                'slump' => '14 ± 2 cm',
+                'tag' => 'Ultra Strength',
+                'recommended_for' => 'High-Rise Building, Pre-stressed Girder',
+                'description' => 'Beton kekuatan ultra-tinggi untuk gedung tinggi >15 lantai dan girder jembatan prategang.',
+                'specs' => ['fcMpa' => '41.5 MPa', 'aggregateSize' => '15 mm', 'settingTime' => '4.5 - 6 Jam', 'cementBrand' => 'Semen Tonasa High Early'],
+                'is_active' => true,
+            ],
+            [
+                'code' => 'ST-OPC-50KG',
+                'name' => 'Semen Tonasa OPC Type I (50 kg/Sak)',
+                'category' => 'cement',
+                'unit' => 'Sak',
+                'base_price' => 78000,
+                'max_trip_capacity' => 200.00,
+                'allow_combined_delivery' => true, // Bisa gabung customer A & B dalam 1 truk flatbed
+                'min_order' => 20,
+                'slump' => null,
+                'tag' => 'Semen Tonasa',
+                'recommended_for' => 'Konstruksi Umum, Pondasi, Kolom, Beton Struktural',
+                'description' => 'Semen Portland Ordinary tipe I produksi PT Semen Tonasa (SIG). Kuat tekan tinggi untuk pekerjaan struktural umum.',
+                'specs' => ['type' => 'OPC Type I (SNI 15-2049)', 'strengthClass' => '52.5 MPa (28 Hari)', 'packSize' => '50 kg / Sak', 'origin' => 'Pabrik Semen Tonasa, Pangkep'],
+                'is_active' => true,
+            ],
+            [
+                'code' => 'ST-PCC-50KG',
+                'name' => 'Semen Tonasa PCC (50 kg/Sak)',
+                'category' => 'cement',
+                'unit' => 'Sak',
+                'base_price' => 73000,
+                'max_trip_capacity' => 200.00,
+                'allow_combined_delivery' => true,
+                'min_order' => 20,
+                'slump' => null,
+                'tag' => 'Semen Tonasa',
+                'recommended_for' => 'Plesteran, Pasangan Bata, Dak, Pekerjaan Finishing',
+                'description' => 'Semen Portland Komposit (PCC) Semen Tonasa dengan hidrasi lebih lambat & panas rendah.',
+                'specs' => ['type' => 'PCC (SNI 7064)', 'strengthClass' => '42.5 MPa (28 Hari)', 'packSize' => '50 kg / Sak'],
+                'is_active' => true,
+            ],
+            [
+                'code' => 'ST-BULK-300T',
+                'name' => 'Semen Curah Tonasa OPC Type I (Bulk)',
+                'category' => 'cement',
+                'unit' => 'Ton',
+                'base_price' => 1250000,
+                'max_trip_capacity' => 300.00, // Limitasi 300 Ton per ritase kapal/truk bulk
+                'allow_combined_delivery' => false,
+                'min_order' => 50,
+                'slump' => null,
+                'tag' => 'Semen Curah',
+                'recommended_for' => 'Proyek Skala Besar, Batching Plant, Precast Manufacturer',
+                'description' => 'Semen Tonasa curah (bulk) didistribusikan via truk kapsul/tangki khusus untuk kebutuhan batching plant dan infrastruktur masif.',
+                'specs' => ['type' => 'OPC Type I Curah', 'siloStorage' => 'Tonasa Port Terminal', 'transport' => 'Bulk Capsule Truck (Max 300 Ton/Rit)'],
+                'is_active' => true,
+            ],
+            [
+                'code' => 'MORTAR-BI-40KG',
+                'name' => 'Mortar Beton Instan Semen Tonasa (40 kg/Sak)',
+                'category' => 'mortar',
+                'unit' => 'Sak',
+                'base_price' => 68000,
+                'max_trip_capacity' => 250.00,
+                'allow_combined_delivery' => true,
+                'min_order' => 10,
+                'slump' => null,
+                'tag' => 'Beton Instan',
+                'recommended_for' => 'Pasangan Batako, Pemasangan Keramik, Plesteran Presisi',
+                'description' => 'Campuran semen-pasir instan pra-campur berstandar Tonasa Group. Tinggal tambah air di proyek.',
+                'specs' => ['type' => 'Mortar Instan Semen Tonasa', 'composition' => 'Semen PCC + Pasir Silika Graded', 'packSize' => '40 kg / Sak'],
+                'is_active' => true,
+            ],
+        ];
+
+        foreach ($products as $item) {
+            Product::query()->updateOrCreate(
+                ['code' => $item['code']],
+                $item
+            );
+        }
+    }
+}

@@ -1,0 +1,30 @@
+{
+    "name": "nwidart/dispatch",
+    "description": "",
+    "authors": [
+        {
+            "name": "Nicolas Widart",
+            "email": "n.widart@gmail.com"
+        }
+    ],
+    "extra": {
+        "laravel": {
+            "providers": [],
+            "aliases": {
+
+            }
+        }
+    },
+    "autoload": {
+        "psr-4": {
+            "Modules\\Dispatch\\": "app/",
+            "Modules\\Dispatch\\Database\\Factories\\": "database/factories/",
+            "Modules\\Dispatch\\Database\\Seeders\\": "database/seeders/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Modules\\Dispatch\\Tests\\": "tests/"
+        }
+    }
+}
