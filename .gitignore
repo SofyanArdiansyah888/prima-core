@@ -22,3 +22,22 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Env / secrets
+.env
+.env.local
+.env.*.local
+*.pem
+
+# Laravel / PHP
+/dashboard/vendor
+/dashboard/node_modules
+/dashboard/public/build
+/dashboard/public/hot
+/dashboard/storage/*.key
+/dashboard/storage/pail
+/dashboard/bootstrap/cache/*.php
+!/dashboard/bootstrap/cache/.gitignore
+
+# Docker volumes
+/dashboard/docker/mysql-data

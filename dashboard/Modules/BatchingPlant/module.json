@@ -1,0 +1,11 @@
+{
+    "name": "BatchingPlant",
+    "alias": "batchingplant",
+    "description": "",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\BatchingPlant\\Providers\\BatchingPlantServiceProvider"
+    ],
+    "files": []
+}
