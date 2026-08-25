@@ -60,17 +60,53 @@ class DashboardController extends Controller
                 ];
             });
 
+        // Recent orders (5 latest)
         $recentOrders = Order::query()
-            ->with(['batchingPlant:id,name,code', 'items.product:id,name,unit'])
+            ->with(['batchingPlant:id,name,code'])
+            ->select(['id', 'uuid', 'code', 'customer_name', 'customer_type', 'project_title',
+                      'status', 'payment_status', 'total_price', 'batching_plant_id', 'created_at'])
             ->orderByDesc('id')
             ->limit(5)
             ->get();
 
+        // Recent dispatches (5 latest)
         $recentDispatches = SuratJalan::query()
             ->with(['batchingPlant:id,name,code', 'items.product:id,name,unit'])
+            ->select(['id', 'uuid', 'code', 'vehicle_number', 'driver_name', 'status',
+                      'net_weight_kg', 'batching_plant_id', 'created_at'])
             ->orderByDesc('id')
             ->limit(5)
-            ->get();
+            ->get()
+            ->map(function ($sj) {
+                return [
+                    'id' => $sj->id,
+                    'uuid' => $sj->uuid,
+                    'code' => $sj->code,
+                    'vehicle_number' => $sj->vehicle_number,
+                    'driver_name' => $sj->driver_name,
+                    'status' => $sj->status,
+                    'net_weight_kg' => $sj->net_weight_kg,
+                    'plant_name' => $sj->batchingPlant?->name,
+                    'created_at' => $sj->created_at,
+                    'customers' => $sj->items->map(fn($i) => $i->destination_customer_name ?? '')->unique()->values(),
+                ];
+            });
+
+        // Status breakdowns
+        $orderStatusBreakdown = Order::query()
+            ->selectRaw('status, COUNT(*) as count')
+            ->groupBy('status')
+            ->pluck('count', 'status');
+
+        $workOrderStatusBreakdown = WorkOrder::query()
+            ->selectRaw('status, COUNT(*) as count')
+            ->groupBy('status')
+            ->pluck('count', 'status');
+
+        $dispatchStatusBreakdown = SuratJalan::query()
+            ->selectRaw('status, COUNT(*) as count')
+            ->groupBy('status')
+            ->pluck('count', 'status');
 
         return Inertia::render('dashboard', [
             'stats' => [
@@ -81,6 +117,18 @@ class DashboardController extends Controller
                 'workOrders' => WorkOrder::query()->count(),
                 'dispatches' => SuratJalan::query()->count(),
                 'products' => Product::query()->where('is_active', true)->count(),
+                // Status breakdowns
+                'ordersPending' => $orderStatusBreakdown->get('PENDING', 0),
+                'ordersConfirmed' => $orderStatusBreakdown->get('CONFIRMED', 0),
+                'ordersInProduction' => $orderStatusBreakdown->get('IN_PRODUCTION', 0),
+                'ordersCompleted' => $orderStatusBreakdown->get('COMPLETED', 0),
+                'workOrdersScheduled' => $workOrderStatusBreakdown->get('SCHEDULED', 0),
+                'workOrdersInProd' => $workOrderStatusBreakdown->get('IN_PRODUCTION', 0),
+                'workOrdersReadyDispatch' => $workOrderStatusBreakdown->get('READY_FOR_DISPATCH', 0),
+                'dispatchDeparted' => $dispatchStatusBreakdown->get('DEPARTED', 0),
+                'dispatchOnTheWay' => $dispatchStatusBreakdown->get('ON_THE_WAY', 0),
+                'dispatchArrived' => $dispatchStatusBreakdown->get('ARRIVED', 0),
+                'dispatchCompleted' => $dispatchStatusBreakdown->get('COMPLETED', 0),
             ],
             'plants' => $plants,
             'activeDeliveries' => $activeDeliveries,
