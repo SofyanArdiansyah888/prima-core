@@ -5,6 +5,7 @@ import { AuthProvider } from '../data/auth';
 import { CartProvider } from '../data/cart';
 import LoginPage from '../features/auth/LoginPage';
 import RegisterPage from '../features/auth/RegisterPage';
+import ForgotPasswordPage from '../features/auth/ForgotPasswordPage';
 import CartPage from '../features/cart/CartPage';
 import ProductPage from '../features/catalog/ProductPage';
 import CheckoutPage from '../features/checkout/CheckoutPage';
@@ -37,6 +38,7 @@ export default function App() {
             <IonRouterOutlet>
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
+              <Route path="/forgot-password" element={<ForgotPasswordPage />} />
               <Route path="/tabs/*" element={<RequireAuth><TabsPage /></RequireAuth>} />
               <Route path="/product/:uuid" element={<RequireAuth><ProductPage /></RequireAuth>} />
               <Route path="/cart" element={<RequireAuth><CartPage /></RequireAuth>} />

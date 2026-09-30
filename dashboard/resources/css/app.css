@@ -9,13 +9,29 @@
 
 @theme {
     --font-sans:
-        'Instrument Sans', ui-sans-serif, system-ui, sans-serif,
-        'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
-        'Noto Color Emoji';
+        'Plus Jakarta Sans', ui-sans-serif, system-ui, -apple-system,
+        BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-mono:
+        'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+        monospace;
 
     --radius-lg: var(--radius);
     --radius-md: calc(var(--radius) - 2px);
     --radius-sm: calc(var(--radius) - 4px);
+
+    --color-brand: #0c1d37;
+    --color-brand-hover: #162e55;
+    --color-brand-soft: #f1f5f9;
+    --color-brand-line: #cbd5e1;
+
+    --color-accent-red: #d91424;
+    --color-accent-red-soft: #fef2f2;
+    --color-accent-orange: #ea580c;
+    --color-accent-orange-soft: #fff7ed;
+
+    --color-canvas: #f8fafc;
+    --color-surface: #ffffff;
+    --color-ink: #0f172a;
 
     --color-background: var(--background);
     --color-foreground: var(--foreground);
@@ -62,74 +78,93 @@
 }
 
 :root {
-    --background: oklch(0.985 0.005 240);
-    --foreground: oklch(0.16 0.03 260);
-    --card: oklch(1 0 0);
-    --card-foreground: oklch(0.16 0.03 260);
-    --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.16 0.03 260);
-    --primary: oklch(0.48 0.15 155);
-    --primary-foreground: oklch(0.99 0 0);
-    --secondary: oklch(0.95 0.008 240);
-    --secondary-foreground: oklch(0.22 0.03 260);
-    --muted: oklch(0.95 0.008 240);
-    --muted-foreground: oklch(0.48 0.02 250);
-    --accent: oklch(0.96 0.03 155);
-    --accent-foreground: oklch(0.28 0.12 155);
-    --destructive: oklch(0.55 0.22 27);
-    --destructive-foreground: oklch(0.99 0 0);
-    --border: oklch(0.90 0.01 240);
-    --input: oklch(0.90 0.01 240);
-    --ring: oklch(0.52 0.16 155);
-    --chart-1: oklch(0.52 0.16 155);
-    --chart-2: oklch(0.55 0.12 195);
-    --chart-3: oklch(0.42 0.10 250);
-    --chart-4: oklch(0.72 0.15 85);
-    --chart-5: oklch(0.68 0.16 50);
-    --radius: 0.625rem;
-    --sidebar: oklch(0.99 0.003 240);
-    --sidebar-foreground: oklch(0.20 0.03 260);
-    --sidebar-primary: oklch(0.48 0.15 155);
-    --sidebar-primary-foreground: oklch(0.99 0 0);
-    --sidebar-accent: oklch(0.955 0.03 155);
-    --sidebar-accent-foreground: oklch(0.26 0.12 155);
-    --sidebar-border: oklch(0.90 0.01 240);
-    --sidebar-ring: oklch(0.52 0.16 155);
+    --background: #f8fafc;
+    --foreground: #0f172a;
+    --card: #ffffff;
+    --card-foreground: #0f172a;
+    --popover: #ffffff;
+    --popover-foreground: #0f172a;
+    
+    /* PKM Brand Navy Primary */
+    --primary: #0c1d37;
+    --primary-foreground: #ffffff;
+    
+    --secondary: #f1f5f9;
+    --secondary-foreground: #0f172a;
+    --muted: #f1f5f9;
+    --muted-foreground: #64748b;
+    
+    /* PKM Brand Soft Accent */
+    --accent: #f8fafc;
+    --accent-foreground: #0c1d37;
+    
+    /* Semen Tonasa Red Destructive */
+    --destructive: #d91424;
+    --destructive-foreground: #ffffff;
+    
+    --border: #e2e8f0;
+    --input: #e2e8f0;
+    --ring: #0c1d37;
+    
+    --chart-1: #0c1d37;
+    --chart-2: #ea580c;
+    --chart-3: #d91424;
+    --chart-4: #059669;
+    --chart-5: #3b82f6;
+    
+    --radius: 0.75rem;
+    
+    /* PKM Deep Navy Sidebar */
+    --sidebar: #0c1d37;
+    --sidebar-foreground: #f8fafc;
+    --sidebar-primary: #ea580c;
+    --sidebar-primary-foreground: #ffffff;
+    --sidebar-accent: #162e55;
+    --sidebar-accent-foreground: #ffffff;
+    --sidebar-border: rgba(255, 255, 255, 0.10);
+    --sidebar-ring: #ea580c;
 }
 
 .dark {
-    --background: oklch(0.12 0.015 260);
-    --foreground: oklch(0.98 0.005 240);
-    --card: oklch(0.16 0.02 260);
-    --card-foreground: oklch(0.98 0.005 240);
-    --popover: oklch(0.16 0.02 260);
-    --popover-foreground: oklch(0.98 0.005 240);
-    --primary: oklch(0.72 0.16 155);
-    --primary-foreground: oklch(0.12 0.015 260);
-    --secondary: oklch(0.22 0.025 260);
-    --secondary-foreground: oklch(0.98 0.005 240);
-    --muted: oklch(0.20 0.02 260);
-    --muted-foreground: oklch(0.65 0.02 250);
-    --accent: oklch(0.22 0.04 155);
-    --accent-foreground: oklch(0.92 0.08 155);
-    --destructive: oklch(0.48 0.18 25);
-    --destructive-foreground: oklch(0.98 0.005 240);
-    --border: oklch(0.24 0.02 260);
-    --input: oklch(0.24 0.02 260);
-    --ring: oklch(0.72 0.16 155);
-    --chart-1: oklch(0.72 0.16 155);
-    --chart-2: oklch(0.68 0.14 195);
-    --chart-3: oklch(0.58 0.10 250);
-    --chart-4: oklch(0.76 0.16 85);
-    --chart-5: oklch(0.72 0.16 50);
-    --sidebar: oklch(0.10 0.015 260);
-    --sidebar-foreground: oklch(0.98 0.005 240);
-    --sidebar-primary: oklch(0.72 0.16 155);
-    --sidebar-primary-foreground: oklch(0.12 0.015 260);
-    --sidebar-accent: oklch(0.20 0.04 155);
-    --sidebar-accent-foreground: oklch(0.92 0.08 155);
-    --sidebar-border: oklch(0.22 0.02 260);
-    --sidebar-ring: oklch(0.72 0.16 155);
+    --background: #081324;
+    --foreground: #f8fafc;
+    --card: #0c1d37;
+    --card-foreground: #f8fafc;
+    --popover: #0c1d37;
+    --popover-foreground: #f8fafc;
+    
+    --primary: #ea580c;
+    --primary-foreground: #ffffff;
+    
+    --secondary: #162e55;
+    --secondary-foreground: #f8fafc;
+    --muted: #162e55;
+    --muted-foreground: #94a3b8;
+    
+    --accent: #162e55;
+    --accent-foreground: #ffffff;
+    
+    --destructive: #d91424;
+    --destructive-foreground: #ffffff;
+    
+    --border: #1e3a5f;
+    --input: #1e3a5f;
+    --ring: #ea580c;
+    
+    --chart-1: #38bdf8;
+    --chart-2: #ea580c;
+    --chart-3: #d91424;
+    --chart-4: #10b981;
+    --chart-5: #a855f7;
+    
+    --sidebar: #060e1b;
+    --sidebar-foreground: #f8fafc;
+    --sidebar-primary: #ea580c;
+    --sidebar-primary-foreground: #ffffff;
+    --sidebar-accent: #0f2445;
+    --sidebar-accent-foreground: #ffffff;
+    --sidebar-border: rgba(255, 255, 255, 0.08);
+    --sidebar-ring: #ea580c;
 }
 
 @layer base {
@@ -138,7 +173,9 @@
     }
 
     body {
-        @apply bg-background text-foreground antialiased selection:bg-emerald-500/20 selection:text-emerald-900 dark:selection:text-emerald-200;
+        @apply bg-background text-foreground antialiased selection:bg-[#ea580c]/20 selection:text-[#0c1d37] dark:selection:text-white;
+        font-family: var(--font-sans);
     }
 }
+
 

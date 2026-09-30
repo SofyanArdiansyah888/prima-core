@@ -187,33 +187,33 @@ export default function Dashboard({
                 <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
                     <div className="space-y-1.5">
                         <div className="flex items-center gap-2">
-                            <span className="inline-flex items-center gap-1.5 rounded-md bg-emerald-500/10 px-2 py-0.5 text-[11px] font-semibold tracking-wider text-emerald-700 uppercase dark:text-emerald-300">
+                            <span className="inline-flex items-center gap-1.5 rounded-md bg-[#ea580c]/10 border border-[#ea580c]/20 px-2 py-0.5 text-[10px] font-extrabold tracking-wider text-[#ea580c] uppercase">
                                 Tonasa Ready-Mix Network
                             </span>
-                            <span className="text-xs text-slate-400">·</span>
-                            <span className="text-xs text-slate-500 dark:text-slate-400">PT Prima Karya Manunggal</span>
+                            <span className="text-xs text-slate-300">·</span>
+                            <span className="text-xs text-slate-500 font-medium dark:text-slate-400">PT Prima Karya Manunggal</span>
                         </div>
-                        <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl dark:text-white">
+                        <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl dark:text-white">
                             Dashboard Operasional
                         </h1>
-                        <p className="max-w-2xl text-sm text-slate-600 dark:text-slate-400">
-                            Pantau pesanan, produksi batching, dan pengantaran material secara terpadu.
+                        <p className="max-w-2xl text-xs text-slate-500 dark:text-slate-400">
+                            Pantau pesanan pelanggan, monitoring produksi batching plant, dan pengantaran armada mixer secara real-time.
                         </p>
                     </div>
-                    <div className="flex items-center gap-2.5">
-                        <Button asChild size="sm" variant="outline" className="h-9">
+                    <div className="flex items-center gap-2">
+                        <Button asChild size="sm" variant="outline" className="h-9 rounded-xl border-slate-200 text-xs font-bold shadow-2xs">
                             <Link href="/sales/orders/create">
-                                <Plus className="size-4" /> Buat SO
+                                <Plus className="size-3.5 mr-1" /> Buat SO
                             </Link>
                         </Button>
-                        <Button asChild size="sm" className="h-9 bg-purple-700 font-medium text-white shadow-xs hover:bg-purple-800 dark:bg-purple-600">
+                        <Button asChild size="sm" className="h-9 rounded-xl bg-[#0c1d37] hover:bg-[#162e55] font-bold text-white shadow-md text-xs shadow-[#0c1d37]/15">
                             <Link href="/production/work-orders/create">
-                                <Plus className="size-4" /> Terbitkan SPK
+                                <Plus className="size-3.5 mr-1 text-amber-400" /> Terbitkan SPK
                             </Link>
                         </Button>
-                        <Button asChild size="sm" className="h-9 bg-emerald-700 font-medium text-white shadow-xs hover:bg-emerald-800 dark:bg-emerald-600">
+                        <Button asChild size="sm" className="h-9 rounded-xl bg-[#ea580c] hover:bg-[#c2410c] font-bold text-white shadow-md text-xs shadow-[#ea580c]/15">
                             <Link href="/dispatch/surat-jalan/create">
-                                <Plus className="size-4" /> Buat SJ
+                                <Plus className="size-3.5 mr-1" /> Terbitkan SJ
                             </Link>
                         </Button>
                     </div>
@@ -372,21 +372,24 @@ export default function Dashboard({
 
                 {/* Activity Banner — Active ops summary */}
                 {(activeOrdersCount > 0 || activeWOCount > 0 || activeDispatchCount > 0) && (
-                    <div className="flex flex-wrap items-center gap-3 rounded-xl border border-emerald-200/80 bg-emerald-50/60 px-5 py-3.5 dark:border-emerald-900/60 dark:bg-emerald-950/30">
-                        <span className="text-xs font-bold text-emerald-800 dark:text-emerald-300 uppercase tracking-wider">Operasi Aktif Saat Ini:</span>
+                    <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-slate-200/80 bg-white p-3.5 shadow-2xs dark:border-slate-800 dark:bg-slate-900">
+                        <span className="text-xs font-black text-[#0c1d37] dark:text-white uppercase tracking-wider flex items-center gap-1.5">
+                            <span className="size-2 rounded-full bg-[#ea580c] animate-pulse"></span>
+                            Operasi Lapangan Berjalan:
+                        </span>
                         {activeOrdersCount > 0 && (
-                            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-700/10 border border-emerald-700/20 px-3 py-0.5 text-xs font-semibold text-emerald-800 dark:text-emerald-300">
-                                <ShoppingCart className="size-3" /> {activeOrdersCount} SO Berjalan
+                            <span className="inline-flex items-center gap-1.5 rounded-xl bg-blue-50 border border-blue-200/80 px-3 py-1 text-xs font-bold text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800">
+                                <ShoppingCart className="size-3 text-blue-600" /> {activeOrdersCount} SO Diproses
                             </span>
                         )}
                         {activeWOCount > 0 && (
-                            <span className="inline-flex items-center gap-1.5 rounded-full bg-purple-700/10 border border-purple-700/20 px-3 py-0.5 text-xs font-semibold text-purple-800 dark:text-purple-300">
-                                <FileSpreadsheet className="size-3" /> {activeWOCount} SPK Aktif
+                            <span className="inline-flex items-center gap-1.5 rounded-xl bg-purple-50 border border-purple-200/80 px-3 py-1 text-xs font-bold text-purple-800 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-800">
+                                <FileSpreadsheet className="size-3 text-purple-600" /> {activeWOCount} SPK Batching
                             </span>
                         )}
                         {activeDispatchCount > 0 && (
-                            <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-700/10 border border-blue-700/20 px-3 py-0.5 text-xs font-semibold text-blue-800 dark:text-blue-300">
-                                <Truck className="size-3" /> {activeDispatchCount} Armada di Lapangan
+                            <span className="inline-flex items-center gap-1.5 rounded-xl bg-amber-50 border border-amber-200/80 px-3 py-1 text-xs font-bold text-amber-900 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800">
+                                <Truck className="size-3 text-[#ea580c]" /> {activeDispatchCount} Armada di Jalan
                             </span>
                         )}
                     </div>

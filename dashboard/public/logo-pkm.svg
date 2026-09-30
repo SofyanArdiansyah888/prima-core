@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" width="100%" height="100%">
+  <!-- Outer Navy Circle -->
+  <circle cx="250" cy="250" r="240" fill="#0c1d37" />
+  <circle cx="250" cy="250" r="230" fill="none" stroke="#ffffff" stroke-width="5" />
+  
+  <!-- Red Ring Band -->
+  <circle cx="250" cy="250" r="215" fill="#d91424" stroke="#0c1d37" stroke-width="4" />
+  
+  <!-- Text on Path: PT. PRIMA KARYA MANUNGGAL -->
+  <defs>
+    <!-- Top Arc Path -->
+    <path id="topArc" d="M 75,250 A 175,175 0 0,1 425,250" fill="none" />
+    <!-- Bottom Arc Path -->
+    <path id="bottomArc" d="M 425,250 A 175,175 0 0,1 75,250" fill="none" />
+  </defs>
+
+  <text fill="#ffffff" font-family="'Arial Black', 'Impact', sans-serif" font-weight="900" font-size="25" letter-spacing="2.5">
+    <textPath href="#topArc" startOffset="50%" text-anchor="middle">
+      PT. PRIMA KARYA MANUNGGAL
+    </textPath>
+  </text>
+
+  <text fill="#ffffff" font-family="'Arial Black', 'Impact', sans-serif" font-weight="900" font-size="27" letter-spacing="4">
+    <textPath href="#bottomArc" startOffset="50%" text-anchor="middle">
+      &#9733; SEMEN TONASA &#9733;
+    </textPath>
+  </text>
+
+  <!-- Inner Orange Circle -->
+  <circle cx="250" cy="250" r="140" fill="#ea580c" stroke="#ffffff" stroke-width="6" />
+  
+  <!-- White Horizontal Stripes in Orange Circle -->
+  <line x1="113" y1="185" x2="387" y2="185" stroke="#ffffff" stroke-width="7" />
+  <line x1="113" y1="315" x2="387" y2="315" stroke="#ffffff" stroke-width="7" />
+  
+  <!-- Center White Pill/Box for PKM -->
+  <rect x="110" y="193" width="280" height="114" fill="#ffffff" rx="10" />
+  
+  <!-- PKM Navy Text -->
+  <text x="250" y="280" font-family="'Arial Black', 'Impact', sans-serif" font-weight="900" font-size="82" fill="#0c1d37" text-anchor="middle" letter-spacing="4">PKM</text>
+</svg>

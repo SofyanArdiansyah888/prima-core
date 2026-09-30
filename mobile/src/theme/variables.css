@@ -29,6 +29,14 @@ ion-tab-button {
 ion-content.pkm-screen::part(scroll) {
   display: flex;
   flex-direction: column;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+ion-content::part(scroll)::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
 
 .pkm-frame {
@@ -70,4 +78,15 @@ button {
   background-color: transparent;
   color: inherit;
   font: inherit;
+}
+
+* {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+*::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }

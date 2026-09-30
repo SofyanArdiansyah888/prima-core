@@ -65,7 +65,7 @@ export default function DeliveryRateIndex({
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                     <div className="space-y-1">
                         <div className="flex items-center gap-2">
-                            <span className="inline-flex items-center rounded-md bg-emerald-500/10 px-2 py-0.5 text-[11px] font-semibold tracking-wider text-emerald-700 uppercase dark:text-emerald-300">
+                            <span className="inline-flex items-center rounded-md bg-[#ea580c]/10 border border-[#ea580c]/20 px-2 py-0.5 text-[10px] font-extrabold tracking-wider text-[#ea580c] uppercase">
                                 Logistik & Pengantaran PKM
                             </span>
                         </div>
@@ -76,7 +76,7 @@ export default function DeliveryRateIndex({
                             Konfigurasi matriks ongkos kirim tiap Batching Plant berdasarkan jarak kilometer dan kategori produk.
                         </p>
                     </div>
-                    <Button asChild size="sm" className="h-9 bg-emerald-700 font-medium text-white shadow-xs hover:bg-emerald-800 dark:bg-emerald-600 dark:hover:bg-emerald-700">
+                    <Button asChild size="sm" className="h-9 bg-[#0c1d37] font-medium text-white shadow-xs hover:bg-[#162e55] dark:bg-slate-800 dark:hover:bg-slate-700">
                         <Link href="/master/delivery-rates/create">
                             <Plus className="size-4" /> Tambah Tarif Plant
                         </Link>

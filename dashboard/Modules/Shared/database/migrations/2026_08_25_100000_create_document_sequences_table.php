@@ -12,7 +12,7 @@ return new class extends Migration
             $table->id();
             $table->string('entity', 64);
             $table->string('scope', 64);
-            $table->unsignedSmallInteger('year')->nullable();
+            $table->unsignedInteger('year')->nullable();
             $table->unsignedInteger('last_number')->default(0);
             $table->timestamps();
 

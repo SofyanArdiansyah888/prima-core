@@ -98,7 +98,7 @@ export default function PlantIndex({
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                     <div className="space-y-1">
                         <div className="flex items-center gap-2">
-                            <span className="inline-flex items-center rounded-md bg-emerald-500/10 px-2 py-0.5 text-[11px] font-semibold tracking-wider text-emerald-700 uppercase dark:text-emerald-300">
+                            <span className="inline-flex items-center rounded-md bg-[#ea580c]/10 border border-[#ea580c]/20 px-2 py-0.5 text-[10px] font-extrabold tracking-wider text-[#ea580c] uppercase">
                                 Master Data · Unit Produksi
                             </span>
                         </div>
@@ -109,7 +109,7 @@ export default function PlantIndex({
                             Unit produksi beton ready-mix terdaftar. Format kode hierarkis: <span className="font-mono text-xs font-semibold text-slate-800 dark:text-slate-200">[BR_CODE]-BP-NN</span>
                         </p>
                     </div>
-                    <Button asChild size="sm" className="h-9 bg-emerald-700 font-medium text-white shadow-xs hover:bg-emerald-800 dark:bg-emerald-600 dark:hover:bg-emerald-700">
+                    <Button asChild size="sm" className="h-9 bg-[#0c1d37] font-medium text-white shadow-xs hover:bg-[#162e55] dark:bg-slate-800 dark:hover:bg-slate-700">
                         <Link href="/master/batching-plants/create">
                             <Plus className="size-4" /> Tambah Plant
                         </Link>
@@ -248,7 +248,7 @@ export default function PlantIndex({
                                         disabled={!link.url}
                                         className={`h-8 px-3 text-xs ${
                                             link.active
-                                                ? 'bg-emerald-700 text-white hover:bg-emerald-800 dark:bg-emerald-600'
+                                                ? 'bg-[#0c1d37] text-white hover:bg-[#162e55]'
                                                 : 'border-slate-200 dark:border-slate-800'
                                         }`}
                                     >

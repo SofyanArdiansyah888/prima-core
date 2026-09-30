@@ -8,6 +8,10 @@
   --color-brand-hover: var(--pkm-brand-hover);
   --color-brand-soft: var(--pkm-brand-soft);
   --color-brand-line: var(--pkm-brand-line);
+  --color-accent-red: var(--pkm-accent-red);
+  --color-accent-red-soft: var(--pkm-accent-red-soft);
+  --color-accent-orange: var(--pkm-accent-orange);
+  --color-accent-orange-soft: var(--pkm-accent-orange-soft);
   --color-canvas: var(--pkm-canvas);
   --color-surface: var(--pkm-surface);
   --color-ink: var(--pkm-ink);
@@ -25,4 +29,57 @@
   --font-display: var(--pkm-font-display);
   --font-mono: var(--pkm-font-mono);
   --radius-card: var(--pkm-radius-card);
+}
+
+@layer base {
+  input,
+  button,
+  textarea,
+  select {
+    border: none;
+    outline: none;
+    box-sizing: border-box;
+    font-family: inherit;
+  }
+
+  input:focus,
+  button:focus,
+  textarea:focus,
+  select:focus {
+    outline: none;
+  }
+
+  /* Global hide scrollbar while preserving scroll functionality */
+  * {
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+  }
+
+  *::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+  }
+
+  ion-content::part(scroll) {
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+  }
+
+  ion-content::part(scroll)::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+  }
+}
+
+.no-scrollbar {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
