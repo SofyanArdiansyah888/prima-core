@@ -1,0 +1,11 @@
+{
+    "name": "Customer",
+    "alias": "customer",
+    "description": "Akun pelanggan aplikasi pemesanan",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\Customer\\Providers\\CustomerServiceProvider"
+    ],
+    "files": []
+}

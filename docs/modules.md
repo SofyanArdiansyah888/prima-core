@@ -29,6 +29,14 @@
 - Pages: `resources/js/pages/modules/user/{index,form}.tsx`
 - Sync: `batching_plant_ids[]` → pivot `batching_plant_user`
 
+## Customer
+
+- Path: `dashboard/Modules/Customer`
+- Model: `Modules\Customer\Models\Customer` (terpisah dari user staf)
+- API: `/api/customer/v1` — daftar, masuk, profil, katalog, quote ongkir, buat/lacak/batal pesanan B2C
+- App: [`mobile/`](../mobile/) Ionic React + Tailwind
+- Seed lokal: `081300000001` / `password`
+
 ## Product
 
 - Routes: `/master/products`
@@ -52,6 +60,7 @@
 - Model: `Modules\Order\Models\Order`, `Modules\Order\Models\OrderItem`
 - Pages: `resources/js/pages/modules/order/{index,form,show}.tsx`
 - Fitur: Sales Order pemesanan, auto-select batching plant terdekat, hitung ongkir otomatis, tracking pemenuhan per item.
+- Pesanan aplikasi pelanggan masuk ke tabel yang sama (`customer_id`, `customer_type = B2C`) lewat `PlaceOrder`.
 
 ## WorkOrder
 

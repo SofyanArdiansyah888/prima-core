@@ -14,7 +14,7 @@ Lihat dokumentasi root:
 
 ```bash
 cp .env.example .env
-# set MySQL remote + php artisan key:generate
+# set kredensial PostgreSQL remote + php artisan key:generate
 composer install && npm install
 php artisan migrate --seed
 composer run dev

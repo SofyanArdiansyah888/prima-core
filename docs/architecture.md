@@ -30,8 +30,8 @@ Autoload modul via Composer merge-plugin (`Modules/*/composer.json`).
 ## Docker
 
 - `app` (php-fpm), `nginx`, `mailpit`
-- MySQL **tidak** di compose default (remote `.env`)
-- Profile `local-db` untuk MySQL container opsional
+- PostgreSQL **tidak** di compose default (remote `.env`, host `72.61.209.61`)
+- Profile `local-db` untuk container PostgreSQL opsional
 
 ## Frontend
 

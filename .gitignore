@@ -40,4 +40,4 @@ dist-ssr
 !/dashboard/bootstrap/cache/.gitignore
 
 # Docker volumes
-/dashboard/docker/mysql-data
+/dashboard/docker/postgres-data

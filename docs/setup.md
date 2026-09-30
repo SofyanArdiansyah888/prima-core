@@ -3,7 +3,7 @@
 ## Prasyarat
 
 - PHP 8.3+, Composer, Node 20+/22+, Docker (opsional)
-- MySQL remote (server online) — whitelist IP mesin/Docker Anda
+- PostgreSQL remote (server online) — whitelist IP mesin/Docker Anda
 
 ## 1. Env
 
@@ -16,16 +16,16 @@ php artisan key:generate
 Isi di `.env`:
 
 ```env
-DB_CONNECTION=mysql
-DB_HOST=<host-online>
-DB_PORT=3306
+DB_CONNECTION=pgsql
+DB_HOST=72.61.209.61
+DB_PORT=5432
 DB_DATABASE=<nama_db>
 DB_USERNAME=<user>
 DB_PASSWORD=<password>
 APP_URL=http://localhost:8080
 ```
 
-Lokal tanpa MySQL: sementara `DB_CONNECTION=sqlite` + file `database/database.sqlite` (sudah dipakai bootstrap awal).
+Lokal tanpa PostgreSQL: sementara `DB_CONNECTION=sqlite` + file `database/database.sqlite` (sudah dipakai bootstrap awal).
 
 ## 2. Install & migrate
 
@@ -53,11 +53,11 @@ docker compose up -d --build
 docker compose exec app php artisan migrate --seed
 ```
 
-MySQL lokal darurat:
+PostgreSQL lokal darurat:
 
 ```bash
 docker compose --profile local-db up -d
-# set DB_HOST=mysql di .env
+# set DB_HOST=postgres di .env
 ```
 
 ## Seed akun

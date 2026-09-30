@@ -1,4 +1,4 @@
-# PKM Dashboard — Docker (app runtime). MySQL default = remote via .env
+# PKM Dashboard — Docker (app runtime). PostgreSQL default = remote via .env
 services:
   app:
     build:
@@ -40,22 +40,21 @@ services:
     networks:
       - pkm
 
-  # Optional offline MySQL — not the default path
+  # Optional offline PostgreSQL — not the default path
   # docker compose --profile local-db up -d
-  mysql:
+  postgres:
     profiles: ["local-db"]
-    image: mysql:8.4
-    container_name: pkm-dashboard-mysql
+    image: postgres:16
+    container_name: pkm-dashboard-postgres
     restart: unless-stopped
     environment:
-      MYSQL_DATABASE: ${DB_DATABASE:-pkm_dashboard}
-      MYSQL_USER: ${DB_USERNAME:-pkm}
-      MYSQL_PASSWORD: ${DB_PASSWORD:-secret}
-      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root}
+      POSTGRES_DB: ${DB_DATABASE:-pkm_dashboard}
+      POSTGRES_USER: ${DB_USERNAME:-pkm}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-secret}
     ports:
-      - "${DB_PUBLISH_PORT:-3306}:3306"
+      - "${DB_PUBLISH_PORT:-5432}:5432"
     volumes:
-      - ./docker/mysql-data:/var/lib/mysql
+      - ./docker/postgres-data:/var/lib/postgresql/data
     networks:
       - pkm
 

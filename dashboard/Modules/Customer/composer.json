@@ -1,0 +1,23 @@
+{
+    "name": "nwidart/customer",
+    "description": "Customer accounts for the ordering app",
+    "authors": [
+        {
+            "name": "PKM",
+            "email": "admin@pkm.test"
+        }
+    ],
+    "extra": {
+        "laravel": {
+            "providers": [],
+            "aliases": {}
+        }
+    },
+    "autoload": {
+        "psr-4": {
+            "Modules\\Customer\\": "app/",
+            "Modules\\Customer\\Database\\Factories\\": "database/factories/",
+            "Modules\\Customer\\Database\\Seeders\\": "database/seeders/"
+        }
+    }
+}

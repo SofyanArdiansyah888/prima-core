@@ -1,0 +1,24 @@
+:root {
+  --pkm-brand: #047857;
+  --pkm-brand-rgb: 4, 120, 87;
+  --pkm-brand-hover: #065f46;
+  --pkm-brand-soft: #ecfdf5;
+  --pkm-brand-line: #a7f3d0;
+  --pkm-canvas: #fafaf9;
+  --pkm-surface: #ffffff;
+  --pkm-ink: #1c1917;
+  --pkm-muted: #78716c;
+  --pkm-subtle: #a8a29e;
+  --pkm-line: #e7e5e4;
+  --pkm-fill: #f5f5f4;
+  --pkm-amber-soft: #fffbeb;
+  --pkm-amber-ink: #92400e;
+  --pkm-amber-line: #fde68a;
+  --pkm-danger: #dc2626;
+  --pkm-danger-soft: #fef2f2;
+  --pkm-danger-line: #fecaca;
+  --pkm-radius-card: 12px;
+  --pkm-font-sans: "Source Sans 3", "Segoe UI", sans-serif;
+  --pkm-font-display: "Source Serif 4", Georgia, serif;
+  --pkm-font-mono: "IBM Plex Mono", ui-monospace, monospace;
+}

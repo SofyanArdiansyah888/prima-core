@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Modules\BatchingPlant\Models\BatchingPlant;
+use Modules\Customer\Models\Customer;
 use Modules\Shared\Concerns\HasUuid;
 use Modules\WorkOrder\Models\WorkOrder;
 
@@ -15,6 +16,7 @@ class Order extends Model
 
     protected $fillable = [
         'uuid',
+        'customer_id',
         'code',
         'customer_name',
         'customer_phone',
@@ -48,6 +50,11 @@ class Order extends Model
             'ppn' => 'decimal:2',
             'total_price' => 'decimal:2',
         ];
+    }
+
+    public function customer(): BelongsTo
+    {
+        return $this->belongsTo(Customer::class);
     }
 
     public function items(): HasMany

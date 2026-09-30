@@ -1,0 +1,28 @@
+@import "./theme/tokens.css";
+
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css";
+
+@theme {
+  --color-brand: var(--pkm-brand);
+  --color-brand-hover: var(--pkm-brand-hover);
+  --color-brand-soft: var(--pkm-brand-soft);
+  --color-brand-line: var(--pkm-brand-line);
+  --color-canvas: var(--pkm-canvas);
+  --color-surface: var(--pkm-surface);
+  --color-ink: var(--pkm-ink);
+  --color-muted: var(--pkm-muted);
+  --color-subtle: var(--pkm-subtle);
+  --color-line: var(--pkm-line);
+  --color-fill: var(--pkm-fill);
+  --color-amber-soft: var(--pkm-amber-soft);
+  --color-amber-ink: var(--pkm-amber-ink);
+  --color-amber-line: var(--pkm-amber-line);
+  --color-danger: var(--pkm-danger);
+  --color-danger-soft: var(--pkm-danger-soft);
+  --color-danger-line: var(--pkm-danger-line);
+  --font-sans: var(--pkm-font-sans);
+  --font-display: var(--pkm-font-display);
+  --font-mono: var(--pkm-font-mono);
+  --radius-card: var(--pkm-radius-card);
+}

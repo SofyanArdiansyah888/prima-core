@@ -7,5 +7,6 @@
     "Order": true,
     "WorkOrder": true,
     "Dispatch": true,
-    "DeliveryRate": true
+    "DeliveryRate": true,
+    "Customer": true
 }

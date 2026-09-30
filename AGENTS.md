@@ -24,7 +24,7 @@ Baca file ini dulu sebelum mengubah kode.
 - Backend: Laravel 13, Fortify (login + forgot password; **tanpa** public register)
 - Frontend: Inertia + React 19 + TypeScript + Tailwind 4 + shadcn
 - Modular: `nwidart/laravel-modules` → `Modules/{Shared,Branch,BatchingPlant,User}`
-- DB: MySQL remote (lihat `.env`); Docker untuk PHP/Nginx/Mailpit
+- DB: PostgreSQL remote `72.61.209.61` (lihat `.env`); Docker untuk PHP/Nginx/Mailpit
 - Identitas: FK = `id`; URL = `uuid`; bisnis = `code` (industri)
 
 ## Perintah umum
@@ -32,7 +32,7 @@ Baca file ini dulu sebelum mengubah kode.
 ```bash
 cd dashboard
 composer install && npm install
-cp .env.example .env   # isi DB MySQL remote + APP_KEY
+cp .env.example .env   # isi kredensial PostgreSQL remote + APP_KEY
 php artisan key:generate
 php artisan migrate --seed
 composer run dev       # atau: docker compose up -d
