@@ -57,7 +57,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
     return {
       lines,
-      count: lines.reduce((sum, line) => sum + line.quantity, 0),
+      count: lines.length,
       category,
       conflicts(product) {
         return categoryConflict(category, product.category);

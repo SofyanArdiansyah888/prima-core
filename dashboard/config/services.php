@@ -35,4 +35,12 @@ return [
         ],
     ],
 
+    'midtrans' => [
+        'server_key' => env('MIDTRANS_SERVER_KEY', 'SB-Mid-server-test'),
+        'client_key' => env('MIDTRANS_CLIENT_KEY', 'SB-Mid-client-test'),
+        'merchant_id' => env('MIDTRANS_MERCHANT_ID', ''),
+        'is_production' => (bool) env('MIDTRANS_IS_PRODUCTION', false),
+        'admin_fee' => (float) env('MIDTRANS_ADMIN_FEE', 4500),
+    ],
+
 ];

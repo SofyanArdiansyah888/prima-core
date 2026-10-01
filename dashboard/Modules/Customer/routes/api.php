@@ -10,6 +10,7 @@ use Modules\Order\Http\Controllers\CustomerOrderController;
 Route::prefix('customer/v1')->group(function () {
     Route::post('register', [AuthController::class, 'register'])->middleware('throttle:10,1');
     Route::post('login', [AuthController::class, 'login'])->middleware('throttle:10,1');
+    Route::post('payments/midtrans-webhook', [CustomerOrderController::class, 'webhook']);
 
     Route::middleware(['auth:sanctum', EnsureCustomer::class])->group(function () {
         Route::post('logout', [AuthController::class, 'logout']);
@@ -23,6 +24,7 @@ Route::prefix('customer/v1')->group(function () {
         Route::get('orders', [CustomerOrderController::class, 'index']);
         Route::post('orders', [CustomerOrderController::class, 'store']);
         Route::get('orders/{order}', [CustomerOrderController::class, 'show']);
+        Route::post('orders/{order}/pay', [CustomerOrderController::class, 'pay']);
         Route::post('orders/{order}/cancel', [CustomerOrderController::class, 'cancel']);
     });
 });

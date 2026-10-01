@@ -30,6 +30,7 @@ import {
   TextInput 
 } from '../../shared/ui';
 import { DeliveryMapPicker, type DeliveryLocation } from './DeliveryMapPicker';
+import { openSnapPayment } from '../../lib/midtrans';
 
 export default function CheckoutPage() {
   const navigate = useNavigate();
@@ -46,7 +47,7 @@ export default function CheckoutPage() {
   const [lat, setLat] = useState<number>(-5.1477);
   const [lng, setLng] = useState<number>(119.4327);
 
-  const [payment, setPayment] = useState<string>('CASH');
+  const [payment, setPayment] = useState<string>('MIDTRANS');
   const [notes, setNotes] = useState('');
   const [quote, setQuote] = useState<Quote | null>(null);
   const [error, setError] = useState('');
@@ -116,10 +117,37 @@ export default function CheckoutPage() {
         notes: notes || undefined,
         items: lines.map((line) => ({ product_uuid: line.product.uuid, quantity: line.quantity })),
       });
+
+      const orderData = response.data;
       clear();
-      navigate(`/success/${encodeURIComponent(response.data.code)}`, {
-        state: { uuid: response.data.uuid },
-      });
+
+      // If Midtrans is selected and snap_token is returned, open Snap popup
+      if (payment === 'MIDTRANS' && orderData.snap_token) {
+        void openSnapPayment(
+          orderData.snap_token,
+          {
+            onSuccess: () => {
+              navigate(`/orders/${orderData.uuid}`);
+            },
+            onPending: () => {
+              navigate(`/orders/${orderData.uuid}`);
+            },
+            onError: () => {
+              navigate(`/orders/${orderData.uuid}`);
+            },
+            onClose: () => {
+              navigate(`/success/${encodeURIComponent(orderData.code)}`, {
+                state: { uuid: orderData.uuid, snap_token: orderData.snap_token },
+              });
+            },
+          },
+          orderData.midtrans_client_key || undefined
+        );
+      } else {
+        navigate(`/success/${encodeURIComponent(orderData.code)}`, {
+          state: { uuid: orderData.uuid },
+        });
+      }
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Gagal membuat pesanan.');
     } finally {
@@ -266,29 +294,46 @@ export default function CheckoutPage() {
             </h2>
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-2.5">
             {PAYMENTS.map((method) => {
               const selected = payment === method.value;
+              const isMidtrans = method.value === 'MIDTRANS';
               return (
                 <label 
                   key={method.value} 
-                  className={`flex items-center justify-between rounded-xl border p-3 text-xs transition-all cursor-pointer ${
+                  className={`flex items-start justify-between rounded-xl border p-3.5 text-xs transition-all cursor-pointer ${
                     selected 
-                      ? 'border-[#0c1d37] bg-slate-50 font-bold text-[#0c1d37] shadow-xs' 
+                      ? 'border-[#0c1d37] bg-slate-50/90 font-medium text-[#0c1d37] shadow-xs' 
                       : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
                   }`}
                 >
-                  <div className="flex items-center gap-2.5">
-                    <IonIcon 
-                      icon={method.value === 'CASH' ? cashOutline : cardOutline} 
-                      className={`text-base ${selected ? 'text-[#0c1d37]' : 'text-slate-400'}`} 
-                    />
-                    <span>{method.label}</span>
+                  <div className="flex items-start gap-3">
+                    <div className={`flex size-8 items-center justify-center rounded-lg mt-0.5 ${
+                      selected ? 'bg-[#0c1d37] text-white' : 'bg-slate-100 text-slate-500'
+                    }`}>
+                      <IonIcon 
+                        icon={isMidtrans ? cardOutline : cashOutline} 
+                        className="text-base" 
+                      />
+                    </div>
+                    <div className="space-y-0.5">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-slate-900">{method.label}</span>
+                        <span className={`rounded-full px-1.5 py-0.2 text-[9px] font-bold ${
+                          isMidtrans ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'
+                        }`}>
+                          {method.badge}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-500 leading-tight">
+                        {method.sublabel}
+                      </p>
+                    </div>
                   </div>
                   <input
                     type="radio"
                     name="payment"
-                    className="accent-[#0c1d37] size-4 cursor-pointer"
+                    className="accent-[#0c1d37] size-4 cursor-pointer mt-1 shrink-0 ml-2"
                     checked={selected}
                     onChange={() => setPayment(method.value)}
                   />
@@ -333,6 +378,15 @@ export default function CheckoutPage() {
                 <dt className="text-slate-500">PPN (11%)</dt>
                 <dd className="font-semibold text-slate-800">{formatRupiah(quote.ppn)}</dd>
               </div>
+              {Number(quote.admin_fee) > 0 && (
+                <div className="flex justify-between">
+                  <dt className="text-slate-500 flex items-center gap-1.5">
+                    <span>Biaya Layanan & Pembayaran</span>
+                    <span className="rounded bg-slate-100 px-1 py-0.2 text-[9px] text-slate-600 font-medium">Midtrans</span>
+                  </dt>
+                  <dd className="font-semibold text-slate-800">{formatRupiah(quote.admin_fee)}</dd>
+                </div>
+              )}
             </dl>
 
             <div className="flex items-center justify-between pt-1">

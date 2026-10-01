@@ -148,6 +148,62 @@ class CustomerOrderApiTest extends TestCase
             ->assertStatus(422);
     }
 
+    public function test_customer_order_calculates_admin_fee_and_generates_midtrans_token(): void
+    {
+        ['cement' => $cement] = $this->seedCatalog();
+        $token = $this->customerToken();
+
+        $quote = $this->withToken($token)->postJson('/api/customer/v1/delivery/quote', [
+            'delivery_lat' => -4.805,
+            'delivery_lng' => 119.561,
+            'items' => [
+                ['product_uuid' => $cement->uuid, 'quantity' => 20],
+            ],
+        ]);
+
+        $quote->assertOk();
+        $this->assertEquals(4500, $quote->json('data.admin_fee'));
+        $expectedTotal = round(1560000 + (float) $quote->json('data.delivery_fee') + (float) $quote->json('data.ppn') + 4500, 2);
+        $this->assertEquals($expectedTotal, $quote->json('data.total_price'));
+
+        $orderRes = $this->withToken($token)->postJson('/api/customer/v1/orders', [
+            'project_title' => 'Pembangunan Ruko',
+            'delivery_address' => 'Jl. Poros Tonasa II',
+            'delivery_lat' => -4.805,
+            'delivery_lng' => 119.561,
+            'payment_method' => 'MIDTRANS',
+            'items' => [
+                ['product_uuid' => $cement->uuid, 'quantity' => 20],
+            ],
+        ]);
+
+        $orderRes->assertCreated();
+        $this->assertEquals(4500, $orderRes->json('data.admin_fee'));
+        $this->assertNotEmpty($orderRes->json('data.snap_token'));
+
+        $uuid = $orderRes->json('data.uuid');
+        $code = $orderRes->json('data.code');
+
+        // Test pay endpoint
+        $payRes = $this->withToken($token)->postJson('/api/customer/v1/orders/'.$uuid.'/pay');
+        $payRes->assertOk();
+        $this->assertNotEmpty($payRes->json('data.snap_token'));
+
+        // Test webhook
+        $webhook = $this->postJson('/api/customer/v1/payments/midtrans-webhook', [
+            'order_id' => $code . '-sample',
+            'status_code' => '200',
+            'gross_amount' => (string) $expectedTotal,
+            'transaction_status' => 'settlement',
+            'payment_type' => 'qris',
+            'transaction_id' => 'trx-123456',
+            'signature_key' => 'dummy', // In test environment without secret key, fallback is accepted
+        ]);
+
+        $webhook->assertOk();
+        $webhook->assertJsonPath('payment_status', 'PAID');
+    }
+
     private function customerToken(): string
     {
         $customer = Customer::query()->create([

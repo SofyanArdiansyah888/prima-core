@@ -38,6 +38,7 @@ export type Quote = {
   plant: { code: string; name: string };
   distance_km: number;
   delivery_fee: number;
+  admin_fee: number;
   subtotal: number;
   ppn: number;
   total_price: number;
@@ -66,12 +67,17 @@ export type CustomerOrder = {
   delivery_lng: number | null;
   distance_km: number;
   delivery_fee: number;
+  admin_fee: number;
   subtotal: number;
   ppn: number;
   total_price: number;
   payment_method: string;
   payment_method_label: string;
   payment_status: string;
+  snap_token?: string | null;
+  snap_redirect_url?: string | null;
+  midtrans_client_key?: string | null;
+  paid_at?: string | null;
   status: string;
   status_label: string;
   can_cancel: boolean;
@@ -87,9 +93,18 @@ export type CartLine = {
 };
 
 export const PAYMENTS = [
-  { value: 'CASH', label: 'Tunai / Transfer' },
-  { value: 'VA_MANDIRI', label: 'Virtual Account Mandiri' },
-  { value: 'VA_BRI', label: 'Virtual Account BRI' },
+  { 
+    value: 'MIDTRANS', 
+    label: 'Midtrans Online Payment', 
+    sublabel: 'QRIS, Mandiri / BCA / BRI / BNI VA, GoPay, ShopeePay, Kartu Kredit',
+    badge: 'Otomatis'
+  },
+  { 
+    value: 'CASH', 
+    label: 'Tunai / Transfer Bank Manual', 
+    sublabel: 'Konfirmasi bukti pembayaran manual via Admin',
+    badge: 'Manual'
+  },
 ] as const;
 
 export const STATUS_STEPS = [

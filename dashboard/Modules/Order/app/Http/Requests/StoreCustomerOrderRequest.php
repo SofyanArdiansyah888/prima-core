@@ -22,7 +22,7 @@ class StoreCustomerOrderRequest extends FormRequest
             'delivery_address' => ['required', 'string'],
             'delivery_lat' => ['required', 'numeric', 'between:-90,90'],
             'delivery_lng' => ['required', 'numeric', 'between:-180,180'],
-            'payment_method' => ['required', 'string', 'in:VA_MANDIRI,VA_BRI,CASH'],
+            'payment_method' => ['required', 'string', 'in:MIDTRANS,VA_MANDIRI,VA_BRI,CASH,TRANSFER,BANK_TRANSFER'],
             'notes' => ['nullable', 'string'],
             'items' => ['required', 'array', 'min:1'],
             'items.*.product_uuid' => ['required', 'uuid', 'exists:products,uuid'],

@@ -26,6 +26,7 @@ import { formatDate, formatQty, formatRupiah } from '../../domain/format';
 import { orderStatusTone, paymentStatusLabel } from '../../domain/rules';
 import { STATUS_LABELS, STATUS_STEPS, type CustomerOrder } from '../../domain/types';
 import { Card, ConfirmModal, ErrorText, Eyebrow, NavBar, OrderDetailSkeleton, Screen, StatusBadge, StickyBar } from '../../shared/ui';
+import { openSnapPayment } from '../../lib/midtrans';
 
 type ToastState = {
   show: boolean;
@@ -39,6 +40,7 @@ export default function OrderDetailPage() {
   const [order, setOrder] = useState<CustomerOrder | null>(null);
   const [error, setError] = useState('');
   const [cancelling, setCancelling] = useState(false);
+  const [paying, setPaying] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
@@ -115,10 +117,47 @@ export default function OrderDetailPage() {
     }
   };
 
+  const handlePay = async () => {
+    if (!order) return;
+    setPaying(true);
+    try {
+      const res = await api.payOrder(order.uuid);
+      const updatedOrder = res.data;
+      setOrder(updatedOrder);
+      if (updatedOrder.snap_token) {
+        void openSnapPayment(
+          updatedOrder.snap_token,
+          {
+            onSuccess: () => {
+              void loadOrder();
+              triggerToast('Pembayaran berhasil diverifikasi!', 'success');
+            },
+            onPending: () => {
+              void loadOrder();
+              triggerToast('Menunggu pembayaran diselesaikan.', 'info');
+            },
+            onError: () => {
+              triggerToast('Pembayaran gagal atau dibatalkan.', 'error');
+            },
+            onClose: () => {
+              void loadOrder();
+            },
+          },
+          updatedOrder.midtrans_client_key || undefined
+        );
+      }
+    } catch (err) {
+      triggerToast(err instanceof Error ? err.message : 'Gagal membuka pembayaran Midtrans.', 'error');
+    } finally {
+      setPaying(false);
+    }
+  };
+
   const currentIndex = order ? STATUS_STEPS.indexOf(order.status as typeof STATUS_STEPS[number]) : -1;
   const isCompleted = order?.status === 'COMPLETED';
   const isCancelled = order?.status === 'CANCELLED';
   const isActive = order && !isCompleted && !isCancelled;
+  const isPendingPayment = order?.payment_status === 'PENDING' && !isCancelled;
 
   return (
     <Screen
@@ -142,17 +181,33 @@ export default function OrderDetailPage() {
           }
         />
       )}
-      footer={order?.can_cancel ? (
+      footer={order && (!isCancelled || order.can_cancel) ? (
         <StickyBar>
-          <button
-            type="button"
-            disabled={cancelling}
-            className="w-full rounded-xl border border-red-200 bg-red-50 hover:bg-red-100 py-3 text-xs font-bold text-[#d91424] disabled:opacity-50 transition-colors cursor-pointer flex items-center justify-center gap-1.5"
-            onClick={() => setShowCancelModal(true)}
-          >
-            <IonIcon icon={closeCircleOutline} className="text-base" />
-            <span>{cancelling ? 'Membatalkan…' : 'Batalkan Pesanan Ini'}</span>
-          </button>
+          <div className="space-y-2">
+            {isPendingPayment && (
+              <button
+                type="button"
+                disabled={paying}
+                onClick={() => void handlePay()}
+                className="w-full rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 py-3 text-xs font-black text-white shadow-md transition-all cursor-pointer flex items-center justify-center gap-2"
+              >
+                <IonIcon icon={walletOutline} className="text-base" />
+                <span>{paying ? 'Menghubungkan Midtrans…' : `Bayar Sekarang (${formatRupiah(order.total_price)})`}</span>
+              </button>
+            )}
+
+            {order.can_cancel && (
+              <button
+                type="button"
+                disabled={cancelling}
+                className="w-full rounded-xl border border-red-200 bg-red-50 hover:bg-red-100 py-2.5 text-xs font-bold text-[#d91424] disabled:opacity-50 transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+                onClick={() => setShowCancelModal(true)}
+              >
+                <IonIcon icon={closeCircleOutline} className="text-base" />
+                <span>{cancelling ? 'Membatalkan…' : 'Batalkan Pesanan Ini'}</span>
+              </button>
+            )}
+          </div>
         </StickyBar>
       ) : null}
     >
@@ -378,7 +433,13 @@ export default function OrderDetailPage() {
                   <IonIcon icon={walletOutline} className="text-slate-500" />
                   <span>Rincian Pembayaran</span>
                 </h2>
-                <span className="rounded-md bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-[10px] font-extrabold text-emerald-700">
+                <span className={`rounded-md px-2 py-0.5 text-[10px] font-extrabold border ${
+                  order.payment_status === 'PAID'
+                    ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                    : order.payment_status === 'PENDING'
+                    ? 'bg-amber-50 border-amber-200 text-amber-700'
+                    : 'bg-red-50 border-red-200 text-[#d91424]'
+                }`}>
                   {paymentStatusLabel(order.payment_status)}
                 </span>
               </div>
@@ -392,14 +453,23 @@ export default function OrderDetailPage() {
                   <span>Subtotal Dasar (DPP)</span>
                   <span className="font-mono font-medium text-slate-800">{formatRupiah(order.subtotal)}</span>
                 </div>
+                {Number(order.delivery_fee) > 0 && (
+                  <div className="flex justify-between text-slate-600">
+                    <span>Biaya Pengantaran ({order.distance_km || 0} km)</span>
+                    <span className="font-mono font-medium text-slate-800">{formatRupiah(order.delivery_fee)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between text-slate-600">
                   <span>PPN Resmi (11%)</span>
                   <span className="font-mono font-medium text-slate-800">{formatRupiah(order.ppn)}</span>
                 </div>
-                {order.delivery_fee > 0 && (
+                {Number(order.admin_fee) > 0 && (
                   <div className="flex justify-between text-slate-600">
-                    <span>Biaya Angkut / Logistik ({order.distance_km || 0} km)</span>
-                    <span className="font-mono font-medium text-slate-800">{formatRupiah(order.delivery_fee)}</span>
+                    <span className="flex items-center gap-1">
+                      <span>Biaya Layanan & Pembayaran</span>
+                      <span className="rounded bg-slate-100 px-1 py-0.2 text-[9px] text-slate-600 font-medium">Midtrans</span>
+                    </span>
+                    <span className="font-mono font-medium text-slate-800">{formatRupiah(order.admin_fee)}</span>
                   </div>
                 )}
                 <div className="flex justify-between border-t border-slate-200 pt-2.5 text-sm font-extrabold text-[#0c1d37]">
@@ -407,6 +477,20 @@ export default function OrderDetailPage() {
                   <span className="font-mono text-base font-black text-[#0c1d37]">{formatRupiah(order.total_price)}</span>
                 </div>
               </div>
+
+              {isPendingPayment && (
+                <div className="pt-2">
+                  <button
+                    type="button"
+                    disabled={paying}
+                    onClick={() => void handlePay()}
+                    className="w-full flex items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 py-2.5 px-4 text-xs font-black text-white shadow-xs transition-all cursor-pointer"
+                  >
+                    <IonIcon icon={walletOutline} className="text-sm" />
+                    <span>{paying ? 'Menghubungkan Midtrans…' : 'Bayar Sekarang via Midtrans'}</span>
+                  </button>
+                </div>
+              )}
             </Card>
 
             {/* LOGISTICS & DISPATCH CONTACT CARD */}

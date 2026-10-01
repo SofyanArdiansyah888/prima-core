@@ -13,6 +13,7 @@ class CustomerOrderService
     public function __construct(
         private PlantDistanceService $distance,
         private PlaceOrder $placeOrder,
+        private MidtransPaymentService $midtrans,
     ) {}
 
     /**
@@ -28,6 +29,7 @@ class CustomerOrderService
             'plant' => $built['plant'],
             'distance_km' => $built['distance_km'],
             'delivery_fee' => $built['delivery_fee'],
+            'admin_fee' => $built['admin_fee'],
             'subtotal' => $built['subtotal'],
             'ppn' => $built['ppn'],
             'total_price' => $built['total_price'],
@@ -47,7 +49,7 @@ class CustomerOrderService
             $input['items'],
         );
 
-        return $this->placeOrder->place([
+        $order = $this->placeOrder->place([
             'customer_id' => $customer->id,
             'customer_name' => $customer->name,
             'customer_phone' => $customer->phone,
@@ -60,12 +62,19 @@ class CustomerOrderService
             'batching_plant_id' => $built['plant_id'],
             'distance_km' => $built['distance_km'],
             'delivery_fee' => $built['delivery_fee'],
+            'admin_fee' => $built['admin_fee'],
             'payment_method' => $input['payment_method'],
             'payment_status' => 'PENDING',
             'po_number' => null,
             'notes' => $input['notes'] ?? null,
             'items' => $built['lines'],
         ]);
+
+        if ($order->payment_method === 'MIDTRANS') {
+            $this->midtrans->createSnapTransaction($order);
+        }
+
+        return $order;
     }
 
     /**
@@ -91,7 +100,8 @@ class CustomerOrderService
             $resolved['quantity'],
         );
 
-        $totals = OrderTotals::fromLineAmounts($resolved['line_amounts'], (float) $fee['delivery_fee']);
+        $adminFee = (float) config('services.midtrans.admin_fee', 4500);
+        $totals = OrderTotals::fromLineAmounts($resolved['line_amounts'], (float) $fee['delivery_fee'], $adminFee);
 
         return [
             'category' => $resolved['category'],
@@ -102,6 +112,7 @@ class CustomerOrderService
             ],
             'distance_km' => (float) $nearest['distance_km'],
             'delivery_fee' => $totals['delivery_fee'],
+            'admin_fee' => $totals['admin_fee'],
             'subtotal' => $totals['subtotal'],
             'ppn' => $totals['ppn'],
             'total_price' => $totals['total_price'],

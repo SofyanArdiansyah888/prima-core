@@ -120,6 +120,12 @@ export const api = {
       body: JSON.stringify(payload),
     });
   },
+  payOrder(uuid: string, refresh = false) {
+    return request<{ data: CustomerOrder }>(`/orders/${uuid}/pay`, {
+      method: 'POST',
+      body: JSON.stringify({ refresh }),
+    });
+  },
   cancelOrder(uuid: string) {
     return request<{ data: CustomerOrder }>(`/orders/${uuid}/cancel`, { method: 'POST' });
   },
