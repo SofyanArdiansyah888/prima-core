@@ -2,19 +2,20 @@ import { useEffect, useState } from 'react';
 import { IonIcon } from '@ionic/react';
 import { 
   locationOutline, 
-  navigateOutline, 
   cardOutline, 
   cashOutline, 
   businessOutline, 
   checkmarkCircle, 
   documentTextOutline,
   shieldCheckmarkOutline,
-  arrowForwardOutline
+  arrowForwardOutline,
+  navigateOutline,
+  sparklesOutline
 } from 'ionicons/icons';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../../data/api';
+import { useAuth } from '../../data/auth';
 import { useCart } from '../../data/cart';
-import { PRESET_LOCATIONS } from '../../data/locations';
 import { formatRupiah } from '../../domain/format';
 import { PAYMENTS, type Quote } from '../../domain/types';
 import { 
@@ -28,23 +29,31 @@ import {
   TextArea, 
   TextInput 
 } from '../../shared/ui';
+import { DeliveryMapPicker, type DeliveryLocation } from './DeliveryMapPicker';
 
 export default function CheckoutPage() {
   const navigate = useNavigate();
+  const { customer } = useAuth();
   const { lines, clear } = useCart();
-  const [projectTitle, setProjectTitle] = useState('');
+
+  // User delivery destination & project info
+  const [projectTitle, setProjectTitle] = useState(
+    customer?.name ? `Proyek ${customer.name}` : ''
+  );
   const [address, setAddress] = useState('');
-  const [regionId, setRegionId] = useState<string | null>(null);
-  const [lat, setLat] = useState<number | null>(null);
-  const [lng, setLng] = useState<number | null>(null);
+  
+  // Default coordinates (Makassar center)
+  const [lat, setLat] = useState<number>(-5.1477);
+  const [lng, setLng] = useState<number>(119.4327);
+
   const [payment, setPayment] = useState<string>('CASH');
   const [notes, setNotes] = useState('');
   const [quote, setQuote] = useState<Quote | null>(null);
   const [error, setError] = useState('');
-  const [locating, setLocating] = useState(false);
   const [calculating, setCalculating] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
+  // Automatically recalculate quote whenever cart items or map coordinates change
   useEffect(() => {
     if (lines.length === 0 || lat === null || lng === null) {
       setQuote(null);
@@ -69,26 +78,19 @@ export default function CheckoutPage() {
         .finally(() => {
           setCalculating(false);
         });
-    }, 300);
+    }, 350);
 
     return () => window.clearTimeout(timer);
   }, [lines, lat, lng]);
 
-  const useGps = () => {
-    setLocating(true);
-    setRegionId(null);
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setLat(position.coords.latitude);
-        setLng(position.coords.longitude);
-        setLocating(false);
-      },
-      () => {
-        setError('Lokasi GPS tidak dapat diakses. Silakan pilih salah satu wilayah di bawah.');
-        setLocating(false);
-      },
-      { enableHighAccuracy: true, timeout: 8000 },
-    );
+  const handleLocationChange = (loc: DeliveryLocation) => {
+    setLat(loc.lat);
+    setLng(loc.lng);
+    if (loc.roadAddress) {
+      setAddress(loc.roadAddress);
+    } else if (loc.areaName) {
+      setAddress(loc.areaName);
+    }
   };
 
   const submit = async () => {
@@ -98,7 +100,7 @@ export default function CheckoutPage() {
     }
 
     if (lat === null || lng === null || !quote) {
-      setError('Silakan pilih salah satu wilayah operasional pengantaran.');
+      setError('Silakan tentukan titik lokasi pengantaran pada peta.');
       return;
     }
 
@@ -135,13 +137,16 @@ export default function CheckoutPage() {
               <div>
                 <span className="block text-[10px] text-slate-400 font-medium">Total Tagihan Final</span>
                 <span className="text-base font-extrabold text-[#d91424]">
-                  {quote ? formatRupiah(quote.total_price) : calculating ? 'Menghitung...' : 'Pilih Wilayah'}
+                  {quote ? formatRupiah(quote.total_price) : calculating ? 'Menghitung...' : 'Tentukan Lokasi'}
                 </span>
               </div>
               {quote && (
-                <span className="text-right text-[10px] font-mono text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded font-bold border border-emerald-200">
-                  {quote.distance_km} km dari Plant
-                </span>
+                <div className="text-right">
+                  <span className="block text-[9px] text-slate-400">Plant Terpilih:</span>
+                  <span className="text-[10px] font-extrabold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                    {quote.plant.name} ({quote.distance_km} km)
+                  </span>
+                </div>
               )}
             </div>
             <PrimaryButton 
@@ -157,7 +162,7 @@ export default function CheckoutPage() {
       }
     >
       <form
-        className="space-y-3.5 px-4 py-4 pb-28"
+        className="space-y-3.5 px-4 py-4 pb-32"
         onSubmit={(event) => {
           event.preventDefault();
           void submit();
@@ -165,88 +170,92 @@ export default function CheckoutPage() {
       >
         <ErrorText>{error}</ErrorText>
 
-        {/* STEP 1: PROYEK & ALAMAT */}
-        <Card className="space-y-3 p-4 border border-slate-200/90 shadow-xs">
+        {/* STEP 1: PETA INTERAKTIF & ALAMAT PENGANTARAN */}
+        <Card className="space-y-3.5 p-4 border border-slate-200/90 shadow-xs">
           <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
             <div className="flex items-center gap-2">
               <span className="flex size-5 items-center justify-center rounded-full bg-[#0c1d37] text-[10px] font-bold text-white">
                 1
               </span>
               <h2 className="text-xs font-extrabold text-[#0c1d37] uppercase tracking-wide">
-                Lokasi & Proyek
+                Titik Pengantaran & Proyek Anda
               </h2>
             </div>
-
-            <button 
-              type="button" 
-              className="inline-flex items-center gap-1 rounded-lg bg-slate-100 px-2 py-1 text-[11px] font-bold text-[#0c1d37] hover:bg-slate-200 transition-colors cursor-pointer" 
-              onClick={useGps}
-            >
-              <IonIcon icon={navigateOutline} className="text-xs text-[#d91424]" />
-              <span>{locating ? 'Mencari…' : 'Gunakan GPS'}</span>
-            </button>
           </div>
 
-          <Field label="Nama Proyek / Toko Pemesan" hint="Wajib diisi">
-            <TextInput 
-              required 
-              placeholder="Contoh: Proyek Ruko Panakkukang / Toko Bangunan Berkah"
-              value={projectTitle} 
-              onChange={(event) => setProjectTitle(event.target.value)} 
-            />
-          </Field>
+          {/* Interactive Delivery Map Picker */}
+          <DeliveryMapPicker lat={lat} lng={lng} onChange={handleLocationChange} />
 
-          <Field label="Alamat Lengkap Pengantaran" hint="Sertakan patokan">
-            <TextArea 
-              required 
-              rows={2} 
-              placeholder="Jl. Boulevard No. 12, Panakkukang, Makassar (Depan Mall)"
-              value={address} 
-              onChange={(event) => setAddress(event.target.value)} 
-            />
-          </Field>
+          {/* Form Fields: Project Title & Detailed Address */}
+          <div className="space-y-3 pt-1 border-t border-slate-100">
+            <Field label="Nama Proyek / Toko Pemesan" hint="Bisa diubah">
+              <TextInput 
+                required 
+                placeholder="Contoh: Proyek Ruko Panakkukang / Toko Bangunan Berkah"
+                value={projectTitle} 
+                onChange={(event) => setProjectTitle(event.target.value)} 
+              />
+            </Field>
 
-          <div>
-            <span className="mb-2 block text-xs font-bold text-[#0c1d37]">
-              Pilih Wilayah Operasional Terdekat:
-            </span>
-            <div className="grid grid-cols-2 gap-2">
-              {PRESET_LOCATIONS.map((place) => {
-                const selected = regionId === place.id;
-                return (
-                  <button
-                    key={place.id}
-                    type="button"
-                    className={`rounded-xl border p-2.5 text-left transition-all cursor-pointer ${
-                      selected 
-                        ? 'border-[#0c1d37] bg-[#0c1d37] text-white shadow-xs' 
-                        : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'
-                    }`}
-                    onClick={() => {
-                      setRegionId(place.id);
-                      setLat(place.lat);
-                      setLng(place.lng);
-                      setAddress(place.address);
-                      if (!projectTitle) {
-                        setProjectTitle(`Proyek ${place.region}`);
-                      }
-                    }}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="font-extrabold text-xs">{place.region}</span>
-                      {selected && <IonIcon icon={checkmarkCircle} className="text-sm text-emerald-400" />}
-                    </div>
-                    <div className={`text-[10px] mt-0.5 truncate ${selected ? 'text-slate-300' : 'text-slate-400'}`}>
-                      {place.name}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
+            <Field label="Alamat Lengkap Pengantaran" hint="Sertakan patokan">
+              <TextArea 
+                required 
+                rows={2} 
+                placeholder="Jl. Boulevard No. 12, Panakkukang, Makassar (Depan Mall)"
+                value={address} 
+                onChange={(event) => setAddress(event.target.value)} 
+              />
+            </Field>
           </div>
         </Card>
 
-        {/* STEP 2: METODE PEMBAYARAN */}
+        {/* STEP 2: AUTO-DETECTED BATCHING PLANT CARD */}
+        {quote ? (
+          <Card className="p-4 border-2 border-emerald-500/30 bg-gradient-to-br from-emerald-50/70 to-teal-50/40 shadow-xs space-y-2.5">
+            <div className="flex items-center justify-between border-b border-emerald-200/60 pb-2">
+              <div className="flex items-center gap-1.5">
+                <span className="flex size-5 items-center justify-center rounded-full bg-emerald-600 text-white text-xs">
+                  <IonIcon icon={checkmarkCircle} />
+                </span>
+                <span className="text-xs font-black text-emerald-950 uppercase tracking-wide">
+                  Batching Plant Otomatis Terpilih
+                </span>
+              </div>
+              <span className="rounded bg-emerald-200/60 px-1.5 py-0.5 text-[9px] font-mono font-bold text-emerald-900">
+                {quote.plant.code}
+              </span>
+            </div>
+
+            <div className="flex items-start justify-between gap-3 text-xs">
+              <div className="space-y-0.5">
+                <div className="font-extrabold text-sm text-[#0c1d37]">
+                  {quote.plant.name}
+                </div>
+                <p className="text-[11px] text-slate-600">
+                  Melayani pengiriman langsung ke titik lokasi proyek Anda.
+                </p>
+              </div>
+              <div className="text-right shrink-0 bg-white/80 p-2 rounded-xl border border-emerald-200 shadow-2xs">
+                <span className="text-[9px] text-slate-400 block">Jarak Radius</span>
+                <span className="font-mono font-black text-sm text-[#0c1d37]">
+                  {quote.distance_km} <span className="text-[10px] font-sans font-medium">km</span>
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between text-[11px] bg-white/70 px-2.5 py-1.5 rounded-lg border border-emerald-100">
+              <span className="text-slate-600">Estimasi Biaya Pengantaran Armada:</span>
+              <span className="font-bold text-[#0c1d37] font-mono">{formatRupiah(quote.delivery_fee)}</span>
+            </div>
+          </Card>
+        ) : calculating ? (
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 text-center text-xs text-slate-500 flex items-center justify-center gap-2">
+            <span className="animate-spin text-[#ea580c]">⏳</span>
+            <span>Mendeteksi batching plant terdekat dan mengalkulasi tarif...</span>
+          </div>
+        ) : null}
+
+        {/* STEP 3: METODE PEMBAYARAN */}
         <Card className="space-y-3 p-4 border border-slate-200/90 shadow-xs">
           <div className="flex items-center gap-2 border-b border-slate-100 pb-2.5">
             <span className="flex size-5 items-center justify-center rounded-full bg-[#0c1d37] text-[10px] font-bold text-white">
@@ -297,36 +306,27 @@ export default function CheckoutPage() {
           </Field>
         </Card>
 
-        {/* STEP 3: RINGKASAN BIAYA SERVER (QUOTE) */}
-        {quote ? (
+        {/* STEP 4: RINGKASAN BIAYA SERVER (QUOTE) */}
+        {quote && (
           <Card className="space-y-3 p-4 border border-slate-200/90 shadow-xs">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
               <div className="flex items-center gap-2">
-                <span className="flex size-5 items-center justify-center rounded-full bg-emerald-700 text-[10px] font-bold text-white">
-                  ✓
+                <span className="flex size-5 items-center justify-center rounded-full bg-[#0c1d37] text-[10px] font-bold text-white">
+                  3
                 </span>
                 <h2 className="text-xs font-extrabold text-[#0c1d37] uppercase tracking-wide">
-                  Ringkasan Kalkulasi Server
+                  Rincian Biaya Pesanan
                 </h2>
               </div>
-              <span className="text-[10px] font-mono text-slate-400 font-semibold">{quote.plant.code}</span>
             </div>
 
             <dl className="space-y-1.5 border-b border-slate-100 pb-2.5 text-xs">
               <div className="flex justify-between">
-                <dt className="text-slate-500">Plant Produksi Tonasa</dt>
-                <dd className="font-bold text-slate-800">{quote.plant.name}</dd>
-              </div>
-              <div className="flex justify-between">
-                <dt className="text-slate-500">Jarak Tempuh Armada</dt>
-                <dd className="font-mono font-semibold text-slate-800">{quote.distance_km} km</dd>
-              </div>
-              <div className="flex justify-between">
-                <dt className="text-slate-500">Subtotal Material</dt>
+                <dt className="text-slate-500">Subtotal Produk</dt>
                 <dd className="font-semibold text-slate-800">{formatRupiah(quote.subtotal)}</dd>
               </div>
               <div className="flex justify-between">
-                <dt className="text-slate-500">Ongkos Kirim Armada</dt>
+                <dt className="text-slate-500">Ongkos Kirim ({quote.distance_km} km)</dt>
                 <dd className="font-semibold text-slate-800">{formatRupiah(quote.delivery_fee)}</dd>
               </div>
               <div className="flex justify-between">
@@ -336,7 +336,7 @@ export default function CheckoutPage() {
             </dl>
 
             <div className="flex items-center justify-between pt-1">
-              <span className="text-xs font-bold text-slate-700">Total Pembayaran</span>
+              <span className="text-xs font-bold text-slate-700">Total Tagihan Final</span>
               <span className="font-extrabold text-base text-[#d91424]">
                 {formatRupiah(quote.total_price)}
               </span>
@@ -348,11 +348,7 @@ export default function CheckoutPage() {
               </p>
             )}
           </Card>
-        ) : calculating ? (
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 text-center text-xs text-slate-500">
-            Sedang menghitung jarak dan tarif pengiriman otomatis...
-          </div>
-        ) : null}
+        )}
       </form>
     </Screen>
   );

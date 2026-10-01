@@ -125,39 +125,6 @@ export function OrderDetailSkeleton() {
   );
 }
 
-export function TrackingSkeleton() {
-  return (
-    <div className="space-y-4 px-4 py-4">
-      <div className="rounded-2xl border border-slate-200 bg-white p-4 space-y-3">
-        <Skeleton className="h-4 w-24" />
-        <Skeleton className="h-10 w-full rounded-xl" />
-      </div>
-
-      <div className="rounded-2xl border border-slate-200 bg-white p-5 space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="space-y-1">
-            <Skeleton className="h-3 w-20" />
-            <Skeleton className="h-6 w-32" />
-          </div>
-          <Skeleton className="h-6 w-24 rounded-lg" />
-        </div>
-        <Skeleton className="h-16 w-full rounded-xl" />
-        <div className="space-y-4 pt-3 border-t border-slate-100">
-          {[1, 2, 3, 4, 5].map((i) => (
-            <div key={i} className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Skeleton className="size-6 rounded-full" />
-                <Skeleton className="h-4 w-32" />
-              </div>
-              <Skeleton className="h-3 w-16" />
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export function DocSkeleton() {
   return (
     <div className="space-y-4 px-4 py-4">

@@ -1,4 +1,5 @@
 @import "./theme/tokens.css";
+@import "leaflet/dist/leaflet.css";
 
 @import "tailwindcss/theme.css" layer(theme);
 @import "tailwindcss/utilities.css";
@@ -83,3 +84,19 @@
   width: 0 !important;
   height: 0 !important;
 }
+
+/* ==========================================================================
+   PKM TONASA CLEAN PULL-TO-REFRESH (NATIVE LOADING SPINNER)
+   ========================================================================== */
+ion-refresher {
+  --color: #ea580c;
+}
+
+/* Hide static icon and text, leaving only the pure loading spinner */
+ion-refresher-content .refresher-pulling-icon,
+ion-refresher-content .refresher-pulling-text,
+ion-refresher-content .refresher-refreshing-text {
+  display: none !important;
+}
+
+

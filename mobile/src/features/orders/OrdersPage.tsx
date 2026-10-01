@@ -6,7 +6,6 @@ import {
   cubeOutline,
   documentTextOutline,
   locationOutline,
-  navigateOutline,
   receiptOutline,
   searchOutline,
   closeCircleOutline
@@ -297,19 +296,11 @@ export default function OrdersPage() {
                       </div>
 
                       {/* QUICK ACTION BUTTONS */}
-                      <div className="grid grid-cols-3 divide-x divide-slate-100 border-t border-slate-100 bg-white text-center text-xs">
-                        <button
-                          type="button"
-                          onClick={() => navigate(`/tabs/tracking?code=${order.code}`)}
-                          className="flex items-center justify-center gap-1 py-2 text-[11px] font-bold text-slate-600 hover:bg-slate-50 hover:text-[#0c1d37] transition-colors cursor-pointer"
-                        >
-                          <IonIcon icon={navigateOutline} className="text-xs text-[#ea580c]" />
-                          <span>Lacak</span>
-                        </button>
+                      <div className="grid grid-cols-2 divide-x divide-slate-100 border-t border-slate-100 bg-white text-center text-xs">
                         <button
                           type="button"
                           onClick={() => navigate(`/tabs/docs?code=${order.code}`)}
-                          className="flex items-center justify-center gap-1 py-2 text-[11px] font-bold text-slate-600 hover:bg-slate-50 hover:text-[#0c1d37] transition-colors cursor-pointer"
+                          className="flex items-center justify-center gap-1.5 py-2.5 text-[11px] font-bold text-slate-600 hover:bg-slate-50 hover:text-[#0c1d37] transition-colors cursor-pointer"
                         >
                           <IonIcon icon={documentTextOutline} className="text-xs text-[#0c1d37]" />
                           <span>Dokumen</span>
@@ -317,7 +308,7 @@ export default function OrdersPage() {
                         <button
                           type="button"
                           onClick={() => navigate(`/orders/${order.uuid}`)}
-                          className="flex items-center justify-center gap-1 py-2 text-[11px] font-bold text-[#0c1d37] hover:bg-slate-50 transition-colors cursor-pointer"
+                          className="flex items-center justify-center gap-1.5 py-2.5 text-[11px] font-bold text-[#0c1d37] hover:bg-slate-50 transition-colors cursor-pointer"
                         >
                           <span>Rincian</span>
                           <IonIcon icon={chevronForwardOutline} className="text-[10px]" />

@@ -1,7 +1,7 @@
 import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode, TextareaHTMLAttributes } from 'react';
 import { createPortal } from 'react-dom';
 import { IonContent, IonHeader, IonIcon, IonPage, IonRefresher, IonRefresherContent, type RefresherEventDetail } from '@ionic/react';
-import { addOutline, cartOutline, chevronBackOutline, chevronDownCircleOutline, removeOutline, trashOutline } from 'ionicons/icons';
+import { addOutline, cartOutline, chevronBackOutline, removeOutline, trashOutline } from 'ionicons/icons';
 import { Link } from 'react-router-dom';
 import type { StatusTone } from '../../domain/rules';
 import PkmLogo from './PkmLogo';
@@ -91,8 +91,23 @@ export function ErrorText({ children }: { children: ReactNode }) {
   );
 }
 
-export function Card({ children, className = '' }: { children: ReactNode; className?: string }) {
-  return <div className={`rounded-2xl border border-slate-200/90 bg-white p-4 shadow-xs ${className}`}>{children}</div>;
+export function Card({
+  children,
+  className = '',
+  onClick,
+}: {
+  children: ReactNode;
+  className?: string;
+  onClick?: () => void;
+}) {
+  return (
+    <div
+      onClick={onClick}
+      className={`rounded-2xl border border-slate-200/90 bg-white p-4 shadow-xs ${className}`}
+    >
+      {children}
+    </div>
+  );
 }
 
 export function StatusBadge({ tone, children }: { tone: StatusTone; children: ReactNode }) {
@@ -269,12 +284,7 @@ export function Screen({
       <IonContent className="pkm-screen [--background:var(--pkm-canvas)]">
         {onRefresh && (
           <IonRefresher slot="fixed" onIonRefresh={onRefresh}>
-            <IonRefresherContent
-              pullingIcon={chevronDownCircleOutline}
-              pullingText="Tarik untuk memuat ulang"
-              refreshingSpinner="crescent"
-              refreshingText="Memperbarui data..."
-            />
+            <IonRefresherContent refreshingSpinner="crescent" />
           </IonRefresher>
         )}
         <div className="flex min-h-full flex-1 flex-col bg-canvas text-ink">{children}</div>

@@ -36,7 +36,6 @@ export {
   ProductDetailSkeleton,
   OrderCardSkeleton,
   OrderDetailSkeleton,
-  TrackingSkeleton,
   DocSkeleton,
   AppLoadingSkeleton,
   ProfileSkeleton,

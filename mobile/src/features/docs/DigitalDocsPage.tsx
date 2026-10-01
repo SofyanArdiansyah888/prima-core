@@ -1,33 +1,36 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { IonIcon, useIonViewWillEnter, type RefresherEventDetail } from '@ionic/react';
 import {
   alertCircleOutline,
+  arrowBackOutline,
   businessOutline,
   checkmarkCircle,
   checkmarkCircleOutline,
-  checkmarkOutline,
+  chevronForwardOutline,
+  closeCircleOutline,
   closeOutline,
   cubeOutline,
   documentTextOutline,
   downloadOutline,
-  eyeOutline,
-  medalOutline,
+  folderOpenOutline,
+  folderOutline,
   printOutline,
   qrCodeOutline,
-  scaleOutline,
+  searchOutline,
   shareSocialOutline,
   shieldCheckmarkOutline,
   timeOutline,
 } from 'ionicons/icons';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '../../data/api';
 import { formatDate, formatQty, formatRupiah } from '../../domain/format';
+import { orderStatusTone } from '../../domain/rules';
 import type { CustomerOrder } from '../../domain/types';
 import PkmLogo from '../../shared/ui/PkmLogo';
-import { BrandBar, Card, DocSkeleton, ErrorText, Screen } from '../../shared/ui';
+import { BrandBar, Card, DocSkeleton, ErrorText, Screen, StatusBadge } from '../../shared/ui';
 
-type DocTab = 'suratJalan' | 'notaTimbangan' | 'eFaktur' | 'sertifikatMutu';
+type DocTab = 'suratJalan' | 'eFaktur';
 
 type ToastState = {
   show: boolean;
@@ -36,12 +39,13 @@ type ToastState = {
 };
 
 export default function DigitalDocsPage() {
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const paramCode = searchParams.get('code');
 
   const [orders, setOrders] = useState<CustomerOrder[]>([]);
-  const [selectedOrderCode, setSelectedOrderCode] = useState<string>('');
   const [activeTab, setActiveTab] = useState<DocTab>('suratJalan');
+  const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [isDownloading, setIsDownloading] = useState(false);
@@ -65,12 +69,6 @@ export default function DigitalDocsPage() {
     try {
       const res = await api.orders();
       setOrders(res.data);
-      if (res.data.length > 0) {
-        const match = paramCode
-          ? res.data.find((o) => o.code === paramCode || o.uuid === paramCode)
-          : null;
-        setSelectedOrderCode(match ? match.code : res.data[0].code);
-      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Gagal memuat dokumen digital.');
     } finally {
@@ -82,9 +80,6 @@ export default function DigitalDocsPage() {
     try {
       const res = await api.orders();
       setOrders(res.data);
-      if (res.data.length > 0 && !selectedOrderCode) {
-        setSelectedOrderCode(res.data[0].code);
-      }
       triggerToast('Dokumen digital diperbarui.', 'info');
       setError('');
     } catch (err) {
@@ -102,15 +97,29 @@ export default function DigitalDocsPage() {
     void loadOrders();
   }, []);
 
-  const activeOrder = orders.find((o) => o.code === selectedOrderCode) || orders[0];
+  // Filtered orders for list view
+  const filteredOrders = useMemo(() => {
+    if (!searchQuery.trim()) return orders;
+    const q = searchQuery.toLowerCase();
+    return orders.filter(
+      (o) =>
+        o.code.toLowerCase().includes(q) ||
+        o.project_title.toLowerCase().includes(q) ||
+        (o.delivery_address && o.delivery_address.toLowerCase().includes(q))
+    );
+  }, [orders, searchQuery]);
+
+  // If a code parameter is present in URL, select that specific active order
+  const activeOrder = useMemo(() => {
+    if (!paramCode) return null;
+    return orders.find((o) => o.code === paramCode || o.uuid === paramCode) || null;
+  }, [orders, paramCode]);
 
   const handleDownload = () => {
     if (!activeOrder) return;
     const tabNames: Record<DocTab, string> = {
       suratJalan: 'Surat-Jalan-POD',
-      notaTimbangan: 'Nota-Timbangan-Jembatan',
       eFaktur: 'e-Faktur-Pajak',
-      sertifikatMutu: 'Sertifikat-Mutu-Beton',
     };
     setIsDownloading(true);
     triggerToast(`Menyiapkan berkas PDF ${tabNames[activeTab]}-${activeOrder.code}...`, 'info');
@@ -139,14 +148,19 @@ export default function DigitalDocsPage() {
   };
 
   const tabs: { id: DocTab; label: string; icon: string }[] = [
-    { id: 'suratJalan', label: 'Surat Jalan', icon: documentTextOutline },
-    { id: 'notaTimbangan', label: 'Timbangan', icon: scaleOutline },
-    { id: 'eFaktur', label: 'e-Faktur', icon: documentTextOutline },
-    { id: 'sertifikatMutu', label: 'Mutu QC', icon: medalOutline },
+    { id: 'suratJalan', label: 'Surat Jalan (e-POD)', icon: documentTextOutline },
+    { id: 'eFaktur', label: 'e-Faktur Pajak', icon: documentTextOutline },
   ];
 
   return (
-    <Screen onRefresh={handlePullRefresh} header={<BrandBar title="Dokumen Digital" />}>
+    <Screen
+      onRefresh={handlePullRefresh}
+      header={
+        <BrandBar
+          title={activeOrder ? `Dokumen ${activeOrder.code}` : 'Dokumen Digital'}
+        />
+      }
+    >
       {/* Toast Notification */}
       <div
         className={`fixed top-4 left-1/2 z-50 w-[92%] max-w-sm -translate-x-1/2 rounded-2xl border border-slate-700 bg-[#0c1d37] px-4 py-3 text-xs text-white shadow-2xl transition-all duration-300 sm:text-sm ${
@@ -184,46 +198,57 @@ export default function DigitalDocsPage() {
           </div>
           <h2 className="text-base font-extrabold text-[#0c1d37]">Belum Ada Dokumen Terbit</h2>
           <p className="mt-1.5 max-w-xs text-xs text-slate-500 leading-relaxed">
-            Dokumen resmi surat jalan, nota timbangan, dan e-faktur akan tersedia otomatis setelah pesanan dibuat.
+            Surat jalan dan e-faktur akan tersedia otomatis setelah pesanan diproses.
           </p>
         </div>
-      ) : (
+      ) : activeOrder ? (
+        /* ======================================================================
+           VIEW 2: DETAIL VIEW DOKUMEN PESANAN TERTENTU
+           ====================================================================== */
         <div className="space-y-3.5 px-4 py-4 pb-24">
-          {/* HORIZONTAL ORDER SELECTOR PILLS */}
-          <div className="space-y-1.5">
-            <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block px-0.5">
-              Pilih Berkas Pesanan ({orders.length})
+          {/* Back to Document List Header */}
+          <div className="flex items-center justify-between">
+            <button
+              type="button"
+              onClick={() => navigate('/tabs/docs')}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-white border border-slate-200/90 px-3 py-1.5 text-xs font-bold text-[#0c1d37] hover:bg-slate-50 shadow-2xs transition-all cursor-pointer"
+            >
+              <IonIcon icon={arrowBackOutline} className="text-sm text-[#ea580c]" />
+              <span>Semua Dokumen</span>
+            </button>
+            <span className="rounded-md bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-[10px] font-extrabold text-emerald-700 uppercase flex items-center gap-1">
+              <IonIcon icon={shieldCheckmarkOutline} />
+              <span>Dokumen Sah</span>
             </span>
-            <div className="flex gap-2 overflow-x-auto no-scrollbar py-0.5">
-              {orders.map((o) => {
-                const isSelected = (selectedOrderCode || orders[0].code) === o.code;
-                return (
-                  <button
-                    key={o.uuid}
-                    type="button"
-                    onClick={() => setSelectedOrderCode(o.code)}
-                    className={`whitespace-nowrap px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 border ${
-                      isSelected
-                        ? 'bg-[#0c1d37] text-white border-[#0c1d37] shadow-xs'
-                        : 'bg-white text-slate-700 border-slate-200/90 hover:bg-slate-50'
-                    }`}
-                  >
-                    <span className="font-mono text-[11px]">{o.code}</span>
-                    <span
-                      className={`text-[10px] truncate max-w-[110px] ${
-                        isSelected ? 'text-slate-300' : 'text-slate-400'
-                      }`}
-                    >
-                      · {o.project_title}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
           </div>
 
-          {/* DOCUMENT TAB SELECTOR */}
-          <div className="grid grid-cols-4 gap-1 rounded-2xl border border-slate-200 bg-slate-100 p-1">
+          {/* Active Order Summary Card */}
+          <Card className="p-3.5 bg-gradient-to-br from-[#0c1d37] to-[#162e55] text-white border-none shadow-md">
+            <div className="flex items-center justify-between border-b border-white/10 pb-2 mb-2">
+              <div>
+                <span className="text-[9px] font-bold text-slate-300 uppercase tracking-wider block">
+                  Nomor Pesanan (SO)
+                </span>
+                <span className="font-mono text-sm font-black text-amber-400">{activeOrder.code}</span>
+              </div>
+              <StatusBadge tone={orderStatusTone(activeOrder.status)}>
+                {activeOrder.status}
+              </StatusBadge>
+            </div>
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <div>
+                <span className="text-[9px] text-slate-300 block">Proyek:</span>
+                <span className="font-bold text-slate-100 truncate block">{activeOrder.project_title}</span>
+              </div>
+              <div className="text-right">
+                <span className="text-[9px] text-slate-300 block">Tanggal Terbit:</span>
+                <span className="font-mono text-slate-200">{formatDate(activeOrder.created_at)}</span>
+              </div>
+            </div>
+          </Card>
+
+          {/* Document Type Tabs (Surat Jalan & e-Faktur) */}
+          <div className="grid grid-cols-2 gap-1 rounded-2xl border border-slate-200 bg-slate-100 p-1">
             {tabs.map((tab) => {
               const isSelected = activeTab === tab.id;
               return (
@@ -231,7 +256,7 @@ export default function DigitalDocsPage() {
                   key={tab.id}
                   type="button"
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex flex-col items-center justify-center gap-1 rounded-xl py-2 px-1 text-center transition-all cursor-pointer ${
+                  className={`flex items-center justify-center gap-2 rounded-xl py-2.5 px-3 text-center transition-all cursor-pointer ${
                     isSelected
                       ? 'bg-white text-[#0c1d37] font-extrabold shadow-xs'
                       : 'text-slate-500 hover:text-slate-900 font-medium'
@@ -239,15 +264,15 @@ export default function DigitalDocsPage() {
                 >
                   <IonIcon
                     icon={tab.icon}
-                    className={`text-base ${isSelected ? 'text-[#d91424]' : 'text-slate-400'}`}
+                    className={`text-sm ${isSelected ? 'text-[#ea580c]' : 'text-slate-400'}`}
                   />
-                  <span className="text-[10px] leading-tight truncate max-w-full">{tab.label}</span>
+                  <span className="text-xs font-bold leading-tight">{tab.label}</span>
                 </button>
               );
             })}
           </div>
 
-          {/* ACTION BUTTONS TOOLBAR */}
+          {/* Action Buttons Toolbar */}
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -276,257 +301,282 @@ export default function DigitalDocsPage() {
             </button>
           </div>
 
-          {/* DOCUMENT PAPER SHEET */}
+          {/* Render Document Sheet */}
           <AnimatePresence mode="wait">
-            {activeOrder && (
-              <motion.div
-                key={`${activeOrder.code}-${activeTab}`}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                transition={{ duration: 0.2 }}
-                className="relative rounded-2xl border border-slate-300/90 bg-white p-5 shadow-sm space-y-4 text-xs overflow-hidden"
-              >
-                {/* Watermark Logo Background */}
-                <div className="pointer-events-none absolute inset-0 flex items-center justify-center opacity-[0.03]">
-                  <PkmLogo className="size-64" />
-                </div>
+            <motion.div
+              key={`${activeOrder.code}-${activeTab}`}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.2 }}
+              className="relative rounded-2xl border border-slate-300/90 bg-white p-5 shadow-sm space-y-4 text-xs overflow-hidden"
+            >
+              {/* Watermark Logo Background */}
+              <div className="pointer-events-none absolute inset-0 flex items-center justify-center opacity-[0.03]">
+                <PkmLogo className="size-64" />
+              </div>
 
-                {/* Official Letterhead Header */}
-                <div className="relative z-10 flex items-start justify-between border-b-2 border-slate-800 pb-3.5">
-                  <div className="flex items-center gap-2.5">
-                    <PkmLogo className="size-10 shrink-0" />
-                    <div>
-                      <h3 className="text-xs font-black tracking-wide text-[#0c1d37]">
-                        PT PRIMA KARYA MANUNGGAL
-                      </h3>
-                      <p className="text-[9px] font-extrabold text-[#ea580c] uppercase">
-                        Semen Tonasa Group • SIG
-                      </p>
-                      <p className="text-[9px] text-slate-400">
-                        Biringere, Pangkep, Sulawesi Selatan | (0410) 21012
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="text-right shrink-0">
-                    <span className="rounded bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 text-[9px] font-extrabold text-emerald-700 uppercase flex items-center gap-1 justify-end">
-                      <IonIcon icon={shieldCheckmarkOutline} />
-                      <span>E-VERIFIED</span>
-                    </span>
-                    <p className="mt-1 font-mono text-[9px] text-slate-400">
-                      {activeOrder.created_at ? formatDate(activeOrder.created_at) : '30 Sep 2026'}
+              {/* Official Letterhead Header */}
+              <div className="relative z-10 flex items-start justify-between border-b-2 border-slate-800 pb-3.5">
+                <div className="flex items-center gap-2.5">
+                  <PkmLogo className="size-10 shrink-0" />
+                  <div>
+                    <h3 className="text-xs font-black tracking-wide text-[#0c1d37]">
+                      PT PRIMA KARYA MANUNGGAL
+                    </h3>
+                    <p className="text-[9px] font-extrabold text-[#ea580c] uppercase">
+                      Semen Tonasa Group • SIG
+                    </p>
+                    <p className="text-[9px] text-slate-400">
+                      Biringere, Pangkep, Sulawesi Selatan | (0410) 21012
                     </p>
                   </div>
                 </div>
 
-                {/* TAB 1: SURAT JALAN & POD */}
-                {activeTab === 'suratJalan' && (
-                  <div className="relative z-10 space-y-3.5">
-                    <div className="text-center">
-                      <h4 className="font-extrabold text-sm text-[#0c1d37] uppercase tracking-wide">
-                        Surat Jalan & Bukti Penerimaan (e-POD)
-                      </h4>
-                      <p className="font-mono text-[10px] font-bold text-[#d91424]">
-                        No. SJ: SJ-PKM/{activeOrder.code}/2026
-                      </p>
-                    </div>
+                <div className="text-right shrink-0">
+                  <span className="rounded bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 text-[9px] font-extrabold text-emerald-700 uppercase flex items-center gap-1 justify-end">
+                    <IonIcon icon={shieldCheckmarkOutline} />
+                    <span>E-VERIFIED</span>
+                  </span>
+                  <p className="mt-1 font-mono text-[9px] text-slate-400">
+                    {activeOrder.created_at ? formatDate(activeOrder.created_at) : '30 Sep 2026'}
+                  </p>
+                </div>
+              </div>
 
-                    <div className="grid grid-cols-2 gap-3 rounded-xl border border-slate-100 bg-slate-50 p-3 text-[11px]">
+              {/* TAB 1: SURAT JALAN & POD */}
+              {activeTab === 'suratJalan' && (
+                <div className="relative z-10 space-y-3.5">
+                  <div className="text-center">
+                    <h4 className="font-extrabold text-sm text-[#0c1d37] uppercase tracking-wide">
+                      Surat Jalan & Bukti Penerimaan (e-POD)
+                    </h4>
+                    <p className="font-mono text-[10px] font-bold text-[#d91424]">
+                      No. SJ: SJ-PKM/{activeOrder.code}/2026
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 rounded-xl border border-slate-100 bg-slate-50 p-3 text-[11px]">
+                    <div>
+                      <span className="text-[9px] font-bold text-slate-400 uppercase block">Penerima / Proyek:</span>
+                      <div className="font-extrabold text-slate-900 mt-0.5">{activeOrder.project_title}</div>
+                      <div className="text-slate-500 text-[10px] mt-0.5">{activeOrder.delivery_address}</div>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-[9px] font-bold text-slate-400 uppercase block">Armada & Plant:</span>
+                      <div className="font-bold text-slate-900 mt-0.5">{activeOrder.plant?.name || 'Plant Pangkep'}</div>
+                      <div className="font-mono text-[10px] text-slate-600">Mixer: DD 8920 XT (#04)</div>
+                      <div className="text-[10px] text-slate-600">Driver: Muh. Yusuf S.</div>
+                    </div>
+                  </div>
+
+                  {/* Material Table */}
+                  <table className="w-full border-collapse border border-slate-200 text-[11px]">
+                    <thead>
+                      <tr className="bg-[#0c1d37] text-white">
+                        <th className="p-2 border border-slate-700 text-left">Item Material</th>
+                        <th className="p-2 border border-slate-700 text-center">Volume</th>
+                        <th className="p-2 border border-slate-700 text-right">Keterangan</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {activeOrder.items.map((item, idx) => (
+                        <tr key={idx} className="border-b border-slate-200">
+                          <td className="p-2 font-bold text-slate-900">{item.name || item.code}</td>
+                          <td className="p-2 text-center font-extrabold text-[#0c1d37]">
+                            {formatQty(item.quantity)} {item.unit}
+                          </td>
+                          <td className="p-2 text-right text-slate-500 italic text-[10px]">SNI Resmi</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+
+                  {/* Signatures & QR */}
+                  <div className="grid grid-cols-3 gap-2 pt-2 text-center text-[10px]">
+                    <div className="rounded-xl border border-slate-200 p-2">
+                      <span className="text-[9px] text-slate-400 font-bold uppercase block mb-6">Petugas Batcher</span>
+                      <p className="font-bold text-slate-800">( Hardianto )</p>
+                    </div>
+                    <div className="rounded-xl border border-slate-200 p-2">
+                      <span className="text-[9px] text-slate-400 font-bold uppercase block mb-6">Pengemudi Mixer</span>
+                      <p className="font-bold text-slate-800">( Muh. Yusuf S. )</p>
+                    </div>
+                    <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-2 flex flex-col items-center justify-between">
+                      <span className="text-[9px] text-emerald-800 font-bold uppercase block">Validasi Digital</span>
+                      <IonIcon icon={qrCodeOutline} className="text-2xl text-[#0c1d37] my-0.5" />
+                      <span className="font-extrabold text-emerald-700 text-[8px]">DIGITAL VERIFIED</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 2: E-FAKTUR PAJAK */}
+              {activeTab === 'eFaktur' && (
+                <div className="relative z-10 space-y-3.5">
+                  <div className="text-center">
+                    <h4 className="font-extrabold text-sm text-[#0c1d37] uppercase tracking-wide">
+                      Faktur Pajak Digital (e-Faktur)
+                    </h4>
+                    <p className="font-mono text-[10px] font-bold text-[#d91424]">
+                      Kode: 010.004-26.{activeOrder.code.replace(/[^0-9]/g, '').padEnd(8, '0')}
+                    </p>
+                  </div>
+
+                  <div className="rounded-xl border border-slate-200 p-3 space-y-2 text-[11px]">
+                    <div className="grid grid-cols-2 gap-3 pb-2 border-b border-slate-100">
                       <div>
-                        <span className="text-[9px] font-bold text-slate-400 uppercase block">Penerima / Proyek:</span>
-                        <div className="font-extrabold text-slate-900 mt-0.5">{activeOrder.project_title}</div>
-                        <div className="text-slate-500 text-[10px] mt-0.5">{activeOrder.delivery_address}</div>
+                        <span className="text-[9px] font-bold text-slate-400 uppercase block">PKP Penjual:</span>
+                        <div className="font-extrabold text-slate-900">PT PRIMA KARYA MANUNGGAL</div>
+                        <div className="text-slate-500 font-mono text-[10px]">NPWP: 01.122.344.5-801.000</div>
                       </div>
                       <div className="text-right">
-                        <span className="text-[9px] font-bold text-slate-400 uppercase block">Armada & Plant:</span>
-                        <div className="font-bold text-slate-900 mt-0.5">{activeOrder.plant?.name || 'Plant Pangkep'}</div>
-                        <div className="font-mono text-[10px] text-slate-600">Mixer: DD 8920 XT (#04)</div>
-                        <div className="text-[10px] text-slate-600">Driver: Muh. Yusuf S.</div>
+                        <span className="text-[9px] font-bold text-slate-400 uppercase block">Pembeli:</span>
+                        <div className="font-extrabold text-slate-900">{activeOrder.project_title}</div>
+                        <div className="text-slate-500 font-mono text-[10px]">NPWP: 01.999.888.7-802.000</div>
                       </div>
                     </div>
 
-                    {/* Material Table */}
-                    <table className="w-full border-collapse border border-slate-200 text-[11px]">
-                      <thead>
-                        <tr className="bg-[#0c1d37] text-white">
-                          <th className="p-2 border border-slate-700 text-left">Item Material</th>
-                          <th className="p-2 border border-slate-700 text-center">Volume</th>
-                          <th className="p-2 border border-slate-700 text-right">Keterangan</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {activeOrder.items.map((item, idx) => (
-                          <tr key={idx} className="border-b border-slate-200">
-                            <td className="p-2 font-bold text-slate-900">{item.name || item.code}</td>
-                            <td className="p-2 text-center font-extrabold text-[#0c1d37]">
-                              {formatQty(item.quantity)} {item.unit}
-                            </td>
-                            <td className="p-2 text-right text-slate-500 italic text-[10px]">SNI Resmi</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-
-                    {/* Signatures & QR */}
-                    <div className="grid grid-cols-3 gap-2 pt-2 text-center text-[10px]">
-                      <div className="rounded-xl border border-slate-200 p-2">
-                        <span className="text-[9px] text-slate-400 font-bold uppercase block mb-6">Petugas Batcher</span>
-                        <p className="font-bold text-slate-800">( Hardianto )</p>
+                    <div className="space-y-1.5 pt-1 text-[11px]">
+                      <div className="flex justify-between font-medium text-slate-700">
+                        <span>Dasar Pengenaan Pajak (DPP):</span>
+                        <span className="font-mono font-medium">{formatRupiah(activeOrder.subtotal)}</span>
                       </div>
-                      <div className="rounded-xl border border-slate-200 p-2">
-                        <span className="text-[9px] text-slate-400 font-bold uppercase block mb-6">Pengemudi Mixer</span>
-                        <p className="font-bold text-slate-800">( Muh. Yusuf S. )</p>
+                      <div className="flex justify-between font-medium text-slate-700">
+                        <span>PPN Terutang (11%):</span>
+                        <span className="font-mono font-medium">{formatRupiah(activeOrder.ppn)}</span>
                       </div>
-                      <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-2 flex flex-col items-center justify-between">
-                        <span className="text-[9px] text-emerald-800 font-bold uppercase block">Validasi Digital</span>
-                        <IonIcon icon={qrCodeOutline} className="text-2xl text-[#0c1d37] my-0.5" />
-                        <span className="font-extrabold text-emerald-700 text-[8px]">GPS VERIFIED</span>
+                      <div className="flex justify-between font-extrabold text-[#0c1d37] pt-1.5 border-t border-slate-200 text-xs">
+                        <span>Total Tagihan:</span>
+                        <span className="font-mono font-bold text-sm">{formatRupiah(activeOrder.total_price)}</span>
                       </div>
                     </div>
                   </div>
-                )}
-
-                {/* TAB 2: NOTA TIMBANGAN DIGITAL */}
-                {activeTab === 'notaTimbangan' && (
-                  <div className="relative z-10 space-y-3.5">
-                    <div className="text-center">
-                      <h4 className="font-extrabold text-sm text-[#0c1d37] uppercase tracking-wide">
-                        Nota Jembatan Timbang Digital
-                      </h4>
-                      <p className="font-mono text-[10px] font-bold text-[#d91424]">
-                        Tiket Timbangan: WB-PKM-{activeOrder.code}
-                      </p>
-                    </div>
-
-                    <div className="grid grid-cols-3 gap-2 text-center">
-                      <div className="rounded-xl border border-slate-200 bg-slate-50 p-2.5">
-                        <span className="text-[9px] text-slate-400 font-bold uppercase block">Gross (Bruto)</span>
-                        <div className="text-base font-black font-mono text-slate-900 mt-0.5">
-                          24.850 <span className="text-[10px] font-sans">kg</span>
-                        </div>
-                      </div>
-                      <div className="rounded-xl border border-slate-200 bg-slate-50 p-2.5">
-                        <span className="text-[9px] text-slate-400 font-bold uppercase block">Tara (Kosong)</span>
-                        <div className="text-base font-black font-mono text-slate-700 mt-0.5">
-                          10.200 <span className="text-[10px] font-sans">kg</span>
-                        </div>
-                      </div>
-                      <div className="rounded-xl border border-[#0c1d37] bg-[#0c1d37] p-2.5 text-white">
-                        <span className="text-[9px] text-[#ea580c] font-extrabold uppercase block">Netto Material</span>
-                        <div className="text-base font-black font-mono text-amber-400 mt-0.5">
-                          14.650 <span className="text-[10px] font-sans text-white">kg</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="rounded-xl border border-amber-200 bg-amber-50/90 p-3 text-xs text-amber-900">
-                      <div className="flex items-center gap-1.5 font-bold text-amber-950 text-[11px] mb-0.5">
-                        <IonIcon icon={shieldCheckmarkOutline} className="text-sm text-amber-700" />
-                        <span>Kalibrasi Jembatan Timbang Metrologi Legal OK</span>
-                      </div>
-                      <p className="text-[10px] text-amber-800 leading-relaxed">
-                        Timbangan otomatis telah dikalibrasi berkala sesuai standar Badan Metrologi Legal Kementerian Perdagangan RI.
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                {/* TAB 3: E-FAKTUR PAJAK */}
-                {activeTab === 'eFaktur' && (
-                  <div className="relative z-10 space-y-3.5">
-                    <div className="text-center">
-                      <h4 className="font-extrabold text-sm text-[#0c1d37] uppercase tracking-wide">
-                        Faktur Pajak Digital (e-Faktur)
-                      </h4>
-                      <p className="font-mono text-[10px] font-bold text-[#d91424]">
-                        Kode: 010.004-26.{activeOrder.code.replace(/[^0-9]/g, '').padEnd(8, '0')}
-                      </p>
-                    </div>
-
-                    <div className="rounded-xl border border-slate-200 p-3 space-y-2 text-[11px]">
-                      <div className="grid grid-cols-2 gap-3 pb-2 border-b border-slate-100">
-                        <div>
-                          <span className="text-[9px] font-bold text-slate-400 uppercase block">PKP Penjual:</span>
-                          <div className="font-extrabold text-slate-900">PT PRIMA KARYA MANUNGGAL</div>
-                          <div className="text-slate-500 font-mono text-[10px]">NPWP: 01.122.344.5-801.000</div>
-                        </div>
-                        <div className="text-right">
-                          <span className="text-[9px] font-bold text-slate-400 uppercase block">Pembeli:</span>
-                          <div className="font-extrabold text-slate-900">{activeOrder.project_title}</div>
-                          <div className="text-slate-500 font-mono text-[10px]">NPWP: 01.999.888.7-802.000</div>
-                        </div>
-                      </div>
-
-                      <div className="space-y-1.5 pt-1 text-[11px]">
-                        <div className="flex justify-between font-medium text-slate-700">
-                          <span>Dasar Pengenaan Pajak (DPP):</span>
-                          <span className="font-mono font-medium">{formatRupiah(activeOrder.subtotal)}</span>
-                        </div>
-                        <div className="flex justify-between font-medium text-slate-700">
-                          <span>PPN Terutang (11%):</span>
-                          <span className="font-mono font-medium">{formatRupiah(activeOrder.ppn)}</span>
-                        </div>
-                        <div className="flex justify-between font-extrabold text-[#0c1d37] pt-1.5 border-t border-slate-200 text-xs">
-                          <span>Total Tagihan:</span>
-                          <span className="font-mono font-bold text-sm">{formatRupiah(activeOrder.total_price)}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* TAB 4: SERTIFIKAT MUTU BETON */}
-                {activeTab === 'sertifikatMutu' && (
-                  <div className="relative z-10 space-y-3.5">
-                    <div className="text-center">
-                      <h4 className="font-extrabold text-sm text-[#0c1d37] uppercase tracking-wide">
-                        Sertifikat Mutu Beton (QC Certificate)
-                      </h4>
-                      <p className="font-mono text-[10px] font-bold text-[#d91424]">
-                        Reg. Lab: QC-PKM/CERT/{activeOrder.code}
-                      </p>
-                    </div>
-
-                    <div className="rounded-xl border border-blue-100 bg-blue-50/70 p-3 space-y-2.5">
-                      <div className="flex items-center justify-between border-b border-blue-200/60 pb-2">
-                        <div>
-                          <span className="text-[9px] font-extrabold text-[#0c1d37] uppercase block">
-                            Laboratorium Pengujian Mutu
-                          </span>
-                          <p className="font-bold text-xs text-[#0c1d37]">Semen Tonasa QC & Research Center</p>
-                        </div>
-                        <IonIcon icon={medalOutline} className="text-2xl text-amber-500" />
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-2 text-center">
-                        <div className="rounded-lg bg-white p-2 border border-blue-100">
-                          <span className="text-[9px] text-slate-400 font-bold block">Kuat Tekan Rencana</span>
-                          <div className="text-xs font-extrabold text-[#0c1d37] mt-0.5">
-                            K-250 (20.75 MPa)
-                          </div>
-                        </div>
-                        <div className="rounded-lg bg-white p-2 border border-blue-100">
-                          <span className="text-[9px] text-slate-400 font-bold block">Uji 7 Hari</span>
-                          <div className="text-xs font-bold text-slate-800 mt-0.5">15.8 MPa (76%)</div>
-                        </div>
-                        <div className="rounded-lg bg-white p-2 border border-blue-100 col-span-2">
-                          <span className="text-[9px] text-slate-400 font-bold block">Uji 28 Hari (Kuat Tekan Penuh)</span>
-                          <div className="text-sm font-extrabold text-emerald-600 mt-0.5 flex items-center justify-center gap-1">
-                            <IonIcon icon={checkmarkCircleOutline} />
-                            <span>22.4 MPa (108% PASS & SNI COMPLIANT)</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </motion.div>
-            )}
+                </div>
+              )}
+            </motion.div>
           </AnimatePresence>
+        </div>
+      ) : (
+        /* ======================================================================
+           VIEW 1: DAFTAR BERKAS DOKUMEN PESANAN (MASTER LIST)
+           ====================================================================== */
+        <div className="space-y-4 px-4 py-4 pb-24">
+          {/* Header Description & Search Bar */}
+          <div className="space-y-2.5">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-sm font-black uppercase tracking-wide text-[#0c1d37]">
+                  Daftar Berkas Dokumen
+                </h2>
+                <p className="text-[11px] text-slate-500">
+                  Pilih pesanan untuk melihat berkas e-POD & Faktur.
+                </p>
+              </div>
+              <span className="rounded-full bg-slate-100 border border-slate-200 px-2.5 py-1 text-[10px] font-black text-[#0c1d37]">
+                {orders.length} Berkas
+              </span>
+            </div>
+
+            {/* Search Input Box */}
+            <div className="relative">
+              <IonIcon
+                icon={searchOutline}
+                className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm text-slate-400"
+              />
+              <input
+                type="text"
+                placeholder="Cari kode pesanan / proyek..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-8 text-xs font-medium text-slate-900 placeholder:text-slate-400 focus:border-[#0c1d37] focus:ring-2 focus:ring-[#0c1d37]/15 transition-all outline-none"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                >
+                  <IonIcon icon={closeCircleOutline} className="text-sm" />
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* List of Order Document Folders */}
+          {filteredOrders.length === 0 ? (
+            <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center">
+              <p className="text-xs text-slate-400">Tidak ada berkas yang sesuai dengan kata kunci.</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {filteredOrders.map((order) => (
+                <motion.div
+                  key={order.uuid}
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.15 }}
+                >
+                  <Card
+                    onClick={() => navigate(`/tabs/docs?code=${order.code}`)}
+                    className="p-4 border border-slate-200/90 shadow-2xs hover:border-[#0c1d37]/30 hover:shadow-xs transition-all cursor-pointer bg-white group"
+                  >
+                    <div className="flex items-start justify-between gap-2 border-b border-slate-100 pb-2.5 mb-2.5">
+                      <div className="flex items-center gap-2">
+                        <div className="flex size-9 items-center justify-center rounded-xl bg-orange-50 text-[#ea580c] border border-orange-100 group-hover:bg-[#0c1d37] group-hover:text-white group-hover:border-[#0c1d37] transition-colors">
+                          <IonIcon icon={folderOutline} className="text-lg" />
+                        </div>
+                        <div>
+                          <span className="font-mono text-xs font-black text-[#0c1d37] tracking-tight block">
+                            {order.code}
+                          </span>
+                          <span className="text-[10px] text-slate-400 block">
+                            {formatDate(order.created_at)}
+                          </span>
+                        </div>
+                      </div>
+
+                      <StatusBadge tone={orderStatusTone(order.status)}>
+                        {order.status}
+                      </StatusBadge>
+                    </div>
+
+                    <div className="space-y-1 text-xs">
+                      <div className="font-extrabold text-slate-900 group-hover:text-[#ea580c] transition-colors">
+                        {order.project_title}
+                      </div>
+                      <div className="text-[11px] text-slate-500 truncate">
+                        {order.delivery_address}
+                      </div>
+                    </div>
+
+                    {/* Chips for available documents */}
+                    <div className="mt-3 flex flex-wrap gap-1.5 pt-2.5 border-t border-slate-100 text-[10px]">
+                      <span className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2.5 py-1 font-bold text-slate-700">
+                        <IonIcon icon={documentTextOutline} className="text-xs text-blue-600" />
+                        <span>Surat Jalan (e-POD)</span>
+                      </span>
+                      <span className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2.5 py-1 font-bold text-slate-700">
+                        <IonIcon icon={documentTextOutline} className="text-xs text-purple-600" />
+                        <span>e-Faktur Pajak</span>
+                      </span>
+                    </div>
+
+                    {/* Action Prompt */}
+                    <div className="mt-3 flex items-center justify-between text-xs font-bold text-[#0c1d37] pt-1">
+                      <span className="text-[11px] text-slate-400 font-medium">2 Berkas Terlampir</span>
+                      <div className="flex items-center gap-1 text-[11px] text-[#ea580c] group-hover:translate-x-0.5 transition-transform">
+                        <span>Buka Berkas</span>
+                        <IonIcon icon={chevronForwardOutline} />
+                      </div>
+                    </div>
+                  </Card>
+                </motion.div>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </Screen>
   );
 }
-

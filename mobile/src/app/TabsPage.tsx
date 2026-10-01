@@ -1,8 +1,7 @@
 import { IonIcon, IonLabel, IonRouterOutlet, IonTabBar, IonTabButton, IonTabs } from '@ionic/react';
-import { cubeOutline, documentTextOutline, navigateOutline, personOutline, receiptOutline } from 'ionicons/icons';
+import { cubeOutline, documentTextOutline, personOutline, receiptOutline } from 'ionicons/icons';
 import { Navigate, Route } from 'react-router-dom';
 import HomePage from '../features/catalog/HomePage';
-import TrackingPage from '../features/tracking/TrackingPage';
 import OrdersPage from '../features/orders/OrdersPage';
 import DigitalDocsPage from '../features/docs/DigitalDocsPage';
 import ProfilePage from '../features/profile/ProfilePage';
@@ -12,7 +11,6 @@ export default function TabsPage() {
     <IonTabs>
       <IonRouterOutlet>
         <Route path="/tabs/home" element={<HomePage />} />
-        <Route path="/tabs/tracking" element={<TrackingPage />} />
         <Route path="/tabs/orders" element={<OrdersPage />} />
         <Route path="/tabs/docs" element={<DigitalDocsPage />} />
         <Route path="/tabs/profile" element={<ProfilePage />} />
@@ -22,10 +20,6 @@ export default function TabsPage() {
         <IonTabButton tab="home" href="/tabs/home">
           <IonIcon icon={cubeOutline} />
           <IonLabel className="text-[10px] font-bold">Katalog</IonLabel>
-        </IonTabButton>
-        <IonTabButton tab="tracking" href="/tabs/tracking">
-          <IonIcon icon={navigateOutline} />
-          <IonLabel className="text-[10px] font-bold">Lacak</IonLabel>
         </IonTabButton>
         <IonTabButton tab="orders" href="/tabs/orders">
           <IonIcon icon={receiptOutline} />

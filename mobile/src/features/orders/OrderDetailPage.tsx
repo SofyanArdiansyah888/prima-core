@@ -14,7 +14,6 @@ import {
   documentTextOutline,
   locationOutline,
   logoWhatsapp,
-  navigateOutline,
   receiptOutline,
   shieldCheckmarkOutline,
   timeOutline,
@@ -237,23 +236,15 @@ export default function OrderDetailPage() {
                 </div>
               </div>
 
-              {/* Quick Action Buttons inside Hero */}
-              <div className="mt-4 grid grid-cols-2 gap-2 pt-1">
-                <button
-                  type="button"
-                  onClick={() => navigate(`/tabs/tracking?code=${order.code}`)}
-                  className="flex items-center justify-center gap-1.5 rounded-xl bg-white/15 hover:bg-white/25 py-2.5 px-3 text-xs font-bold text-white backdrop-blur-xs transition-all cursor-pointer border border-white/20"
-                >
-                  <IonIcon icon={navigateOutline} className="text-sm text-amber-400" />
-                  <span>Lacak Pengiriman</span>
-                </button>
+              {/* Quick Action Button inside Hero */}
+              <div className="mt-4 pt-1">
                 <button
                   type="button"
                   onClick={() => navigate(`/tabs/docs?code=${order.code}`)}
-                  className="flex items-center justify-center gap-1.5 rounded-xl bg-white/15 hover:bg-white/25 py-2.5 px-3 text-xs font-bold text-white backdrop-blur-xs transition-all cursor-pointer border border-white/20"
+                  className="w-full flex items-center justify-center gap-2 rounded-xl bg-white/15 hover:bg-white/25 py-2.5 px-4 text-xs font-bold text-white backdrop-blur-xs transition-all cursor-pointer border border-white/20 shadow-xs"
                 >
                   <IonIcon icon={documentTextOutline} className="text-sm text-blue-300" />
-                  <span>Dokumen Digital</span>
+                  <span>Lihat Dokumen Digital Pesanan</span>
                 </button>
               </div>
             </div>
