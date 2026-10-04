@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { IonIcon, useIonViewWillEnter, type RefresherEventDetail } from '@ionic/react';
 import {
   businessOutline,
@@ -33,13 +33,17 @@ export default function OrdersPage() {
     setError('');
     try {
       const response = await api.orders();
-      setOrders(response.data);
+      setOrders(response?.data || []);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Gagal memuat pesanan.');
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    void loadOrders();
+  }, []);
 
   useIonViewWillEnter(() => {
     void loadOrders();
