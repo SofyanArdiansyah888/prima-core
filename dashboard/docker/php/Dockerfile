@@ -14,7 +14,5 @@ RUN chmod +x /usr/local/bin/entrypoint.sh
 
 RUN usermod -u 1000 www-data && groupmod -g 1000 www-data
 
-USER www-data
-
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 CMD ["php-fpm"]
