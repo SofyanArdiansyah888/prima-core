@@ -34,6 +34,25 @@ services:
       - "traefik.http.routers.school-api.tls.certresolver=le"
       - "traefik.http.services.school-api.loadbalancer.server.port=80"
 
+  mobile:
+    build:
+      context: ./mobile
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: https://pkm.orcaid.cloud
+    container_name: pkm-mobile-pwa
+    restart: unless-stopped
+    networks:
+      - traefik-public
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik-public"
+      - "traefik.http.routers.pkm-mobile.rule=Host(`mobile-pkm.orcaid.cloud`)"
+      - "traefik.http.routers.pkm-mobile.entrypoints=websecure"
+      - "traefik.http.routers.pkm-mobile.tls=true"
+      - "traefik.http.routers.pkm-mobile.tls.certresolver=le"
+      - "traefik.http.services.pkm-mobile.loadbalancer.server.port=80"
+
 networks:
   pkm:
     driver: bridge
