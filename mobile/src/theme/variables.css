@@ -13,7 +13,7 @@
   --ion-toolbar-color: var(--pkm-ink);
   --ion-tab-bar-background: var(--pkm-surface);
   --ion-tab-bar-color: var(--pkm-muted);
-  --ion-tab-bar-color-selected: var(--pkm-brand);
+  --ion-tab-bar-color-selected: var(--pkm-accent-red);
   --ion-font-family: var(--pkm-font-sans);
 }
 
@@ -23,7 +23,7 @@ ion-tab-bar {
 
 ion-tab-button {
   --color: var(--pkm-muted);
-  --color-selected: var(--pkm-brand);
+  --color-selected: var(--pkm-accent-red);
 }
 
 ion-content.pkm-screen::part(scroll) {
