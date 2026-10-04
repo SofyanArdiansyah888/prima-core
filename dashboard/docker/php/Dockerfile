@@ -1,7 +1,9 @@
 FROM php:8.3-fpm-bookworm
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    git unzip libzip-dev libpng-dev libonig-dev libxml2-dev libpq-dev \
+    git unzip libzip-dev libpng-dev libonig-dev libxml2-dev libpq-dev curl gnupg \
+    && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y --no-install-recommends nodejs \
     && docker-php-ext-install pdo_pgsql mbstring zip bcmath \
     && rm -rf /var/lib/apt/lists/*
 
