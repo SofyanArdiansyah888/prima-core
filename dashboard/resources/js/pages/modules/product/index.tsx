@@ -1,5 +1,5 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { Package, Plus, Search, Tag, CheckCircle2, XCircle, Truck, Layers, Pencil } from 'lucide-react';
+import { Package, Plus, Search, Pencil } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -64,26 +64,41 @@ export default function ProductIndex({
         }
     };
 
+    const formatCategoryLabel = (cat: string) => {
+        const found = categories.find((c) => c.value === cat);
+        if (found) return found.label;
+        switch (cat) {
+            case 'readymix':
+                return 'Ready Mix';
+            case 'cement':
+                return 'Semen';
+            case 'mortar':
+                return 'Mortar';
+            default:
+                return cat;
+        }
+    };
+
     return (
         <>
             <Head title="Master Produk & Material" />
             <div className="flex flex-1 flex-col gap-6 p-4 md:p-8">
                 {/* Header */}
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-                    <div className="space-y-1">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
                         <div className="flex items-center gap-2">
-                            <span className="inline-flex items-center rounded-md bg-[#ea580c]/10 border border-[#ea580c]/20 px-2 py-0.5 text-[10px] font-extrabold tracking-wider text-[#ea580c] uppercase">
-                                Katalog Mutu & Logistik PKM
+                            <span className="inline-flex items-center rounded-md bg-emerald-500/10 px-2 py-0.5 text-[11px] font-semibold tracking-wider text-emerald-700 uppercase dark:text-emerald-300">
+                                Master Data · Material
                             </span>
                         </div>
-                        <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl dark:text-white">
-                            Master Produk & Ready Mix
+                        <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl dark:text-white">
+                            Produk & Ready Mix
                         </h1>
-                        <p className="text-sm text-slate-600 dark:text-slate-400">
-                            Kelola varian mutu beton Ready Mix, Semen Tonasa OPC/PCC, serta konfigurasi kapasitas ritase dan aturan pengiriman.
+                        <p className="mt-0.5 text-sm text-slate-500 dark:text-slate-400">
+                            Katalog mutu beton ready mix, semen, dan tarif dasar material.
                         </p>
                     </div>
-                    <Button asChild size="sm" className="h-9 bg-[#0c1d37] font-medium text-white shadow-xs hover:bg-[#162e55] dark:bg-slate-800 dark:hover:bg-slate-700">
+                    <Button asChild size="sm" className="h-9 bg-emerald-700 font-medium text-white shadow-xs hover:bg-emerald-800 dark:bg-emerald-600 dark:hover:bg-emerald-700">
                         <Link href="/master/products/create">
                             <Plus className="size-4" /> Tambah Produk
                         </Link>
@@ -99,7 +114,7 @@ export default function ProductIndex({
                                 className="h-9 border-slate-200 pl-9 text-sm focus-visible:ring-emerald-500/20 focus-visible:border-emerald-600 dark:border-slate-800"
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
-                                placeholder="Cari kode (K-300), nama produk…"
+                                placeholder="Cari nama atau kode produk…"
                             />
                         </div>
 
@@ -109,7 +124,7 @@ export default function ProductIndex({
                                 setCategory(e.target.value);
                                 router.get('/master/products', { search, category: e.target.value }, { preserveState: true });
                             }}
-                            className="h-9 rounded-md border border-slate-200 bg-white px-3 text-xs font-medium text-slate-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200"
+                            className="h-9 rounded-md border border-slate-200 bg-white px-3 text-xs font-medium text-slate-700 focus:border-emerald-600 focus:outline-hidden dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200"
                         >
                             <option value="">Semua Kategori</option>
                             {categories.map((c) => (
@@ -141,21 +156,20 @@ export default function ProductIndex({
                     </form>
 
                     <div className="text-xs text-slate-500 dark:text-slate-400">
-                        Total: <span className="font-bold text-slate-900 dark:text-white">{products.total ?? products.data.length}</span> item produk
+                        Total: <span className="font-bold text-slate-900 dark:text-white">{products.total ?? products.data.length}</span> produk
                     </div>
                 </div>
 
-                {/* Product Table */}
+                {/* Clean, Refined Product Table */}
                 <div className="overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.04)] dark:border-slate-800 dark:bg-slate-900/90">
                     <div className="overflow-x-auto">
                         <table className="w-full text-left text-sm">
                             <thead className="border-b border-slate-200/80 bg-slate-50/80 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:border-slate-800 dark:bg-slate-800/60 dark:text-slate-400">
                                 <tr>
-                                    <th className="px-5 py-3.5">Kode & Nama Produk</th>
+                                    <th className="px-5 py-3.5">Produk</th>
                                     <th className="px-5 py-3.5">Kategori</th>
-                                    <th className="px-5 py-3.5">Harga Satuan</th>
-                                    <th className="px-5 py-3.5">Kapasitas Armada</th>
-                                    <th className="px-5 py-3.5">Karakteristik Pengiriman</th>
+                                    <th className="px-5 py-3.5">Harga Dasar</th>
+                                    <th className="px-5 py-3.5">Logistik Ritase</th>
                                     <th className="px-5 py-3.5">Status</th>
                                     <th className="px-5 py-3.5 text-right">Aksi</th>
                                 </tr>
@@ -163,7 +177,7 @@ export default function ProductIndex({
                             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                                 {products.data.length === 0 && (
                                     <tr>
-                                        <td colSpan={7} className="px-6 py-12 text-center">
+                                        <td colSpan={6} className="px-6 py-12 text-center">
                                             <div className="mx-auto flex max-w-xs flex-col items-center justify-center text-center">
                                                 <div className="flex size-10 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800">
                                                     <Package className="size-5 text-slate-400" />
@@ -181,62 +195,74 @@ export default function ProductIndex({
                                 )}
                                 {products.data.map((p) => (
                                     <tr key={p.uuid} className="transition-colors hover:bg-slate-50/70 dark:hover:bg-slate-800/40">
+                                        {/* 1. Produk (Nama + Kode + Slump/Tag) */}
                                         <td className="px-5 py-3.5">
-                                            <div className="flex items-start gap-2.5">
-                                                <span className="inline-flex shrink-0 items-center rounded-md border border-slate-200/80 bg-slate-100/80 px-2 py-0.5 font-mono text-xs font-semibold text-slate-800 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
-                                                    {p.code}
-                                                </span>
-                                                <div>
-                                                    <p className="font-semibold text-slate-900 dark:text-white">{p.name}</p>
+                                            <div className="flex flex-col gap-0.5">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="font-semibold text-slate-900 dark:text-white">{p.name}</span>
                                                     {p.tag && (
-                                                        <span className="mt-0.5 inline-flex items-center gap-1 text-[11px] text-slate-500 dark:text-slate-400">
-                                                            <Tag className="size-3" /> {p.tag}
+                                                        <span className="inline-flex items-center rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-400">
+                                                            {p.tag}
                                                         </span>
+                                                    )}
+                                                </div>
+                                                <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                                                    <span className="font-mono font-medium text-slate-700 dark:text-slate-300">{p.code}</span>
+                                                    {p.slump && (
+                                                        <>
+                                                            <span>•</span>
+                                                            <span>Slump: {p.slump}</span>
+                                                        </>
                                                     )}
                                                 </div>
                                             </div>
                                         </td>
+
+                                        {/* 2. Kategori */}
                                         <td className="px-5 py-3.5">
-                                            <span className={`inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-semibold uppercase ${getCategoryBadge(p.category)}`}>
-                                                {p.category}
+                                            <span className={`inline-flex items-center rounded-md border px-2 py-0.5 text-[11px] font-semibold ${getCategoryBadge(p.category)}`}>
+                                                {formatCategoryLabel(p.category)}
                                             </span>
                                         </td>
-                                        <td className="px-5 py-3.5 font-semibold text-slate-900 dark:text-white">
-                                            Rp {Number(p.base_price).toLocaleString('id-ID')}
-                                            <span className="ml-1 text-xs font-normal text-slate-500">/{p.unit}</span>
-                                        </td>
+
+                                        {/* 3. Harga Dasar */}
                                         <td className="px-5 py-3.5">
-                                            <div className="flex items-center gap-1.5 text-xs font-medium text-slate-700 dark:text-slate-300">
-                                                <Truck className="size-3.5 text-slate-400" />
-                                                <span>Max {Number(p.max_trip_capacity).toLocaleString('id-ID')} {p.unit}/rit</span>
+                                            <div className="flex items-baseline gap-1">
+                                                <span className="font-mono font-bold text-slate-900 dark:text-white">
+                                                    Rp {Number(p.base_price).toLocaleString('id-ID')}
+                                                </span>
+                                                <span className="text-xs text-slate-500">/{p.unit}</span>
                                             </div>
                                         </td>
+
+                                        {/* 4. Logistik Ritase (Kapasitas + Multi-drop/Eksklusif ringkas) */}
                                         <td className="px-5 py-3.5">
-                                            {p.allow_combined_delivery ? (
-                                                <span className="inline-flex items-center gap-1 rounded-full border border-blue-500/20 bg-blue-500/10 px-2.5 py-0.5 text-xs font-medium text-blue-700 dark:text-blue-300">
-                                                    <Layers className="size-3" />
-                                                    Bisa Campur Customer (Multi-drop)
+                                            <div className="flex flex-col gap-0.5 text-xs">
+                                                <span className="font-medium text-slate-800 dark:text-slate-200">
+                                                    Max {Number(p.max_trip_capacity).toLocaleString('id-ID')} {p.unit} / rit
                                                 </span>
-                                            ) : (
-                                                <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/20 bg-amber-500/10 px-2.5 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-300">
-                                                    <CheckCircle2 className="size-3" />
-                                                    Eksklusif 1 Customer / Trip
+                                                <span className="text-[11px] text-slate-500">
+                                                    {p.allow_combined_delivery ? 'Bisa Campur (Multi-drop)' : 'Eksklusif 1 Rit'}
                                                 </span>
-                                            )}
+                                            </div>
                                         </td>
+
+                                        {/* 5. Status */}
                                         <td className="px-5 py-3.5">
                                             {p.is_active ? (
-                                                <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-300">
+                                                <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700 dark:text-emerald-400">
                                                     <span className="size-1.5 rounded-full bg-emerald-600 dark:bg-emerald-400" />
                                                     Aktif
                                                 </span>
                                             ) : (
-                                                <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400">
+                                                <span className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500 dark:text-slate-400">
                                                     <span className="size-1.5 rounded-full bg-slate-400" />
                                                     Nonaktif
                                                 </span>
                                             )}
                                         </td>
+
+                                        {/* 6. Aksi */}
                                         <td className="px-5 py-3.5 text-right">
                                             <div className="flex items-center justify-end gap-1">
                                                 <Button
@@ -275,7 +301,7 @@ export default function ProductIndex({
                                         disabled={!link.url}
                                         className={`h-8 px-3 text-xs ${
                                             link.active
-                                                ? 'bg-[#0c1d37] text-white hover:bg-[#162e55]'
+                                                ? 'bg-emerald-700 text-white hover:bg-emerald-800 dark:bg-emerald-600'
                                                 : 'border-slate-200 dark:border-slate-800'
                                         }`}
                                     >
@@ -298,6 +324,7 @@ export default function ProductIndex({
 ProductIndex.layout = {
     breadcrumbs: [
         { title: 'Dashboard', href: dashboard() },
-        { title: 'Master Produk', href: '/master/products' },
+        { title: 'Master Data', href: '#' },
+        { title: 'Produk & Ready Mix', href: '/master/products' },
     ],
 };
