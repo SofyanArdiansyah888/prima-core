@@ -1,5 +1,5 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { MapPin, Plus, Route, Trash2 } from 'lucide-react';
+import { MapPin, Plus, Route, Trash2, Pencil } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -169,16 +169,27 @@ export default function DeliveryRateIndex({
                                         </td>
                                         <td className="px-5 py-3.5 text-right">
                                             <div className="flex items-center justify-end gap-1">
-                                                <Button asChild variant="ghost" size="sm" className="h-8 px-2 text-xs">
-                                                    <Link href={`/master/delivery-rates/${r.uuid}/edit`}>Edit</Link>
+                                                <Button
+                                                    asChild
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="size-8 p-0 text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 dark:text-slate-400 dark:hover:text-emerald-400 dark:hover:bg-emerald-950/40"
+                                                    title="Edit Tarif"
+                                                >
+                                                    <Link href={`/master/delivery-rates/${r.uuid}/edit`}>
+                                                        <Pencil className="size-3.5" />
+                                                        <span className="sr-only">Edit</span>
+                                                    </Link>
                                                 </Button>
                                                 <Button
                                                     variant="ghost"
                                                     size="sm"
-                                                    className="h-8 px-2 text-xs text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40"
+                                                    className="size-8 p-0 text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40"
                                                     onClick={() => setDeleteTargetUuid(r.uuid)}
+                                                    title="Hapus Tarif"
                                                 >
                                                     <Trash2 className="size-3.5" />
+                                                    <span className="sr-only">Hapus</span>
                                                 </Button>
                                             </div>
                                         </td>

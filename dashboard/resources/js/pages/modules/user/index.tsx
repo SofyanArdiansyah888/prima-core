@@ -1,5 +1,5 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { Plus, Search, Users } from 'lucide-react';
+import { Plus, Search, Users, Pencil } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -246,9 +246,20 @@ export default function UserIndex({
                                             )}
                                         </td>
                                         <td className="px-5 py-3.5 text-right">
-                                            <Button asChild variant="ghost" size="sm" className="h-8 px-2.5 text-xs font-medium hover:bg-slate-100 dark:hover:bg-slate-800">
-                                                <Link href={`/master/users/${u.uuid}/edit`}>Edit</Link>
-                                            </Button>
+                                            <div className="flex items-center justify-end gap-1">
+                                                <Button
+                                                    asChild
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="size-8 p-0 text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 dark:text-slate-400 dark:hover:text-emerald-400 dark:hover:bg-emerald-950/40"
+                                                    title="Edit Pengguna"
+                                                >
+                                                    <Link href={`/master/users/${u.uuid}/edit`}>
+                                                        <Pencil className="size-3.5" />
+                                                        <span className="sr-only">Edit</span>
+                                                    </Link>
+                                                </Button>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))}
