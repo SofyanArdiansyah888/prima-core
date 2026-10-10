@@ -122,11 +122,17 @@ class MidtransPaymentService
         ];
 
         try {
-            $response = Http::withHeaders([
+            $httpClient = Http::withHeaders([
                 'Accept' => 'application/json',
                 'Content-Type' => 'application/json',
                 'Authorization' => 'Basic ' . base64_encode($this->serverKey . ':'),
-            ])->post("{$this->snapBaseUrl}/transactions", $payload);
+            ]);
+
+            if (! $this->isProduction) {
+                $httpClient = $httpClient->withoutVerifying();
+            }
+
+            $response = $httpClient->post("{$this->snapBaseUrl}/transactions", $payload);
 
             if ($response->successful()) {
                 $data = $response->json();

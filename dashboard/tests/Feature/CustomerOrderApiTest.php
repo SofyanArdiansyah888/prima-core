@@ -190,14 +190,19 @@ class CustomerOrderApiTest extends TestCase
         $this->assertNotEmpty($payRes->json('data.snap_token'));
 
         // Test webhook
+        $orderId = $code . '-sample';
+        $grossAmount = (string) $expectedTotal;
+        $serverKey = (string) config('services.midtrans.server_key', '');
+        $signatureKey = hash('sha512', $orderId . '200' . $grossAmount . $serverKey);
+
         $webhook = $this->postJson('/api/customer/v1/payments/midtrans-webhook', [
-            'order_id' => $code . '-sample',
+            'order_id' => $orderId,
             'status_code' => '200',
-            'gross_amount' => (string) $expectedTotal,
+            'gross_amount' => $grossAmount,
             'transaction_status' => 'settlement',
             'payment_type' => 'qris',
             'transaction_id' => 'trx-123456',
-            'signature_key' => 'dummy', // In test environment without secret key, fallback is accepted
+            'signature_key' => $signatureKey,
         ]);
 
         $webhook->assertOk();

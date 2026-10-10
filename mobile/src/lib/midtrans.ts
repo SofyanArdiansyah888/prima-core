@@ -39,19 +39,24 @@ export type SnapCallbacks = {
 
 let scriptLoadedPromise: Promise<boolean> | null = null;
 
-export function loadSnapScript(clientKey?: string, isProduction = false): Promise<boolean> {
+export function loadSnapScript(clientKey?: string, isProduction?: boolean): Promise<boolean> {
   if (typeof window === 'undefined') return Promise.resolve(false);
   if (window.snap) return Promise.resolve(true);
   if (scriptLoadedPromise) return scriptLoadedPromise;
 
-  const snapScriptUrl = isProduction
+  const resolvedIsProduction =
+    isProduction !== undefined
+      ? isProduction
+      : (import.meta.env.VITE_MIDTRANS_IS_PRODUCTION === 'true' || import.meta.env.VITE_MIDTRANS_IS_PRODUCTION === true);
+
+  const snapScriptUrl = resolvedIsProduction
     ? 'https://app.midtrans.com/snap/snap.js'
     : 'https://app.sandbox.midtrans.com/snap/snap.js';
 
   const resolvedClientKey =
     clientKey ||
     (import.meta.env.VITE_MIDTRANS_CLIENT_KEY as string | undefined) ||
-    'SB-Mid-client-test';
+    'SB-Mid-client-yJ53gMlrujF5q6kR';
 
   scriptLoadedPromise = new Promise((resolve) => {
     // Check if script element already exists
@@ -82,9 +87,14 @@ export async function openSnapPayment(
   snapToken: string,
   callbacks?: SnapCallbacks,
   clientKey?: string,
-  isProduction = false
+  isProduction?: boolean
 ): Promise<void> {
-  await loadSnapScript(clientKey, isProduction);
+  const resolvedIsProduction =
+    isProduction !== undefined
+      ? isProduction
+      : (import.meta.env.VITE_MIDTRANS_IS_PRODUCTION === 'true' || import.meta.env.VITE_MIDTRANS_IS_PRODUCTION === true);
+
+  await loadSnapScript(clientKey, resolvedIsProduction);
 
   if (window.snap && typeof window.snap.pay === 'function') {
     window.snap.pay(snapToken, {
@@ -103,7 +113,7 @@ export async function openSnapPayment(
     });
   } else {
     // Fallback if Snap popup is blocked or unavailable
-    const fallbackUrl = isProduction
+    const fallbackUrl = resolvedIsProduction
       ? `https://app.midtrans.com/snap/v2/vtweb/${snapToken}`
       : `https://app.sandbox.midtrans.com/snap/v2/vtweb/${snapToken}`;
     window.open(fallbackUrl, '_blank');

@@ -1,6 +1,7 @@
 import type { Customer, CustomerOrder, Product, ProductCategory, Quote } from '../domain/types';
 
-const API_URL = import.meta.env.VITE_API_URL ?? 'http://127.0.0.1:8000';
+const rawApiUrl = (import.meta.env.VITE_API_URL as string | undefined) || 'https://pkm.orcaid.cloud';
+const API_URL = rawApiUrl.replace(/\/+$/, '');
 const TOKEN_KEY = 'pkm_customer_token';
 
 export class ApiError extends Error {

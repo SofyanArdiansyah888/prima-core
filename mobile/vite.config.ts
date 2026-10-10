@@ -7,6 +7,12 @@ import { defineConfig } from 'vite'
 
 // https://vitejs.dev/config/
 export default defineConfig({
+  server: {
+    port: 5888,
+  },
+  preview: {
+    port: 5888,
+  },
   plugins: [
     react(),
     tailwindcss(),
