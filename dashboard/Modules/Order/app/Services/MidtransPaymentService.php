@@ -139,9 +139,13 @@ class MidtransPaymentService
                 $token = $data['token'] ?? '';
                 $redirectUrl = $data['redirect_url'] ?? '';
 
+                $currentPayload = is_array($order->payment_payload) ? $order->payment_payload : [];
                 $order->update([
                     'snap_token' => $token,
                     'snap_redirect_url' => $redirectUrl,
+                    'payment_payload' => array_merge($currentPayload, [
+                        'midtrans_order_id' => $orderId,
+                    ]),
                 ]);
 
                 return [
@@ -161,9 +165,13 @@ class MidtransPaymentService
             $mockToken = 'SNAP-MOCK-' . $order->code . '-' . substr(md5(uniqid()), 0, 8);
             $mockRedirect = "https://app.sandbox.midtrans.com/snap/v2/vtweb/{$mockToken}";
 
+            $currentPayload = is_array($order->payment_payload) ? $order->payment_payload : [];
             $order->update([
                 'snap_token' => $mockToken,
                 'snap_redirect_url' => $mockRedirect,
+                'payment_payload' => array_merge($currentPayload, [
+                    'midtrans_order_id' => $mockToken,
+                ]),
             ]);
 
             return [
@@ -179,9 +187,13 @@ class MidtransPaymentService
             $mockToken = 'SNAP-MOCK-' . $order->code . '-' . substr(md5(uniqid()), 0, 8);
             $mockRedirect = "https://app.sandbox.midtrans.com/snap/v2/vtweb/{$mockToken}";
 
+            $currentPayload = is_array($order->payment_payload) ? $order->payment_payload : [];
             $order->update([
                 'snap_token' => $mockToken,
                 'snap_redirect_url' => $mockRedirect,
+                'payment_payload' => array_merge($currentPayload, [
+                    'midtrans_order_id' => $mockToken,
+                ]),
             ]);
 
             return [
@@ -190,6 +202,117 @@ class MidtransPaymentService
                 'client_key' => $this->clientKey,
             ];
         }
+    }
+
+    /**
+     * Check real-time payment status from Midtrans API and sync order.
+     */
+    public function checkPaymentStatus(Order $order): Order
+    {
+        if ($order->payment_method !== 'MIDTRANS' || $order->payment_status === 'PAID') {
+            return $order;
+        }
+
+        $orderId = $order->payment_payload['midtrans_order_id'] ?? null;
+        $orderIdCandidates = [];
+
+        if ($orderId) {
+            $orderIdCandidates[] = $orderId;
+        }
+
+        // Add standard candidate patterns
+        $uuidPart = substr(str_replace('-', '', $order->uuid), 0, 6);
+        $base = "{$order->code}-{$uuidPart}";
+        $createdAtTs = $order->created_at?->timestamp;
+
+        if ($createdAtTs) {
+            $orderIdCandidates[] = "{$base}-{$createdAtTs}";
+            for ($offset = 1; $offset <= 5; $offset++) {
+                $orderIdCandidates[] = "{$base}-" . ($createdAtTs + $offset);
+                $orderIdCandidates[] = "{$base}-" . ($createdAtTs - $offset);
+            }
+        }
+        $orderIdCandidates[] = $order->code;
+
+        $httpClient = Http::withHeaders([
+            'Accept' => 'application/json',
+            'Content-Type' => 'application/json',
+            'Authorization' => 'Basic ' . base64_encode($this->serverKey . ':'),
+        ]);
+
+        if (! $this->isProduction) {
+            $httpClient = $httpClient->withoutVerifying();
+        }
+
+        $baseUrl = $this->isProduction
+            ? 'https://api.midtrans.com/v2'
+            : 'https://api.sandbox.midtrans.com/v2';
+
+        foreach (array_unique($orderIdCandidates) as $candidateId) {
+            try {
+                $response = $httpClient->get("{$baseUrl}/{$candidateId}/status");
+                if ($response->successful()) {
+                    $data = $response->json();
+                    if (($data['status_code'] ?? '') !== '404' && isset($data['transaction_status'])) {
+                        return $this->applyTransactionStatus($order, $data);
+                    }
+                }
+            } catch (\Throwable $e) {
+                Log::warning("Gagal cek status Midtrans untuk {$candidateId}: " . $e->getMessage());
+            }
+        }
+
+        return $order;
+    }
+
+    /**
+     * Apply parsed transaction payload to order.
+     *
+     * @param  array<string, mixed>  $payload
+     */
+    public function applyTransactionStatus(Order $order, array $payload): Order
+    {
+        $transactionStatus = (string) ($payload['transaction_status'] ?? '');
+        $fraudStatus = (string) ($payload['fraud_status'] ?? '');
+        $paymentType = (string) ($payload['payment_type'] ?? '');
+        $transactionId = (string) ($payload['transaction_id'] ?? '');
+        $settlementTime = $payload['settlement_time'] ?? null;
+
+        $newPaymentStatus = $order->payment_status;
+        $paidAt = $order->paid_at;
+
+        if ($transactionStatus === 'capture') {
+            if ($fraudStatus === 'challenge') {
+                $newPaymentStatus = 'CHALLENGE';
+            } elseif ($fraudStatus === 'accept') {
+                $newPaymentStatus = 'PAID';
+                $paidAt = $paidAt ?: ($settlementTime ? \Carbon\Carbon::parse($settlementTime) : now());
+            }
+        } elseif ($transactionStatus === 'settlement') {
+            $newPaymentStatus = 'PAID';
+            $paidAt = $paidAt ?: ($settlementTime ? \Carbon\Carbon::parse($settlementTime) : now());
+        } elseif ($transactionStatus === 'pending') {
+            $newPaymentStatus = 'PENDING';
+        } elseif (in_array($transactionStatus, ['deny', 'cancel', 'expire'])) {
+            $newPaymentStatus = 'FAILED';
+        } elseif (in_array($transactionStatus, ['refund', 'partial_refund'])) {
+            $newPaymentStatus = 'REFUNDED';
+        }
+
+        $currentPayload = is_array($order->payment_payload) ? $order->payment_payload : [];
+        $mergedPayload = array_merge($currentPayload, $payload, [
+            'midtrans_order_id' => $payload['order_id'] ?? ($currentPayload['midtrans_order_id'] ?? null),
+        ]);
+
+        $order->update([
+            'payment_status' => $newPaymentStatus,
+            'midtrans_transaction_id' => $transactionId ?: $order->midtrans_transaction_id,
+            'midtrans_payment_type' => $paymentType ?: $order->midtrans_payment_type,
+            'payment_payload' => $mergedPayload,
+            'paid_at' => $paidAt,
+        ]);
+
+        return $order;
     }
 
     /**
@@ -208,16 +331,28 @@ class MidtransPaymentService
         $expectedSignature = hash('sha512', $orderId . $statusCode . $grossAmount . $this->serverKey);
         $signatureValid = hash_equals($expectedSignature, $signatureKey);
 
-        // Extract base order code
-        $parts = explode('-', $orderId);
-        $orderCode = $parts[0] . (isset($parts[1]) && ! is_numeric($parts[1]) ? '-' . $parts[1] : '');
-
         /** @var Order|null $order */
         $order = Order::query()
-            ->where('code', $orderCode)
-            ->orWhere('code', $orderId)
-            ->orWhere('code', 'like', $parts[0] . '%')
+            ->where('code', $orderId)
+            ->orWhere('payment_payload->midtrans_order_id', $orderId)
             ->first();
+
+        if (! $order && preg_match('/^(SO-[A-Za-z0-9]+-\d+)/', $orderId, $matches)) {
+            $order = Order::query()->where('code', $matches[1])->first();
+        }
+
+        if (! $order) {
+            // Strip -{uuid_6}-{timestamp} suffix if present
+            $trimmedCode = preg_replace('/-[a-f0-9]{6}-\d+$/', '', $orderId);
+            $order = Order::query()->where('code', $trimmedCode)->first();
+        }
+
+        if (! $order) {
+            $lastHyphenPos = strrpos($orderId, '-');
+            if ($lastHyphenPos !== false) {
+                $order = Order::query()->where('code', substr($orderId, 0, $lastHyphenPos))->first();
+            }
+        }
 
         if (! $order) {
             throw new Exception("Pesanan tidak ditemukan untuk order_id: {$orderId}");
@@ -231,40 +366,6 @@ class MidtransPaymentService
             throw new Exception("Signature key Midtrans tidak valid.");
         }
 
-        $transactionStatus = (string) ($payload['transaction_status'] ?? '');
-        $fraudStatus = (string) ($payload['fraud_status'] ?? '');
-        $paymentType = (string) ($payload['payment_type'] ?? '');
-        $transactionId = (string) ($payload['transaction_id'] ?? '');
-
-        $newPaymentStatus = $order->payment_status;
-        $paidAt = $order->paid_at;
-
-        if ($transactionStatus === 'capture') {
-            if ($fraudStatus === 'challenge') {
-                $newPaymentStatus = 'CHALLENGE';
-            } elseif ($fraudStatus === 'accept') {
-                $newPaymentStatus = 'PAID';
-                $paidAt = now();
-            }
-        } elseif ($transactionStatus === 'settlement') {
-            $newPaymentStatus = 'PAID';
-            $paidAt = now();
-        } elseif ($transactionStatus === 'pending') {
-            $newPaymentStatus = 'PENDING';
-        } elseif (in_array($transactionStatus, ['deny', 'cancel', 'expire'])) {
-            $newPaymentStatus = 'FAILED';
-        } elseif (in_array($transactionStatus, ['refund', 'partial_refund'])) {
-            $newPaymentStatus = 'REFUNDED';
-        }
-
-        $order->update([
-            'payment_status' => $newPaymentStatus,
-            'midtrans_transaction_id' => $transactionId,
-            'midtrans_payment_type' => $paymentType,
-            'payment_payload' => $payload,
-            'paid_at' => $paidAt,
-        ]);
-
-        return $order;
+        return $this->applyTransactionStatus($order, $payload);
     }
 }

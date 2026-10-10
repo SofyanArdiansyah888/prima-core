@@ -1,6 +1,7 @@
 import { IonIcon } from '@ionic/react';
 import { checkmarkCircleOutline, walletOutline } from 'ionicons/icons';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { api } from '../../data/api';
 import { Card, Eyebrow, PrimaryButton, QuietButton, Screen, StatusBadge } from '../../shared/ui';
 import { openSnapPayment } from '../../lib/midtrans';
 
@@ -16,11 +17,21 @@ export default function SuccessPage() {
   const handlePayNow = () => {
     if (snapToken) {
       void openSnapPayment(snapToken, {
-        onSuccess: () => {
-          if (uuid) navigate(`/orders/${uuid}`);
+        onSuccess: async () => {
+          if (uuid) {
+            try {
+              await api.syncPayment(uuid);
+            } catch {}
+            navigate(`/orders/${uuid}`);
+          }
         },
-        onPending: () => {
-          if (uuid) navigate(`/orders/${uuid}`);
+        onPending: async () => {
+          if (uuid) {
+            try {
+              await api.syncPayment(uuid);
+            } catch {}
+            navigate(`/orders/${uuid}`);
+          }
         },
         onClose: () => {
           if (uuid) navigate(`/orders/${uuid}`);

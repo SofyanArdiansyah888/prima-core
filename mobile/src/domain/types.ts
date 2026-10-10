@@ -96,14 +96,8 @@ export const PAYMENTS = [
   { 
     value: 'MIDTRANS', 
     label: 'Midtrans Online Payment', 
-    sublabel: 'QRIS, Mandiri / BCA / BRI / BNI VA, GoPay, ShopeePay, Kartu Kredit',
+    sublabel: 'QRIS, Virtual Account (Mandiri, BCA, BRI, BNI), GoPay, ShopeePay, Kartu Kredit',
     badge: 'Otomatis'
-  },
-  { 
-    value: 'CASH', 
-    label: 'Tunai / Transfer Bank Manual', 
-    sublabel: 'Konfirmasi bukti pembayaran manual via Admin',
-    badge: 'Manual'
   },
 ] as const;
 

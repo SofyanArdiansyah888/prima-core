@@ -9,6 +9,7 @@ import ForgotPasswordPage from '../features/auth/ForgotPasswordPage';
 import CartPage from '../features/cart/CartPage';
 import ProductPage from '../features/catalog/ProductPage';
 import CheckoutPage from '../features/checkout/CheckoutPage';
+import SelectAddressPage from '../features/checkout/SelectAddressPage';
 import SuccessPage from '../features/checkout/SuccessPage';
 import OrderDetailPage from '../features/orders/OrderDetailPage';
 import RequireAuth from './RequireAuth';
@@ -43,6 +44,7 @@ export default function App() {
               <Route path="/product/:uuid" element={<RequireAuth><ProductPage /></RequireAuth>} />
               <Route path="/cart" element={<RequireAuth><CartPage /></RequireAuth>} />
               <Route path="/checkout" element={<RequireAuth><CheckoutPage /></RequireAuth>} />
+              <Route path="/select-address" element={<RequireAuth><SelectAddressPage /></RequireAuth>} />
               <Route path="/orders/:uuid" element={<RequireAuth><OrderDetailPage /></RequireAuth>} />
               <Route path="/success/:code" element={<RequireAuth><SuccessPage /></RequireAuth>} />
               <Route path="/" element={<Navigate to="/tabs/home" replace />} />

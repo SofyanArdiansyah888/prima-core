@@ -53,9 +53,29 @@ class CustomerOrderController extends Controller
         ], 201);
     }
 
-    public function show(Request $request, Order $order): JsonResponse
+    public function show(Request $request, Order $order, MidtransPaymentService $midtrans): JsonResponse
     {
         $this->owned($request, $order);
+
+        if ($order->payment_method === 'MIDTRANS' && $order->payment_status === 'PENDING') {
+            $order = $midtrans->checkPaymentStatus($order);
+        }
+
+        $order->load([
+            'batchingPlant:id,code,name',
+            'items.product:id,uuid,code,name,unit,category',
+        ]);
+
+        return response()->json([
+            'data' => $this->transform($order),
+        ]);
+    }
+
+    public function syncPayment(Request $request, Order $order, MidtransPaymentService $midtrans): JsonResponse
+    {
+        $this->owned($request, $order);
+
+        $order = $midtrans->checkPaymentStatus($order);
         $order->load([
             'batchingPlant:id,code,name',
             'items.product:id,uuid,code,name,unit,category',

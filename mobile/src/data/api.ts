@@ -127,6 +127,9 @@ export const api = {
       body: JSON.stringify({ refresh }),
     });
   },
+  syncPayment(uuid: string) {
+    return request<{ data: CustomerOrder }>(`/orders/${uuid}/sync-payment`, { method: 'POST' });
+  },
   cancelOrder(uuid: string) {
     return request<{ data: CustomerOrder }>(`/orders/${uuid}/cancel`, { method: 'POST' });
   },

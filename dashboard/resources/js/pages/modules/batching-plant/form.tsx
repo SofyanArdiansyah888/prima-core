@@ -81,10 +81,11 @@ export default function PlantForm({
                                     <Label htmlFor="branch_id" className="text-xs font-semibold text-slate-700 dark:text-slate-300">
                                         Cabang Induk <span className="text-rose-500">*</span>
                                     </Label>
+                                    {editing && <input type="hidden" name="branch_id" value={plant!.branch_id} />}
                                     <select
                                         id="branch_id"
-                                        name="branch_id"
-                                        required
+                                        name={editing ? undefined : 'branch_id'}
+                                        required={!editing}
                                         defaultValue={plant?.branch_id ?? ''}
                                         disabled={editing}
                                         className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-800 focus:border-emerald-600 focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20 disabled:bg-slate-100 disabled:text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 dark:disabled:bg-slate-800"

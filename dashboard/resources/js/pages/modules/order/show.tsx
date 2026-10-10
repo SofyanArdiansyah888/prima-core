@@ -1,6 +1,6 @@
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import { formatDate, formatDateTime } from '@/lib/utils';
-import { ArrowLeft, Building2, Calendar, FileSpreadsheet, MapPin, Truck, CheckCircle2, Phone, Mail, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, Building2, Calendar, FileSpreadsheet, MapPin, Truck, CheckCircle2, Phone, Mail, ShieldCheck, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { dashboard } from '@/routes';
 
@@ -230,6 +230,36 @@ export default function OrderShow({ order }: { order: OrderDetail }) {
                                 <span>Total Tagihan:</span>
                                 <span className="text-emerald-700 dark:text-emerald-400">Rp {Number(order.total_price).toLocaleString('id-ID')}</span>
                             </div>
+
+                            <div className="flex justify-between items-center text-xs text-slate-600 dark:text-slate-400 pt-2.5 border-t border-slate-100 dark:border-slate-800">
+                                <span>Metode Bayar:</span>
+                                <span className="font-semibold text-slate-900 dark:text-white uppercase">{order.payment_method || '—'}</span>
+                            </div>
+                            <div className="flex justify-between items-center text-xs text-slate-600 dark:text-slate-400">
+                                <span>Status Bayar:</span>
+                                <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-bold ${
+                                    order.payment_status === 'PAID'
+                                        ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400'
+                                        : 'bg-amber-500/15 text-amber-700 dark:text-amber-400'
+                                }`}>
+                                    {order.payment_status === 'PAID' ? 'LUNAS' : order.payment_status}
+                                </span>
+                            </div>
+
+                            {order.payment_method === 'MIDTRANS' && (
+                                <div className="pt-2">
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => router.post(`/sales/orders/${order.uuid}/sync-payment`)}
+                                        className="w-full text-xs h-8 gap-1.5 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200"
+                                    >
+                                        <RefreshCw className="size-3.5 text-emerald-600 dark:text-emerald-400" />
+                                        Sinkronkan Status Midtrans
+                                    </Button>
+                                </div>
+                            )}
                         </div>
                     </div>
 

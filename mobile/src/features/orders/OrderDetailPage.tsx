@@ -128,7 +128,12 @@ export default function OrderDetailPage() {
         void openSnapPayment(
           updatedOrder.snap_token,
           {
-            onSuccess: () => {
+            onSuccess: async () => {
+              if (updatedOrder.uuid) {
+                try {
+                  await api.syncPayment(updatedOrder.uuid);
+                } catch {}
+              }
               void loadOrder();
               triggerToast('Pembayaran berhasil diverifikasi!', 'success');
             },

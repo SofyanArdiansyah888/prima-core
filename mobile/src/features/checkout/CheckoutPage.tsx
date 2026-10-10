@@ -3,21 +3,18 @@ import { IonIcon } from '@ionic/react';
 import { 
   locationOutline, 
   cardOutline, 
-  cashOutline, 
-  businessOutline, 
   checkmarkCircle, 
-  documentTextOutline,
-  shieldCheckmarkOutline,
   arrowForwardOutline,
-  navigateOutline,
-  sparklesOutline
+  createOutline,
+  shieldCheckmarkOutline,
+  businessOutline
 } from 'ionicons/icons';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { api } from '../../data/api';
 import { useAuth } from '../../data/auth';
 import { useCart } from '../../data/cart';
 import { formatRupiah } from '../../domain/format';
-import { PAYMENTS, type Quote } from '../../domain/types';
+import type { Quote } from '../../domain/types';
 import { 
   Card, 
   ErrorText, 
@@ -26,28 +23,36 @@ import {
   PrimaryButton, 
   Screen, 
   StickyBar, 
-  TextArea, 
   TextInput 
 } from '../../shared/ui';
-import { DeliveryMapPicker, type DeliveryLocation } from './DeliveryMapPicker';
+import { getSavedDeliveryAddress } from './SelectAddressPage';
 import { openSnapPayment } from '../../lib/midtrans';
 
 export default function CheckoutPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { customer } = useAuth();
   const { lines, clear } = useCart();
 
-  // User delivery destination & project info
-  const [projectTitle, setProjectTitle] = useState(
-    customer?.name ? `Proyek ${customer.name}` : ''
-  );
+  // Delivery destination from saved address
+  const [projectTitle, setProjectTitle] = useState('');
   const [address, setAddress] = useState('');
-  
-  // Default coordinates (Makassar center)
-  const [lat, setLat] = useState<number>(-5.1477);
-  const [lng, setLng] = useState<number>(119.4327);
+  const [lat, setLat] = useState<number | null>(null);
+  const [lng, setLng] = useState<number | null>(null);
 
-  const [payment, setPayment] = useState<string>('MIDTRANS');
+  // Load saved address on mount or when returning from SelectAddressPage
+  useEffect(() => {
+    const saved = getSavedDeliveryAddress();
+    if (saved) {
+      setProjectTitle(saved.projectTitle);
+      setAddress(saved.address);
+      setLat(saved.lat);
+      setLng(saved.lng);
+    } else if (customer?.name) {
+      setProjectTitle(`Proyek ${customer.name}`);
+    }
+  }, [location.state, customer]);
+
   const [notes, setNotes] = useState('');
   const [quote, setQuote] = useState<Quote | null>(null);
   const [error, setError] = useState('');
@@ -84,24 +89,20 @@ export default function CheckoutPage() {
     return () => window.clearTimeout(timer);
   }, [lines, lat, lng]);
 
-  const handleLocationChange = (loc: DeliveryLocation) => {
-    setLat(loc.lat);
-    setLng(loc.lng);
-    if (loc.roadAddress) {
-      setAddress(loc.roadAddress);
-    } else if (loc.areaName) {
-      setAddress(loc.areaName);
-    }
-  };
-
   const submit = async () => {
-    if (!projectTitle.trim() || !address.trim()) {
-      setError('Harap lengkapi nama proyek dan alamat tujuan pengantaran.');
+    if (!address.trim() || lat === null || lng === null) {
+      setError('Silakan pilih alamat pengantaran proyek terlebih dahulu.');
+      navigate('/select-address');
       return;
     }
 
-    if (lat === null || lng === null || !quote) {
-      setError('Silakan tentukan titik lokasi pengantaran pada peta.');
+    if (!projectTitle.trim()) {
+      setError('Harap isi nama proyek atau nama toko pemesan.');
+      return;
+    }
+
+    if (!quote) {
+      setError('Sedang mengalkulasi tarif atau lokasi belum terdeteksi.');
       return;
     }
 
@@ -113,7 +114,7 @@ export default function CheckoutPage() {
         delivery_address: address,
         delivery_lat: lat,
         delivery_lng: lng,
-        payment_method: payment,
+        payment_method: 'MIDTRANS',
         notes: notes || undefined,
         items: lines.map((line) => ({ product_uuid: line.product.uuid, quantity: line.quantity })),
       });
@@ -121,15 +122,21 @@ export default function CheckoutPage() {
       const orderData = response.data;
       clear();
 
-      // If Midtrans is selected and snap_token is returned, open Snap popup
-      if (payment === 'MIDTRANS' && orderData.snap_token) {
+      // Open Midtrans Snap popup directly
+      if (orderData.snap_token) {
         void openSnapPayment(
           orderData.snap_token,
           {
-            onSuccess: () => {
+            onSuccess: async () => {
+              try {
+                await api.syncPayment(orderData.uuid);
+              } catch {}
               navigate(`/orders/${orderData.uuid}`);
             },
-            onPending: () => {
+            onPending: async () => {
+              try {
+                await api.syncPayment(orderData.uuid);
+              } catch {}
               navigate(`/orders/${orderData.uuid}`);
             },
             onError: () => {
@@ -155,9 +162,11 @@ export default function CheckoutPage() {
     }
   };
 
+  const hasAddress = Boolean(address.trim() && lat !== null && lng !== null);
+
   return (
     <Screen
-      header={<NavBar title="Pengiriman & Pembayaran" backHref="/cart" />}
+      header={<NavBar title="Konfirmasi & Pembayaran" backHref="/cart" />}
       footer={
         lines.length > 0 ? (
           <StickyBar>
@@ -165,26 +174,37 @@ export default function CheckoutPage() {
               <div>
                 <span className="block text-[10px] text-slate-400 font-medium">Total Tagihan Final</span>
                 <span className="text-base font-extrabold text-[#d91424]">
-                  {quote ? formatRupiah(quote.total_price) : calculating ? 'Menghitung...' : 'Tentukan Lokasi'}
+                  {quote ? formatRupiah(quote.total_price) : calculating ? 'Menghitung…' : hasAddress ? 'Memuat tarif…' : 'Pilih Alamat Dulu'}
                 </span>
               </div>
               {quote && (
                 <div className="text-right">
-                  <span className="block text-[9px] text-slate-400">Plant Terpilih:</span>
+                  <span className="block text-[9px] text-slate-400">Plant Pengirim:</span>
                   <span className="text-[10px] font-extrabold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
                     {quote.plant.name} ({quote.distance_km} km)
                   </span>
                 </div>
               )}
             </div>
-            <PrimaryButton 
-              type="button" 
-              disabled={submitting || lines.length === 0 || !quote || calculating} 
-              onClick={() => void submit()}
-            >
-              <span>{submitting ? 'Memproses Pesanan…' : 'Konfirmasi & Buat Pesanan'}</span>
-              <IonIcon icon={arrowForwardOutline} className="text-sm" />
-            </PrimaryButton>
+            
+            {hasAddress ? (
+              <PrimaryButton 
+                type="button" 
+                disabled={submitting || lines.length === 0 || !quote || calculating} 
+                onClick={() => void submit()}
+              >
+                <span>{submitting ? 'Menghubungkan Midtrans…' : 'Bayar Sekarang via Midtrans'}</span>
+                <IonIcon icon={arrowForwardOutline} className="text-sm" />
+              </PrimaryButton>
+            ) : (
+              <PrimaryButton 
+                type="button" 
+                onClick={() => navigate('/select-address')}
+              >
+                <IonIcon icon={locationOutline} className="text-sm" />
+                <span>Pilih Alamat Pengantaran</span>
+              </PrimaryButton>
+            )}
           </StickyBar>
         ) : null
       }
@@ -198,46 +218,75 @@ export default function CheckoutPage() {
       >
         <ErrorText>{error}</ErrorText>
 
-        {/* STEP 1: PETA INTERAKTIF & ALAMAT PENGANTARAN */}
-        <Card className="space-y-3.5 p-4 border border-slate-200/90 shadow-xs">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
-            <div className="flex items-center gap-2">
-              <span className="flex size-5 items-center justify-center rounded-full bg-[#0c1d37] text-[10px] font-bold text-white">
-                1
-              </span>
-              <h2 className="text-xs font-extrabold text-[#0c1d37] uppercase tracking-wide">
-                Titik Pengantaran & Proyek Anda
-              </h2>
+        {/* SECTION 1: HASIL PILIH ALAMAT PENGANTARAN */}
+        {hasAddress ? (
+          <Card className="p-4 border border-slate-200/90 shadow-xs space-y-3">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
+              <div className="flex items-center gap-2">
+                <div className="flex size-7 items-center justify-center rounded-lg bg-orange-50 text-[#ea580c] border border-orange-200/60">
+                  <IonIcon icon={locationOutline} className="text-base" />
+                </div>
+                <div>
+                  <h2 className="text-xs font-extrabold text-[#0c1d37] uppercase tracking-wide">
+                    Alamat Pengantaran
+                  </h2>
+                  <span className="text-[10px] text-slate-400">Lokasi proyek tujuan armada</span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => navigate('/select-address')}
+                className="flex items-center gap-1 text-xs font-bold text-[#ea580c] hover:text-orange-700 bg-orange-50/80 px-2.5 py-1 rounded-lg border border-orange-200 transition-colors cursor-pointer"
+              >
+                <IonIcon icon={createOutline} className="text-sm" />
+                <span>Ubah</span>
+              </button>
             </div>
-          </div>
 
-          {/* Interactive Delivery Map Picker */}
-          <DeliveryMapPicker lat={lat} lng={lng} onChange={handleLocationChange} />
+            <div className="space-y-1.5 pt-0.5">
+              <div className="flex items-center gap-2">
+                <IonIcon icon={businessOutline} className="text-xs text-slate-500" />
+                <span className="font-extrabold text-sm text-[#0c1d37]">
+                  {projectTitle || 'Proyek Pemesan'}
+                </span>
+                <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[9px] font-medium text-slate-600">
+                  Proyek
+                </span>
+              </div>
+              <p className="text-xs text-slate-600 leading-relaxed pl-5">
+                {address}
+              </p>
+              {lat !== null && lng !== null && (
+                <div className="flex items-center gap-2 text-[10px] text-slate-400 font-mono pl-5 pt-0.5">
+                  <span className="inline-block size-1.5 rounded-full bg-emerald-500" />
+                  <span>Koordinat: {lat.toFixed(4)}, {lng.toFixed(4)}</span>
+                </div>
+              )}
+            </div>
+          </Card>
+        ) : (
+          <Card className="p-5 border-2 border-dashed border-orange-300 bg-orange-50/40 text-center space-y-3">
+            <div className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-orange-100 text-[#ea580c]">
+              <IonIcon icon={locationOutline} className="text-2xl" />
+            </div>
+            <div className="space-y-1">
+              <h3 className="font-extrabold text-sm text-[#0c1d37]">Alamat Pengantaran Belum Dipilih</h3>
+              <p className="text-xs text-slate-500 max-w-xs mx-auto">
+                Tentukan titik koordinat proyek Anda pada peta untuk mendeteksi batching plant terdekat dan tarif ongkir armada.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => navigate('/select-address')}
+              className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-[#0c1d37] hover:bg-slate-800 py-2.5 px-4 text-xs font-bold text-white shadow-xs transition-all cursor-pointer"
+            >
+              <IonIcon icon={locationOutline} className="text-base text-[#ea580c]" />
+              <span>Pilih Titik Lokasi & Alamat Proyek</span>
+            </button>
+          </Card>
+        )}
 
-          {/* Form Fields: Project Title & Detailed Address */}
-          <div className="space-y-3 pt-1 border-t border-slate-100">
-            <Field label="Nama Proyek / Toko Pemesan" hint="Bisa diubah">
-              <TextInput 
-                required 
-                placeholder="Contoh: Proyek Ruko Panakkukang / Toko Bangunan Berkah"
-                value={projectTitle} 
-                onChange={(event) => setProjectTitle(event.target.value)} 
-              />
-            </Field>
-
-            <Field label="Alamat Lengkap Pengantaran" hint="Sertakan patokan">
-              <TextArea 
-                required 
-                rows={2} 
-                placeholder="Jl. Boulevard No. 12, Panakkukang, Makassar (Depan Mall)"
-                value={address} 
-                onChange={(event) => setAddress(event.target.value)} 
-              />
-            </Field>
-          </div>
-        </Card>
-
-        {/* STEP 2: AUTO-DETECTED BATCHING PLANT CARD */}
+        {/* SECTION 2: AUTO-DETECTED BATCHING PLANT CARD */}
         {quote ? (
           <Card className="p-4 border-2 border-emerald-500/30 bg-gradient-to-br from-emerald-50/70 to-teal-50/40 shadow-xs space-y-2.5">
             <div className="flex items-center justify-between border-b border-emerald-200/60 pb-2">
@@ -260,7 +309,7 @@ export default function CheckoutPage() {
                   {quote.plant.name}
                 </div>
                 <p className="text-[11px] text-slate-600">
-                  Melayani pengiriman langsung ke titik lokasi proyek Anda.
+                  Melayani suplai & pengantaran langsung ke lokasi proyek Anda.
                 </p>
               </div>
               <div className="text-right shrink-0 bg-white/80 p-2 rounded-xl border border-emerald-200 shadow-2xs">
@@ -283,66 +332,28 @@ export default function CheckoutPage() {
           </div>
         ) : null}
 
-        {/* STEP 3: METODE PEMBAYARAN */}
-        <Card className="space-y-3 p-4 border border-slate-200/90 shadow-xs">
-          <div className="flex items-center gap-2 border-b border-slate-100 pb-2.5">
-            <span className="flex size-5 items-center justify-center rounded-full bg-[#0c1d37] text-[10px] font-bold text-white">
-              2
+        {/* SECTION 3: METODE PEMBAYARAN */}
+        <Card className="p-4 border border-slate-200/90 shadow-xs space-y-3">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div className="flex items-center gap-2.5">
+              <div className="flex size-8 items-center justify-center rounded-xl bg-[#0c1d37] text-white shadow-xs">
+                <IonIcon icon={cardOutline} className="text-base" />
+              </div>
+              <div>
+                <span className="block text-[10px] text-slate-400 font-medium uppercase tracking-wider">
+                  Metode Pembayaran
+                </span>
+                <span className="text-xs font-extrabold text-[#0c1d37]">
+                  Midtrans Online Payment
+                </span>
+              </div>
+            </div>
+            <span className="rounded-full bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 text-[10px] font-bold text-emerald-700">
+              QRIS & VA Bank
             </span>
-            <h2 className="text-xs font-extrabold text-[#0c1d37] uppercase tracking-wide">
-              Metode Pembayaran
-            </h2>
           </div>
 
-          <div className="space-y-2.5">
-            {PAYMENTS.map((method) => {
-              const selected = payment === method.value;
-              const isMidtrans = method.value === 'MIDTRANS';
-              return (
-                <label 
-                  key={method.value} 
-                  className={`flex items-start justify-between rounded-xl border p-3.5 text-xs transition-all cursor-pointer ${
-                    selected 
-                      ? 'border-[#0c1d37] bg-slate-50/90 font-medium text-[#0c1d37] shadow-xs' 
-                      : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
-                  }`}
-                >
-                  <div className="flex items-start gap-3">
-                    <div className={`flex size-8 items-center justify-center rounded-lg mt-0.5 ${
-                      selected ? 'bg-[#0c1d37] text-white' : 'bg-slate-100 text-slate-500'
-                    }`}>
-                      <IonIcon 
-                        icon={isMidtrans ? cardOutline : cashOutline} 
-                        className="text-base" 
-                      />
-                    </div>
-                    <div className="space-y-0.5">
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-slate-900">{method.label}</span>
-                        <span className={`rounded-full px-1.5 py-0.2 text-[9px] font-bold ${
-                          isMidtrans ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'
-                        }`}>
-                          {method.badge}
-                        </span>
-                      </div>
-                      <p className="text-[11px] text-slate-500 leading-tight">
-                        {method.sublabel}
-                      </p>
-                    </div>
-                  </div>
-                  <input
-                    type="radio"
-                    name="payment"
-                    className="accent-[#0c1d37] size-4 cursor-pointer mt-1 shrink-0 ml-2"
-                    checked={selected}
-                    onChange={() => setPayment(method.value)}
-                  />
-                </label>
-              );
-            })}
-          </div>
-
-          <Field label="Catatan Tambahan (Opsional)" hint="Untuk driver / QC">
+          <Field label="Catatan Tambahan (Opsional)">
             <TextInput 
               placeholder="Contoh: Akses truk mixer hanya via gerbang barat"
               value={notes} 
@@ -351,18 +362,13 @@ export default function CheckoutPage() {
           </Field>
         </Card>
 
-        {/* STEP 4: RINGKASAN BIAYA SERVER (QUOTE) */}
+        {/* SECTION 4: RINCIAN BIAYA SERVER (QUOTE) */}
         {quote && (
           <Card className="space-y-3 p-4 border border-slate-200/90 shadow-xs">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
-              <div className="flex items-center gap-2">
-                <span className="flex size-5 items-center justify-center rounded-full bg-[#0c1d37] text-[10px] font-bold text-white">
-                  3
-                </span>
-                <h2 className="text-xs font-extrabold text-[#0c1d37] uppercase tracking-wide">
-                  Rincian Biaya Pesanan
-                </h2>
-              </div>
+              <h2 className="text-xs font-extrabold text-[#0c1d37] uppercase tracking-wide">
+                Rincian Biaya Pesanan
+              </h2>
             </div>
 
             <dl className="space-y-1.5 border-b border-slate-100 pb-2.5 text-xs">
@@ -380,10 +386,7 @@ export default function CheckoutPage() {
               </div>
               {Number(quote.admin_fee) > 0 && (
                 <div className="flex justify-between">
-                  <dt className="text-slate-500 flex items-center gap-1.5">
-                    <span>Biaya Layanan & Pembayaran</span>
-                    <span className="rounded bg-slate-100 px-1 py-0.2 text-[9px] text-slate-600 font-medium">Midtrans</span>
-                  </dt>
+                  <dt className="text-slate-500">Biaya Layanan Pembayaran</dt>
                   <dd className="font-semibold text-slate-800">{formatRupiah(quote.admin_fee)}</dd>
                 </div>
               )}

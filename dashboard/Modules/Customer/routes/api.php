@@ -25,6 +25,7 @@ Route::prefix('customer/v1')->group(function () {
         Route::post('orders', [CustomerOrderController::class, 'store']);
         Route::get('orders/{order}', [CustomerOrderController::class, 'show']);
         Route::post('orders/{order}/pay', [CustomerOrderController::class, 'pay']);
+        Route::post('orders/{order}/sync-payment', [CustomerOrderController::class, 'syncPayment']);
         Route::post('orders/{order}/cancel', [CustomerOrderController::class, 'cancel']);
     });
 });

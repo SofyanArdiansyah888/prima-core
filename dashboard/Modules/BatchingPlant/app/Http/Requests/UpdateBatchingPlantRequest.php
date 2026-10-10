@@ -16,7 +16,7 @@ class UpdateBatchingPlantRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'branch_id' => ['required', 'exists:branches,id'],
+            'branch_id' => ['sometimes', 'exists:branches,id'],
             'name' => ['required', 'string', 'max:255'],
             'address' => ['nullable', 'string', 'max:500'],
             'phone' => ['nullable', 'string', 'max:50'],

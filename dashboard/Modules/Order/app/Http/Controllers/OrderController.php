@@ -12,11 +12,12 @@ use Modules\Order\Http\Requests\StoreOrderRequest;
 use Modules\Order\Http\Requests\UpdateOrderRequest;
 use Modules\Order\Models\Order;
 use Modules\Order\Services\PlaceOrder;
+use Modules\Order\Services\MidtransPaymentService;
 use Modules\Product\Models\Product;
 
 class OrderController extends Controller
 {
-    public function index(Request $request): Response
+    public function index(Request $request, MidtransPaymentService $midtrans): Response
     {
         $search = $request->string('search')->trim()->toString();
         $status = $request->string('status')->trim()->toString();
@@ -42,6 +43,12 @@ class OrderController extends Controller
             ->orderByDesc('id')
             ->paginate(10)
             ->withQueryString();
+
+        foreach ($orders->getCollection() as $orderItem) {
+            if ($orderItem->payment_method === 'MIDTRANS' && $orderItem->payment_status === 'PENDING') {
+                $midtrans->checkPaymentStatus($orderItem);
+            }
+        }
 
         return Inertia::render('modules/order/index', [
             'orders' => $orders,
@@ -72,6 +79,7 @@ class OrderController extends Controller
                 ['value' => 'B2B_PARTNER', 'label' => 'B2B Partner (Kontraktor)'],
             ],
             'paymentMethods' => [
+                ['value' => 'MIDTRANS', 'label' => 'Midtrans Payment Gateway'],
                 ['value' => 'VA_MANDIRI', 'label' => 'Virtual Account Bank Mandiri'],
                 ['value' => 'VA_BRI', 'label' => 'Virtual Account Bank BRI'],
                 ['value' => 'CREDIT_B2B', 'label' => 'Kredit B2B (TOP 30 Hari PKM)'],
@@ -87,8 +95,12 @@ class OrderController extends Controller
         return redirect()->route('orders.index')->with('success', "Pesanan {$order->code} berhasil dibuat.");
     }
 
-    public function show(Order $order): Response
+    public function show(Order $order, MidtransPaymentService $midtrans): Response
     {
+        if ($order->payment_method === 'MIDTRANS' && $order->payment_status === 'PENDING') {
+            $order = $midtrans->checkPaymentStatus($order);
+        }
+
         $order->load([
             'batchingPlant.branch',
             'items.product',
@@ -98,6 +110,14 @@ class OrderController extends Controller
         return Inertia::render('modules/order/show', [
             'order' => $order,
         ]);
+    }
+
+    public function syncPayment(Order $order, MidtransPaymentService $midtrans): RedirectResponse
+    {
+        $order = $midtrans->checkPaymentStatus($order);
+        $statusLabel = $order->payment_status === 'PAID' ? 'LUNAS (Terverifikasi Midtrans)' : $order->payment_status;
+
+        return back()->with('success', "Status pembayaran pesanan {$order->code}: {$statusLabel}.");
     }
 
     public function update(UpdateOrderRequest $request, Order $order): RedirectResponse
