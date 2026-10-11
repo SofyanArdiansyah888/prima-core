@@ -24,7 +24,7 @@ class CustomerOrderController extends Controller
         ]);
     }
 
-    public function index(Request $request): JsonResponse
+    public function index(Request $request, MidtransPaymentService $midtrans): JsonResponse
     {
         $orders = Order::query()
             ->where('customer_id', $this->customer($request)->id)
@@ -34,6 +34,12 @@ class CustomerOrderController extends Controller
             ])
             ->orderByDesc('id')
             ->paginate(20);
+
+        foreach ($orders->getCollection() as $orderItem) {
+            if ($orderItem->payment_method === 'MIDTRANS' && $orderItem->payment_status === 'PENDING') {
+                $midtrans->checkPaymentStatus($orderItem);
+            }
+        }
 
         return response()->json([
             'data' => $orders->getCollection()->map(fn (Order $order) => $this->transform($order))->values(),

@@ -95,6 +95,16 @@ export default function OrderIndex({
         return { total, confirmed, inProd, completed };
     }, [orders]);
 
+    const statusLabels: Record<string, string> = {
+        DRAFT: 'Draf',
+        CONFIRMED: 'Dikonfirmasi',
+        WORK_ORDER_CREATED: 'SPK Terbit',
+        IN_PRODUCTION: 'Dalam Produksi',
+        PARTIAL_DELIVERY: 'Sebagian Terkirim',
+        COMPLETED: 'Selesai',
+        CANCELLED: 'Dibatalkan',
+    };
+
     const getStatusBadge = (st: string) => {
         switch (st) {
             case 'CONFIRMED':
@@ -322,7 +332,7 @@ export default function OrderIndex({
                                             {/* 6. FULFILLMENT STATUS */}
                                             <td className="px-4 py-3 align-top text-center whitespace-nowrap">
                                                 <span className={`inline-flex items-center rounded-md border px-2 py-0.5 text-[10px] font-extrabold ${getStatusBadge(o.status)}`}>
-                                                    {o.status}
+                                                    {statusLabels[o.status] ?? o.status}
                                                 </span>
                                                 {o.work_orders_count > 0 && (
                                                     <span className="text-[10px] text-purple-700 dark:text-purple-300 font-semibold block mt-0.5">

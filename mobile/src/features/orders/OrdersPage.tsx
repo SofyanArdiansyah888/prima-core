@@ -8,7 +8,11 @@ import {
   locationOutline,
   receiptOutline,
   searchOutline,
-  closeCircleOutline
+  closeCircleOutline,
+  checkmarkCircleOutline,
+  timeOutline,
+  walletOutline,
+  refreshOutline,
 } from 'ionicons/icons';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
@@ -107,7 +111,28 @@ export default function OrdersPage() {
   ];
 
   return (
-    <Screen onRefresh={handlePullRefresh} header={<BrandBar title="Riwayat Pesanan" />}>
+    <Screen
+      onRefresh={handlePullRefresh}
+      header={(
+        <BrandBar
+          title="Riwayat Pesanan"
+          extra={(
+            <div className="flex items-center justify-between text-xs pt-0.5">
+              <span className="text-[11px] font-medium text-slate-500">Pantau progres pengiriman proyek</span>
+              <button
+                type="button"
+                onClick={() => void loadOrders()}
+                disabled={loading}
+                className="flex items-center gap-1 rounded-lg bg-slate-100 hover:bg-slate-200 px-2 py-0.5 text-[11px] font-bold text-[#0c1d37] transition-all cursor-pointer disabled:opacity-50"
+              >
+                <IonIcon icon={refreshOutline} className={`text-xs ${loading ? 'animate-spin' : ''}`} />
+                <span>Sinkron</span>
+              </button>
+            </div>
+          )}
+        />
+      )}
+    >
       <div className="space-y-3 px-4 py-4 pb-24">
         <ErrorText>{error}</ErrorText>
 
@@ -233,15 +258,38 @@ export default function OrdersPage() {
                     <Card className="overflow-hidden p-0 border border-slate-200/90 shadow-xs hover:border-[#0c1d37]/40 transition-all">
                       {/* CARD TOP BAR */}
                       <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/70 px-4 py-2.5">
-                        <div className="flex items-center gap-1.5">
-                          <IonIcon icon={businessOutline} className="text-slate-400 text-xs" />
-                          <span className="text-[11px] font-bold text-slate-600 truncate max-w-[150px]">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <IonIcon icon={businessOutline} className="text-slate-400 text-xs shrink-0" />
+                          <span className="text-[11px] font-bold text-slate-600 truncate max-w-[130px]">
                             {order.plant?.name || 'Plant Tonasa'}
                           </span>
                         </div>
-                        <StatusBadge tone={orderStatusTone(order.status)}>
-                          {order.status_label}
-                        </StatusBadge>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          {/* Payment Status Badge */}
+                          {order.payment_status === 'PAID' ? (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-[10px] font-extrabold text-emerald-700">
+                              <IonIcon icon={checkmarkCircleOutline} className="text-xs" />
+                              <span>Lunas</span>
+                            </span>
+                          ) : order.payment_status === 'PENDING' ? (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 border border-amber-200 px-2 py-0.5 text-[10px] font-extrabold text-amber-700">
+                              <IonIcon icon={timeOutline} className="text-xs" />
+                              <span>Belum Bayar</span>
+                            </span>
+                          ) : order.payment_status === 'APPROVED_CREDIT' ? (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 border border-blue-200 px-2 py-0.5 text-[10px] font-extrabold text-blue-700">
+                              <span>Kredit OK</span>
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600">
+                              {order.payment_status}
+                            </span>
+                          )}
+
+                          <StatusBadge tone={orderStatusTone(order.status)}>
+                            {order.status_label}
+                          </StatusBadge>
+                        </div>
                       </div>
 
                       {/* CARD BODY */}
@@ -285,11 +333,25 @@ export default function OrdersPage() {
                           </div>
                         )}
 
-                        {/* Price & Date Row */}
+                        {/* Price, Payment & Date Row */}
                         <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-2.5 text-xs">
-                          <span className="font-mono text-[10px] text-slate-400">
-                            {formatDate(order.created_at)}
-                          </span>
+                          <div className="flex flex-col">
+                            <span className="font-mono text-[10px] text-slate-400">
+                              {formatDate(order.created_at)}
+                            </span>
+                            {order.payment_status === 'PAID' && (
+                              <span className="text-[10px] font-bold text-emerald-600 flex items-center gap-1 mt-0.5">
+                                <IonIcon icon={checkmarkCircleOutline} className="text-xs text-emerald-500" />
+                                <span>Lunas ({order.payment_method_label || 'Midtrans'})</span>
+                              </span>
+                            )}
+                            {order.payment_status === 'PENDING' && order.status !== 'CANCELLED' && (
+                              <span className="text-[10px] font-bold text-amber-600 flex items-center gap-1 mt-0.5">
+                                <IonIcon icon={timeOutline} className="text-xs text-amber-500" />
+                                <span>Menunggu Pembayaran</span>
+                              </span>
+                            )}
+                          </div>
                           <div className="text-right">
                             <span className="text-[10px] text-slate-400 mr-1">Total:</span>
                             <span className="font-mono font-black text-sm text-[#0c1d37]">
@@ -300,7 +362,7 @@ export default function OrdersPage() {
                       </div>
 
                       {/* QUICK ACTION BUTTONS */}
-                      <div className="grid grid-cols-2 divide-x divide-slate-100 border-t border-slate-100 bg-white text-center text-xs">
+                      <div className={`grid ${order.payment_status === 'PENDING' && order.status !== 'CANCELLED' ? 'grid-cols-2 divide-x divide-slate-100 bg-amber-50/40 border-t border-amber-100' : 'grid-cols-2 divide-x divide-slate-100 border-t border-slate-100 bg-white'} text-center text-xs`}>
                         <button
                           type="button"
                           onClick={() => navigate(`/tabs/docs?code=${order.code}`)}
@@ -309,14 +371,25 @@ export default function OrdersPage() {
                           <IonIcon icon={documentTextOutline} className="text-xs text-[#0c1d37]" />
                           <span>Dokumen</span>
                         </button>
-                        <button
-                          type="button"
-                          onClick={() => navigate(`/orders/${order.uuid}`)}
-                          className="flex items-center justify-center gap-1.5 py-2.5 text-[11px] font-bold text-[#0c1d37] hover:bg-slate-50 transition-colors cursor-pointer"
-                        >
-                          <span>Rincian</span>
-                          <IonIcon icon={chevronForwardOutline} className="text-[10px]" />
-                        </button>
+                        {order.payment_status === 'PENDING' && order.status !== 'CANCELLED' ? (
+                          <button
+                            type="button"
+                            onClick={() => navigate(`/orders/${order.uuid}`)}
+                            className="flex items-center justify-center gap-1.5 py-2.5 text-[11px] font-extrabold text-amber-700 bg-amber-50 hover:bg-amber-100 transition-colors cursor-pointer"
+                          >
+                            <IonIcon icon={walletOutline} className="text-xs text-amber-700" />
+                            <span>Bayar Sekarang</span>
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => navigate(`/orders/${order.uuid}`)}
+                            className="flex items-center justify-center gap-1.5 py-2.5 text-[11px] font-bold text-[#0c1d37] hover:bg-slate-50 transition-colors cursor-pointer"
+                          >
+                            <span>Rincian</span>
+                            <IonIcon icon={chevronForwardOutline} className="text-[10px]" />
+                          </button>
+                        )}
                       </div>
                     </Card>
                   </motion.div>

@@ -15,6 +15,7 @@ import {
   locationOutline,
   logoWhatsapp,
   receiptOutline,
+  refreshOutline,
   shieldCheckmarkOutline,
   timeOutline,
   walletOutline,
@@ -44,6 +45,7 @@ export default function OrderDetailPage() {
   const [loading, setLoading] = useState(true);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   const [toast, setToast] = useState<ToastState>({
     show: false,
@@ -72,6 +74,27 @@ export default function OrderDetailPage() {
     }
   };
 
+  const handleManualRefresh = async () => {
+    if (!uuid) return;
+    setRefreshing(true);
+    try {
+      if (order?.uuid && order.payment_method === 'MIDTRANS') {
+        try {
+          await api.syncPayment(order.uuid);
+        } catch {
+          // ignore background sync error
+        }
+      }
+      const response = await api.order(uuid);
+      setOrder(response.data);
+      triggerToast('Status pesanan berhasil disinkronkan!', 'success');
+    } catch (reason) {
+      triggerToast(reason instanceof Error ? reason.message : 'Gagal memperbarui status.', 'error');
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   useEffect(() => {
     void loadOrder();
   }, [uuid]);
@@ -82,6 +105,11 @@ export default function OrderDetailPage() {
       return;
     }
     try {
+      if (order?.uuid && order.payment_method === 'MIDTRANS') {
+        try {
+          await api.syncPayment(order.uuid);
+        } catch {}
+      }
       const response = await api.order(uuid);
       setOrder(response.data);
       setError('');
@@ -173,15 +201,27 @@ export default function OrderDetailPage() {
           backHref="/tabs/orders"
           end={
             order ? (
-              <button
-                type="button"
-                onClick={copyOrderCode}
-                className="flex items-center gap-1 rounded-lg bg-slate-100 hover:bg-slate-200 px-2 py-1 font-mono text-[11px] font-extrabold text-[#0c1d37] transition-colors cursor-pointer"
-                title="Salin Kode"
-              >
-                <span>{order.code}</span>
-                <IonIcon icon={copiedCode ? checkmarkOutline : copyOutline} className={copiedCode ? 'text-emerald-600' : 'text-slate-500'} />
-              </button>
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => void handleManualRefresh()}
+                  disabled={refreshing}
+                  className="flex items-center gap-1 rounded-lg bg-slate-100 hover:bg-slate-200 px-2 py-1 text-[11px] font-bold text-slate-700 transition-colors cursor-pointer disabled:opacity-50"
+                  title="Sinkronkan Status"
+                >
+                  <IonIcon icon={refreshOutline} className={`text-xs ${refreshing ? 'animate-spin text-[#0c1d37]' : 'text-slate-600'}`} />
+                  <span>Sync</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={copyOrderCode}
+                  className="flex items-center gap-1 rounded-lg bg-slate-100 hover:bg-slate-200 px-2 py-1 font-mono text-[11px] font-extrabold text-[#0c1d37] transition-colors cursor-pointer"
+                  title="Salin Kode"
+                >
+                  <span>{order.code}</span>
+                  <IonIcon icon={copiedCode ? checkmarkOutline : copyOutline} className={copiedCode ? 'text-emerald-600' : 'text-slate-500'} />
+                </button>
+              </div>
             ) : null
           }
         />
@@ -316,7 +356,11 @@ export default function OrderDetailPage() {
                   Tahapan Pelaksanaan Pesanan
                 </h2>
                 <span className="text-[10px] font-bold text-slate-400">
-                  {isCancelled ? 'Dibatalkan' : `Langkah ${Math.max(1, currentIndex + 1)} dari 5`}
+                  {isCancelled
+                    ? 'Dibatalkan'
+                    : isCompleted
+                    ? 'Semua Tahap Selesai (5/5)'
+                    : `Langkah ${Math.max(1, currentIndex + 1)} dari 5`}
                 </span>
               </div>
 
@@ -331,8 +375,8 @@ export default function OrderDetailPage() {
               ) : (
                 <div className="space-y-4 relative before:absolute before:top-2 before:bottom-2 before:left-3 before:w-0.5 before:bg-slate-200">
                   {STATUS_STEPS.map((step, index) => {
-                    const isPassed = currentIndex >= index;
-                    const isCurrent = currentIndex === index;
+                    const isPassed = isCompleted ? true : currentIndex >= index;
+                    const isCurrent = isCompleted ? false : currentIndex === index;
 
                     const stepSubtext: Record<string, string> = {
                       CONFIRMED: 'Order diverifikasi & dialokasikan ke jadwal plant',
@@ -484,7 +528,7 @@ export default function OrderDetailPage() {
               </div>
 
               {isPendingPayment && (
-                <div className="pt-2">
+                <div className="pt-2 space-y-2">
                   <button
                     type="button"
                     disabled={paying}
@@ -493,6 +537,16 @@ export default function OrderDetailPage() {
                   >
                     <IonIcon icon={walletOutline} className="text-sm" />
                     <span>{paying ? 'Menghubungkan Midtrans…' : 'Bayar Sekarang via Midtrans'}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={refreshing}
+                    onClick={() => void handleManualRefresh()}
+                    className="w-full flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 py-2 px-4 text-[11px] font-bold text-slate-700 transition-all cursor-pointer disabled:opacity-50"
+                  >
+                    <IonIcon icon={refreshOutline} className={`text-xs ${refreshing ? 'animate-spin' : ''}`} />
+                    <span>{refreshing ? 'Memeriksa Midtrans…' : 'Sudah Bayar? Cek Status Pembayaran'}</span>
                   </button>
                 </div>
               )}

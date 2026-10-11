@@ -56,6 +56,25 @@ type OrderDetail = {
 import { useState } from 'react';
 import { ConfirmModal } from '@/components/ui/confirm-modal';
 
+const statusLabels: Record<string, string> = {
+    DRAFT: 'Draf',
+    CONFIRMED: 'Dikonfirmasi',
+    WORK_ORDER_CREATED: 'SPK Terbit',
+    IN_PRODUCTION: 'Dalam Produksi',
+    PARTIAL_DELIVERY: 'Sebagian Terkirim',
+    COMPLETED: 'Selesai',
+    CANCELLED: 'Dibatalkan',
+};
+
+const paymentLabels: Record<string, string> = {
+    PENDING: 'Menunggu Pembayaran',
+    PAID: 'Lunas',
+    APPROVED_CREDIT: 'Disetujui Kredit',
+    CHALLENGE: 'Challenge (Review)',
+    FAILED: 'Gagal / Kadaluarsa',
+    REFUNDED: 'Dikembalikan',
+};
+
 export default function OrderShow({ order }: { order: OrderDetail }) {
     const { put, processing } = useForm();
     const [confirmDialog, setConfirmDialog] = useState<{
@@ -78,10 +97,12 @@ export default function OrderShow({ order }: { order: OrderDetail }) {
         if (newStatus === 'IN_PRODUCTION') variant = 'purple';
         if (newStatus === 'CONFIRMED') variant = 'emerald';
 
+        const label = statusLabels[newStatus] ?? newStatus;
+
         setConfirmDialog({
             open: true,
             title: 'Konfirmasi Perubahan Status',
-            description: `Apakah Anda yakin ingin memperbarui status pesanan ${order.code} menjadi "${newStatus}"?`,
+            description: `Apakah Anda yakin ingin memperbarui status pesanan ${order.code} menjadi "${label} (${newStatus})"?`,
             newStatus,
             variant,
         });
@@ -107,13 +128,17 @@ export default function OrderShow({ order }: { order: OrderDetail }) {
                             </Link>
                         </Button>
                         <div>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 flex-wrap">
                                 <span className="font-mono text-sm font-bold text-slate-900 dark:text-white">{order.code}</span>
                                 <span className="inline-flex items-center rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300">
-                                    {order.status}
+                                    {statusLabels[order.status] ?? order.status} ({order.status})
                                 </span>
-                                <span className="inline-flex items-center rounded-full bg-blue-500/10 px-2.5 py-0.5 text-xs font-semibold text-blue-700 dark:text-blue-300">
-                                    {order.payment_status}
+                                <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                                    order.payment_status === 'PAID'
+                                        ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+                                        : 'bg-amber-500/10 text-amber-700 dark:text-amber-300'
+                                }`}>
+                                    {paymentLabels[order.payment_status] ?? order.payment_status}
                                 </span>
                             </div>
                             <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white mt-1">
@@ -125,10 +150,56 @@ export default function OrderShow({ order }: { order: OrderDetail }) {
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-2">
-                        <Button asChild size="sm" className="bg-purple-700 font-medium text-white hover:bg-purple-800 dark:bg-purple-600">
+                    <div className="flex items-center gap-2 flex-wrap">
+                        {order.payment_method === 'MIDTRANS' && (
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => router.post(`/sales/orders/${order.uuid}/sync-payment`)}
+                                className="h-8 gap-1.5 border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-100"
+                                title="Periksa status pembayaran transaksi terkini dari Midtrans"
+                            >
+                                <RefreshCw className="size-3.5 text-blue-600" />
+                                <span>Cek Midtrans</span>
+                            </Button>
+                        )}
+
+                        {order.status === 'CONFIRMED' && (
+                            <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => triggerStatusChange('IN_PRODUCTION')}
+                                className="h-8 text-xs font-bold border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100"
+                            >
+                                Mulai Produksi
+                            </Button>
+                        )}
+
+                        {order.status === 'IN_PRODUCTION' && (
+                            <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => triggerStatusChange('COMPLETED')}
+                                className="h-8 text-xs font-bold border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100"
+                            >
+                                Tandai Selesai
+                            </Button>
+                        )}
+
+                        {order.status !== 'CANCELLED' && order.status !== 'COMPLETED' && (
+                            <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => triggerStatusChange('CANCELLED')}
+                                className="h-8 text-xs font-bold border-red-200 bg-red-50 text-[#d91424] hover:bg-red-100"
+                            >
+                                Batalkan
+                            </Button>
+                        )}
+
+                        <Button asChild size="sm" className="bg-purple-700 font-medium text-white hover:bg-purple-800 dark:bg-purple-600 h-8">
                             <Link href={`/production/work-orders/create?order_id=${order.id}`}>
-                                <FileSpreadsheet className="size-4" /> Terbitkan Work Order (SPK)
+                                <FileSpreadsheet className="size-4 mr-1.5" /> Terbitkan SPK
                             </Link>
                         </Button>
                     </div>
