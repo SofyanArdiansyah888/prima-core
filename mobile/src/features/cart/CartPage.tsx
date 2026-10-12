@@ -120,20 +120,18 @@ export default function CartPage() {
               const imageSrc = getProductImage(line.product);
 
               return (
-                <Card key={line.product.uuid} className="p-3.5 space-y-3 border border-slate-200/90 shadow-xs">
-                  <div className="flex gap-3 items-start">
-                    {/* Thumbnail */}
-                    <div className="size-16 rounded-xl overflow-hidden bg-slate-100 shrink-0 border border-slate-100">
+                <Card key={line.product.uuid} className="!p-0 overflow-hidden border border-slate-200/90 shadow-xs">
+                  <div className="flex items-stretch">
+                    <div className="h-24 w-24 shrink-0 overflow-hidden bg-slate-100">
                       <SafeImage 
                         src={imageSrc} 
                         alt={line.product.name} 
                         type={line.product.category}
-                        className="w-full h-full object-cover"
+                        className="h-full w-full object-cover"
                       />
                     </div>
 
-                    {/* Product Details */}
-                    <div className="flex-1 min-w-0">
+                    <div className="min-w-0 flex-1 px-3 py-3">
                       <div className="flex items-center justify-between gap-1">
                         <span className="font-mono text-[10px] font-semibold text-slate-400">
                           {line.product.code}
@@ -157,7 +155,7 @@ export default function CartPage() {
                   </div>
 
                   {/* Quantity & Subtotal Row */}
-                  <div className="flex items-center justify-between border-t border-slate-100 pt-2.5">
+                  <div className="flex items-center justify-between border-t border-slate-100 px-3 py-2.5">
                     <div>
                       <span className="block text-[10px] text-slate-400">Subtotal Item</span>
                       <span className="text-xs font-extrabold text-[#0c1d37]">

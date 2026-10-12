@@ -1,6 +1,7 @@
 import { IonIcon, IonLabel, IonRouterOutlet, IonTabBar, IonTabButton, IonTabs } from '@ionic/react';
 import { homeOutline, personOutline, receiptOutline, cartOutline, documentTextOutline } from 'ionicons/icons';
 import { Navigate, Route } from 'react-router-dom';
+import CategoriesPage from '../features/catalog/CategoriesPage';
 import HomePage from '../features/catalog/HomePage';
 import OrdersPage from '../features/orders/OrdersPage';
 import CartPage from '../features/cart/CartPage';
@@ -15,6 +16,7 @@ export default function TabsPage() {
     <IonTabs>
       <IonRouterOutlet>
         <Route path="/tabs/home" element={<HomePage />} />
+        <Route path="/tabs/categories" element={<CategoriesPage />} />
         <Route path="/tabs/orders" element={<OrdersPage />} />
         <Route path="/tabs/cart" element={<CartPage />} />
         <Route path="/tabs/docs" element={<DigitalDocsPage />} />

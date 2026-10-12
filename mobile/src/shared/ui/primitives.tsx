@@ -14,6 +14,19 @@ const toneClass: Record<StatusTone, string> = {
   warning: 'bg-amber-50 text-amber-800 border border-amber-200',
 };
 
+export function SyncIcon({ spinning = false, className = 'size-3.5' }: { spinning?: boolean; className?: string }) {
+  return (
+    <span className={`inline-flex shrink-0 items-center justify-center ${className} ${spinning ? 'animate-spin' : ''}`}>
+      <svg viewBox="0 0 24 24" className="size-full" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+        <path d="M3 3v5h5" />
+        <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" />
+        <path d="M16 16h5v5" />
+      </svg>
+    </span>
+  );
+}
+
 export function Eyebrow({ children }: { children: ReactNode }) {
   return <span className="block text-[10px] font-extrabold tracking-wider text-[#ea580c] uppercase">{children}</span>;
 }

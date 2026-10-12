@@ -130,22 +130,23 @@ export default function ProductPage() {
         ) : null
       }
     >
-      <div className="space-y-3.5 px-4 py-4 pb-28">
+      <div className="pb-28">
         <ErrorText>{error}</ErrorText>
 
         {!product && !error ? (
-          <ProductDetailSkeleton />
+          <div className="px-4 py-4">
+            <ProductDetailSkeleton />
+          </div>
         ) : null}
 
         {product && (
           <>
-            {/* HERO PRODUCT IMAGE */}
-            <div className="relative h-48 w-full rounded-2xl overflow-hidden bg-slate-100 border border-slate-200/80 shadow-xs">
+            <div className="relative h-56 w-full overflow-hidden bg-slate-100">
               <SafeImage 
                 src={getProductImage(product)} 
                 alt={product.name} 
                 type={product.category}
-                className="w-full h-full object-cover"
+                className="h-full w-full object-cover"
               />
               <div className="absolute top-3 left-3 flex gap-1.5">
                 <span className="bg-[#0c1d37]/90 backdrop-blur-xs text-white text-[10px] font-extrabold px-2.5 py-1 rounded-lg">
@@ -159,6 +160,7 @@ export default function ProductPage() {
               </div>
             </div>
 
+            <div className="space-y-3.5 px-4 py-4">
             {/* PRODUCT TITLE & PRICE CARD */}
             <Card className="p-4 space-y-2.5 border border-slate-200/90 shadow-xs">
               <div className="flex items-center gap-1 text-[10px] font-extrabold text-[#ea580c] uppercase tracking-wider">
@@ -239,6 +241,7 @@ export default function ProductPage() {
                 />
               </div>
             </Card>
+            </div>
           </>
         )}
       </div>

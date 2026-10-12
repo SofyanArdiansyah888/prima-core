@@ -234,7 +234,7 @@ class CustomerOrderController extends Controller
     private function paymentLabel(?string $method): string
     {
         return match ($method) {
-            'MIDTRANS' => 'Midtrans Online (QRIS, VA Bank, E-Wallet, Kartu)',
+            'MIDTRANS' => 'Midtrans',
             'VA_MANDIRI' => 'Virtual Account Mandiri',
             'VA_BRI' => 'Virtual Account BRI',
             'CASH' => 'Tunai / Transfer Manual',

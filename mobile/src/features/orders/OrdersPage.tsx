@@ -12,7 +12,6 @@ import {
   checkmarkCircleOutline,
   timeOutline,
   walletOutline,
-  refreshOutline,
 } from 'ionicons/icons';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
@@ -20,7 +19,7 @@ import { api } from '../../data/api';
 import { formatDate, formatQty, formatRupiah } from '../../domain/format';
 import { orderStatusTone } from '../../domain/rules';
 import type { CustomerOrder } from '../../domain/types';
-import { BrandBar, Card, ErrorText, OrderCardSkeleton, Screen, StatusBadge } from '../../shared/ui';
+import { BrandBar, Card, ErrorText, OrderCardSkeleton, Screen, StatusBadge, SyncIcon } from '../../shared/ui';
 
 type FilterTab = 'ALL' | 'PROCESSING' | 'COMPLETED' | 'CANCELLED';
 
@@ -125,7 +124,7 @@ export default function OrdersPage() {
                 disabled={loading}
                 className="flex items-center gap-1 rounded-lg bg-slate-100 hover:bg-slate-200 px-2 py-0.5 text-[11px] font-bold text-[#0c1d37] transition-all cursor-pointer disabled:opacity-50"
               >
-                <IonIcon icon={refreshOutline} className={`text-xs ${loading ? 'animate-spin' : ''}`} />
+                <SyncIcon spinning={loading} className="size-3.5" />
                 <span>Sinkron</span>
               </button>
             </div>
@@ -342,7 +341,7 @@ export default function OrdersPage() {
                             {order.payment_status === 'PAID' && (
                               <span className="text-[10px] font-bold text-emerald-600 flex items-center gap-1 mt-0.5">
                                 <IonIcon icon={checkmarkCircleOutline} className="text-xs text-emerald-500" />
-                                <span>Lunas ({order.payment_method_label || 'Midtrans'})</span>
+                                <span>Lunas ({order.payment_method === 'MIDTRANS' ? 'Midtrans' : order.payment_method_label || 'Midtrans'})</span>
                               </span>
                             )}
                             {order.payment_status === 'PENDING' && order.status !== 'CANCELLED' && (

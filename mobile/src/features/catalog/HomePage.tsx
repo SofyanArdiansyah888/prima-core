@@ -10,11 +10,10 @@ import {
   notificationsOutline,
   flameOutline,
   starOutline,
-  sparklesOutline,
   chevronForwardOutline
 } from 'ionicons/icons';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '../../data/api';
 import { useCart } from '../../data/cart';
 import { formatQty, formatRupiah } from '../../domain/format';
@@ -53,49 +52,170 @@ function getProductImage(product: Product): string {
   return 'https://images.unsplash.com/photo-1581094794329-c8112a89af12?auto=format&fit=crop&q=80&w=400';
 }
 
-function CategoryIcon({ type }: { type: string }) {
-  switch (type) {
-    case 'cement':
-      return (
-        <svg viewBox="0 0 24 24" className="size-6 fill-current" aria-hidden="true">
-          <path d="M19 5h-3V3a1 1 0 0 0-1-1H9a1 1 0 0 0-1 1v2H5a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2zM10 4h4v1h-4V4zm9 16H5V7h3v2h8V7h3v13z" />
-          <path d="M8 12h8v2H8zm0 3h5v2H8z" />
-        </svg>
-      );
-    case 'mortar':
-      return (
-        <svg viewBox="0 0 24 24" className="size-6 fill-current" aria-hidden="true">
-          <path d="M21.71 8.29l-6-6a1 1 0 0 0-1.42 0l-9 9a1 1 0 0 0 0 1.42l6 6a1 1 0 0 0 1.42 0l9-9a1 1 0 0 0 0-1.42zM12 17.59L6.41 12 14 4.41 19.59 10 12 17.59z" />
-          <path d="M4 19h16v2H4z" />
-        </svg>
-      );
-    case 'readymix':
-      return (
-        <svg viewBox="0 0 24 24" className="size-6 fill-current" aria-hidden="true">
-          <path d="M20 8h-3V4H3c-1.1 0-2 .9-2 2v11h2c0 1.66 1.34 3 3 3s3-1.34 3-3h6c0 1.66 1.34 3 3 3s3-1.34 3-3h2v-5l-3-4zM6 18.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm12 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM17 12V9.5h2.5l2 2.5H17z" />
-          <path d="M10 6l4 3-4 3z" />
-        </svg>
-      );
-    case 'tools':
-      return (
-        <svg viewBox="0 0 24 24" className="size-6 fill-current" aria-hidden="true">
-          <path d="M22.7 19l-9.1-9.1c.9-2.3.4-5-1.5-6.9-2-2-5-2.4-7.4-1.3L9 6 6 9 1.6 4.7C.4 7.1.9 10.1 2.9 12.1c1.9 1.9 4.6 2.4 6.9 1.5l9.1 9.1c.4.4 1 .4 1.4 0l2.3-2.3c.5-.4.5-1.1.1-1.4z" />
-        </svg>
-      );
-    case 'promo':
-    default:
-      return (
-        <svg viewBox="0 0 24 24" className="size-6 fill-current" aria-hidden="true">
-          <path d="M7.5 11C9.43 11 11 9.43 11 7.5S9.43 4 7.5 4 4 5.57 4 7.5 5.57 11 7.5 11zm0-5C8.33 6 9 6.67 9 7.5S8.33 9 7.5 9 6 8.33 6 7.5 6.67 6 7.5 6zm9 7c-1.93 0-3.5 1.57-3.5 3.5s1.57 3.5 3.5 3.5 3.5-1.57 3.5-3.5-1.57-3.5-3.5-3.5zm0 5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM6.41 19L19 6.41 17.59 5 5 17.59 6.41 19z" />
-        </svg>
-      );
+export function CategoryGlyph({ type, className = 'size-7' }: { type: string; className?: string }) {
+  const common = {
+    viewBox: '0 0 24 24',
+    className,
+    fill: 'none',
+    stroke: 'currentColor',
+    strokeWidth: 1.75,
+    strokeLinecap: 'round' as const,
+    strokeLinejoin: 'round' as const,
+    'aria-hidden': true,
+  };
+
+  if (type === 'readymix') {
+    return (
+      <svg {...common}>
+        <path d="M3 15.5h2.2" />
+        <path d="M13.2 15.5H15" />
+        <circle cx="7.2" cy="16.4" r="1.7" />
+        <circle cx="17.2" cy="16.4" r="1.7" />
+        <path d="M4.2 15.5V11h6.2l1.4 4.5" />
+        <path d="M11.8 11.2H15l2.6 3v1.3" />
+        <path d="M8.9 15.5h6.6" />
+        <path d="M14.2 6.4c1.5-.7 3.3.2 3.6 1.8.2 1.2-.5 2.2-1.6 2.6" />
+        <path d="M13.4 8.2h3.2" />
+      </svg>
+    );
   }
+
+  if (type === 'cement') {
+    return (
+      <svg {...common}>
+        <path d="M8 7.5h8l1 2.2v8.6a1.8 1.8 0 0 1-1.8 1.8H8.8A1.8 1.8 0 0 1 7 18.3V9.7l1-2.2z" />
+        <path d="M9.2 7.5V6a1.4 1.4 0 0 1 1.4-1.4h2.8A1.4 1.4 0 0 1 14.8 6v1.5" />
+        <path d="M9.2 12.2h5.6" />
+      </svg>
+    );
+  }
+
+  if (type === 'mortar') {
+    return (
+      <svg {...common}>
+        <path d="M14.2 3.8 20 9.6l-7.2 7.2L7 11z" />
+        <path d="M7 11 3.6 19.2" />
+        <path d="M3 20.4h4.2" />
+      </svg>
+    );
+  }
+
+  if (type === 'grout') {
+    return (
+      <svg {...common}>
+        <path d="M8 9.2h8l-.9 9.4a1.6 1.6 0 0 1-1.6 1.4H10.5a1.6 1.6 0 0 1-1.6-1.4L8 9.2z" />
+        <path d="M7.2 9.2h9.6" />
+        <path d="M12 6.4v2.8" />
+        <path d="M12 3.6c.9.7.9 1.5 0 2.4" />
+      </svg>
+    );
+  }
+
+  if (type === 'additive') {
+    return (
+      <svg {...common}>
+        <path d="M9 3.2h6" />
+        <path d="M10 3.2v4.6L6.8 15.8A3.1 3.1 0 0 0 9.6 20.6h4.8a3.1 3.1 0 0 0 2.8-4.8L14 7.8V3.2" />
+        <path d="M8.4 14h7.2" />
+      </svg>
+    );
+  }
+
+  return (
+    <svg {...common}>
+      <path d="m12 3 8 4.5L12 12 4 7.5 12 3z" />
+      <path d="m4 12 8 4.5L20 12" />
+      <path d="m4 16.5 8 4.5 8-4.5" />
+    </svg>
+  );
+}
+
+function ShowcaseCard({
+  product,
+  qtyInCart,
+  onOpen,
+  onAdd,
+  onStep,
+  layout = 'strip',
+}: {
+  product: Product;
+  qtyInCart: number;
+  onOpen: () => void;
+  onAdd: (event: React.MouseEvent) => void;
+  onStep: (delta: number, event: React.MouseEvent) => void;
+  layout?: 'strip' | 'grid';
+}) {
+  return (
+    <div
+      onClick={onOpen}
+      className={`flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-xs transition-all hover:border-[#d91424]/40 ${
+        layout === 'grid' ? 'w-full' : 'w-[155px] shrink-0'
+      }`}
+    >
+      <div className={`w-full overflow-hidden bg-slate-100 ${layout === 'grid' ? 'aspect-square' : 'h-28'}`}>
+        <SafeImage
+          src={getProductImage(product)}
+          alt={product.name}
+          type={product.category}
+          className="h-full w-full object-cover"
+        />
+      </div>
+      <div className="flex flex-1 flex-col justify-between px-3 pb-3 pt-2.5">
+        <div>
+          <h3 className="line-clamp-2 min-h-[32px] text-xs font-bold leading-snug text-slate-900">
+            {product.name}
+          </h3>
+          <p className="mt-0.5 text-[10px] text-slate-400">
+            {formatQty(product.min_order)} {product.unit}
+          </p>
+        </div>
+        <div className="mt-2 border-t border-slate-100 pt-2">
+          <div className="mb-2 flex items-baseline gap-0.5">
+            <span className="text-xs font-black text-[#d91424]">{formatRupiah(product.base_price)}</span>
+            <span className="text-[9px] font-medium text-slate-400">/{product.unit}</span>
+          </div>
+          {qtyInCart === 0 ? (
+            <button
+              type="button"
+              onClick={onAdd}
+              className="flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-xl bg-[#d91424] py-1.5 text-xs font-bold text-white shadow-xs transition hover:bg-red-700 active:scale-95"
+            >
+              <IonIcon icon={cartOutline} className="text-xs" />
+              <span>Tambah</span>
+            </button>
+          ) : (
+            <div
+              className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-100 p-1"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <button
+                type="button"
+                onClick={(event) => onStep(-1, event)}
+                className="flex size-6 cursor-pointer items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-700 shadow-xs active:scale-90"
+              >
+                <IonIcon icon={removeOutline} className="text-xs" />
+              </button>
+              <span className="font-mono text-xs font-bold text-slate-900">{qtyInCart}</span>
+              <button
+                type="button"
+                onClick={(event) => onStep(1, event)}
+                className="flex size-6 cursor-pointer items-center justify-center rounded-lg bg-[#d91424] text-white shadow-xs active:scale-90"
+              >
+                <IonIcon icon={addOutline} className="text-xs" />
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default function HomePage() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const cart = useCart();
-  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [selectedCategory, setSelectedCategory] = useState(searchParams.get('kategori') ?? 'all');
   const [quickCategories, setQuickCategories] = useState<CatalogChip[]>([]);
   const [heroSlides, setHeroSlides] = useState<HomeBanner[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -113,6 +233,10 @@ export default function HomePage() {
     }, 5000);
     return () => clearInterval(timer);
   }, [heroSlides.length]);
+
+  useEffect(() => {
+    setSelectedCategory(searchParams.get('kategori') ?? 'all');
+  }, [searchParams]);
 
   const loadAllProducts = async () => {
     setLoading(true);
@@ -218,7 +342,7 @@ export default function HomePage() {
 
   return (
     <Screen onRefresh={handlePullRefresh}>
-      <div className="bg-slate-50 min-h-full pb-28">
+      <div className="min-h-full w-full min-w-0 max-w-full overflow-x-hidden bg-slate-50 pb-28">
         
         {/* ========================================================================= */}
         {/* 1. TOP APP BAR: Brand Logo + Notification Icon                            */}
@@ -284,7 +408,7 @@ export default function HomePage() {
         </div>
 
         {/* Main Content Area */}
-        <div className="space-y-4 pt-3">
+        <div className="w-full min-w-0 space-y-4 pt-3">
           
           <ErrorText>{error}</ErrorText>
 
@@ -292,12 +416,12 @@ export default function HomePage() {
           {/* 3. KATEGORI SECTION: Clean Horizontal Category Icons Grid                 */}
           {/* ========================================================================= */}
           {!isFilteredMode && (
-            <div className="px-4">
-              <div className="flex items-center justify-between mb-2.5">
+            <div className="min-w-0">
+              <div className="mb-2 flex items-center justify-between px-4">
                 <h2 className="text-sm font-extrabold text-slate-900">Kategori</h2>
                 <button 
                   type="button"
-                  onClick={() => setSelectedCategory('all')}
+                  onClick={() => navigate('/tabs/categories')}
                   className="text-xs font-bold text-[#d91424] hover:text-red-700 flex items-center gap-0.5 cursor-pointer"
                 >
                   <span>Lihat Semua</span>
@@ -305,29 +429,28 @@ export default function HomePage() {
                 </button>
               </div>
 
-              {/* 5 Quick Category Cards */}
-              <div className="grid grid-cols-4 gap-2 sm:grid-cols-5">
+              <div className="flex w-full min-w-0 flex-nowrap gap-1.5 overflow-x-auto overscroll-x-contain px-4 pb-1 no-scrollbar touch-pan-x">
                 {quickCategories.map((cat) => {
                   const isSelected = selectedCategory === cat.id;
                   return (
                     <button
                       key={cat.id}
                       type="button"
-                      onClick={() => setSelectedCategory(isSelected ? 'all' : cat.id)}
-                      className="flex flex-col items-center text-center group cursor-pointer"
+                      onClick={() => {
+                        if (isSelected) {
+                          setSearchParams({}, { replace: true });
+                          return;
+                        }
+                        setSearchParams({ kategori: cat.id }, { replace: true });
+                      }}
+                      className={`inline-flex h-9 shrink-0 cursor-pointer items-center gap-1.5 rounded-full border px-2.5 ${
+                        isSelected
+                          ? 'border-[#d91424] bg-[#d91424] text-white'
+                          : 'border-red-100 bg-red-50 text-[#d91424]'
+                      }`}
                     >
-                      <div className={`w-full aspect-square rounded-2xl flex items-center justify-center transition-all duration-200 ${
-                        isSelected 
-                          ? 'bg-[#d91424] text-white shadow-md scale-105 ring-2 ring-[#d91424]/30' 
-                          : 'bg-red-50/80 text-[#d91424] border border-red-100 hover:bg-red-100/90 active:scale-95'
-                      }`}>
-                        <CategoryIcon type={cat.id} />
-                      </div>
-                      <span className={`text-[10px] font-bold mt-1.5 line-clamp-2 leading-tight ${
-                        isSelected ? 'text-[#d91424]' : 'text-slate-700'
-                      }`}>
-                        {cat.label}
-                      </span>
+                      <CategoryGlyph type={cat.id} className="size-4 shrink-0" />
+                      <span className="whitespace-nowrap text-[11px] font-bold">{cat.label}</span>
                     </button>
                   );
                 })}
@@ -382,17 +505,6 @@ export default function HomePage() {
                       <p className="text-[11px] text-slate-300 line-clamp-2 mt-1 leading-relaxed">
                         {activeHero.description}
                       </p>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (activeHero.category) setSelectedCategory(activeHero.category);
-                        }}
-                        className="mt-3 inline-flex items-center gap-1 bg-[#d91424] hover:bg-red-700 text-white text-xs font-bold px-3.5 py-1.5 rounded-full shadow-md active:scale-95 transition-all cursor-pointer"
-                      >
-                        <span>{activeHero.cta_label}</span>
-                        <IonIcon icon={arrowForwardOutline} className="text-xs" />
-                      </button>
                     </div>
 
                     <div className="relative z-10 w-24 h-24 sm:w-28 sm:h-28 rounded-xl overflow-hidden shrink-0 border-2 border-white/20 shadow-lg bg-slate-800">
@@ -441,8 +553,8 @@ export default function HomePage() {
               <button 
                 type="button"
                 onClick={() => {
-                  setSelectedCategory('all');
                   setSearchQuery('');
+                  setSearchParams({}, { replace: true });
                 }}
                 className="text-xs font-bold text-slate-500 hover:text-slate-800 cursor-pointer"
               >
@@ -470,74 +582,17 @@ export default function HomePage() {
                 </div>
               ) : (
                 <div className="grid grid-cols-2 gap-3">
-                  {filteredProducts.map((p) => {
-                    const cartItem = cart.lines.find((line) => line.product.uuid === p.uuid);
-                    const qtyInCart = cartItem ? cartItem.quantity : 0;
-                    const imageSrc = getProductImage(p);
-
-                    return (
-                      <div
-                        key={p.uuid}
-                        onClick={() => navigate(`/product/${p.uuid}`)}
-                        className="bg-white rounded-2xl p-3 border border-slate-200/80 shadow-xs flex flex-col justify-between cursor-pointer hover:border-[#d91424]/40 transition-all"
-                      >
-                        <div>
-                          <div className="w-full aspect-square rounded-xl bg-slate-50 flex items-center justify-center overflow-hidden border border-slate-100 p-2">
-                            <SafeImage 
-                              src={imageSrc} 
-                              alt={p.name} 
-                              type={p.category}
-                              className="w-full h-full object-contain"
-                            />
-                          </div>
-                          <h3 className="font-bold text-slate-900 text-xs leading-snug mt-2 line-clamp-2 min-h-[32px]">
-                            {p.name}
-                          </h3>
-                          <p className="text-[10px] text-slate-400 mt-0.5">
-                            {formatQty(p.min_order)} {p.unit}
-                          </p>
-                        </div>
-
-                        <div className="mt-2.5 pt-2 border-t border-slate-100">
-                          <div className="flex items-baseline gap-0.5 mb-2">
-                            <span className="text-xs font-black text-[#d91424]">
-                              {formatRupiah(p.base_price)}
-                            </span>
-                            <span className="text-[9px] text-slate-400 font-medium">/{p.unit}</span>
-                          </div>
-
-                          {qtyInCart === 0 ? (
-                            <button
-                              type="button"
-                              onClick={(e) => handleQuickAdd(p, e)}
-                              className="w-full bg-[#d91424] hover:bg-red-700 text-white text-xs font-bold py-1.5 rounded-xl flex items-center justify-center gap-1.5 shadow-xs active:scale-95 transition cursor-pointer"
-                            >
-                              <IonIcon icon={cartOutline} className="text-xs" />
-                              <span>Tambah</span>
-                            </button>
-                          ) : (
-                            <div className="flex items-center justify-between bg-slate-100 p-1 rounded-xl border border-slate-200" onClick={(e) => e.stopPropagation()}>
-                              <button 
-                                type="button"
-                                onClick={(e) => handleStepQuantity(p, -1, e)}
-                                className="size-6 rounded-lg bg-white shadow-xs flex items-center justify-center text-slate-700 active:scale-90 cursor-pointer border border-slate-200"
-                              >
-                                <IonIcon icon={removeOutline} className="text-xs" />
-                              </button>
-                              <span className="text-xs font-bold text-slate-900 font-mono">{qtyInCart}</span>
-                              <button 
-                                type="button"
-                                onClick={(e) => handleStepQuantity(p, 1, e)}
-                                className="size-6 rounded-lg bg-[#d91424] text-white flex items-center justify-center active:scale-90 cursor-pointer shadow-xs"
-                              >
-                                <IonIcon icon={addOutline} className="text-xs" />
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
+                  {filteredProducts.map((p) => (
+                    <ShowcaseCard
+                      key={p.uuid}
+                      layout="grid"
+                      product={p}
+                      qtyInCart={cart.lines.find((line) => line.product.uuid === p.uuid)?.quantity ?? 0}
+                      onOpen={() => navigate(`/product/${p.uuid}`)}
+                      onAdd={(event) => handleQuickAdd(p, event)}
+                      onStep={(delta, event) => handleStepQuantity(p, delta, event)}
+                    />
+                  ))}
                 </div>
               )}
             </div>
@@ -555,7 +610,7 @@ export default function HomePage() {
                 </div>
                 <button 
                   type="button"
-                  onClick={() => setSelectedCategory('cement')}
+                  onClick={() => setSearchParams({ kategori: 'cement' }, { replace: true })}
                   className="text-xs font-bold text-[#d91424] hover:text-red-700 flex items-center gap-0.5 cursor-pointer"
                 >
                   <span>Lihat Semua</span>
@@ -565,74 +620,16 @@ export default function HomePage() {
 
               {/* Horizontal Scroll Product List */}
               <div className="flex gap-3 overflow-x-auto px-4 pb-2 no-scrollbar">
-                {featuredProducts.map((p) => {
-                  const cartItem = cart.lines.find((line) => line.product.uuid === p.uuid);
-                  const qtyInCart = cartItem ? cartItem.quantity : 0;
-                  const imageSrc = getProductImage(p);
-
-                  return (
-                    <div
-                      key={p.uuid}
-                      onClick={() => navigate(`/product/${p.uuid}`)}
-                      className="w-[155px] shrink-0 bg-white rounded-2xl p-3 border border-slate-200/80 shadow-xs flex flex-col justify-between cursor-pointer hover:border-[#d91424]/40 transition-all"
-                    >
-                      <div>
-                        <div className="w-full h-28 rounded-xl bg-slate-50 flex items-center justify-center overflow-hidden border border-slate-100 p-2">
-                          <SafeImage 
-                            src={imageSrc} 
-                            alt={p.name} 
-                            type={p.category}
-                            className="w-full h-full object-contain"
-                          />
-                        </div>
-                        <h3 className="font-bold text-slate-900 text-xs leading-snug mt-2 line-clamp-2 min-h-[32px]">
-                          {p.name}
-                        </h3>
-                        <p className="text-[10px] text-slate-400 mt-0.5">
-                          {formatQty(p.min_order)} {p.unit}
-                        </p>
-                      </div>
-
-                      <div className="mt-2 pt-2 border-t border-slate-100">
-                        <div className="flex items-baseline gap-0.5 mb-2">
-                          <span className="text-xs font-black text-[#d91424]">
-                            {formatRupiah(p.base_price)}
-                          </span>
-                          <span className="text-[9px] text-slate-400 font-medium">/{p.unit}</span>
-                        </div>
-
-                        {qtyInCart === 0 ? (
-                          <button
-                            type="button"
-                            onClick={(e) => handleQuickAdd(p, e)}
-                            className="w-full bg-[#d91424] hover:bg-red-700 text-white text-xs font-bold py-1.5 rounded-xl flex items-center justify-center gap-1.5 shadow-xs active:scale-95 transition cursor-pointer"
-                          >
-                            <IonIcon icon={cartOutline} className="text-xs" />
-                            <span>Tambah</span>
-                          </button>
-                        ) : (
-                          <div className="flex items-center justify-between bg-slate-100 p-1 rounded-xl border border-slate-200" onClick={(e) => e.stopPropagation()}>
-                            <button 
-                              type="button"
-                              onClick={(e) => handleStepQuantity(p, -1, e)}
-                              className="size-6 rounded-lg bg-white shadow-xs flex items-center justify-center text-slate-700 active:scale-90 cursor-pointer border border-slate-200"
-                            >
-                              <IonIcon icon={removeOutline} className="text-xs" />
-                            </button>
-                            <span className="text-xs font-bold text-slate-900 font-mono">{qtyInCart}</span>
-                            <button 
-                              type="button"
-                              onClick={(e) => handleStepQuantity(p, 1, e)}
-                              className="size-6 rounded-lg bg-[#d91424] text-white flex items-center justify-center active:scale-90 cursor-pointer shadow-xs"
-                            >
-                              <IonIcon icon={addOutline} className="text-xs" />
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
+                {featuredProducts.map((p) => (
+                  <ShowcaseCard
+                    key={p.uuid}
+                    product={p}
+                    qtyInCart={cart.lines.find((line) => line.product.uuid === p.uuid)?.quantity ?? 0}
+                    onOpen={() => navigate(`/product/${p.uuid}`)}
+                    onAdd={(event) => handleQuickAdd(p, event)}
+                    onStep={(delta, event) => handleStepQuantity(p, delta, event)}
+                  />
+                ))}
               </div>
             </div>
           )}
@@ -649,7 +646,7 @@ export default function HomePage() {
                 </div>
                 <button 
                   type="button"
-                  onClick={() => setSelectedCategory('readymix')}
+                  onClick={() => setSearchParams({ kategori: 'readymix' }, { replace: true })}
                   className="text-xs font-bold text-[#d91424] hover:text-red-700 flex items-center gap-0.5 cursor-pointer"
                 >
                   <span>Lihat Semua</span>
@@ -659,113 +656,16 @@ export default function HomePage() {
 
               {/* Horizontal Scroll Product List */}
               <div className="flex gap-3 overflow-x-auto px-4 pb-2 no-scrollbar">
-                {bestSellerProducts.map((p) => {
-                  const cartItem = cart.lines.find((line) => line.product.uuid === p.uuid);
-                  const qtyInCart = cartItem ? cartItem.quantity : 0;
-                  const imageSrc = getProductImage(p);
-
-                  return (
-                    <div
-                      key={p.uuid}
-                      onClick={() => navigate(`/product/${p.uuid}`)}
-                      className="w-[155px] shrink-0 bg-white rounded-2xl p-3 border border-slate-200/80 shadow-xs flex flex-col justify-between cursor-pointer hover:border-[#d91424]/40 transition-all"
-                    >
-                      <div>
-                        <div className="w-full h-28 rounded-xl bg-slate-50 flex items-center justify-center overflow-hidden border border-slate-100 p-2">
-                          <SafeImage 
-                            src={imageSrc} 
-                            alt={p.name} 
-                            type={p.category}
-                            className="w-full h-full object-contain"
-                          />
-                        </div>
-                        <h3 className="font-bold text-slate-900 text-xs leading-snug mt-2 line-clamp-2 min-h-[32px]">
-                          {p.name}
-                        </h3>
-                        <p className="text-[10px] text-slate-400 mt-0.5">
-                          {formatQty(p.min_order)} {p.unit}
-                        </p>
-                      </div>
-
-                      <div className="mt-2 pt-2 border-t border-slate-100">
-                        <div className="flex items-baseline gap-0.5 mb-2">
-                          <span className="text-xs font-black text-[#d91424]">
-                            {formatRupiah(p.base_price)}
-                          </span>
-                          <span className="text-[9px] text-slate-400 font-medium">/{p.unit}</span>
-                        </div>
-
-                        {qtyInCart === 0 ? (
-                          <button
-                            type="button"
-                            onClick={(e) => handleQuickAdd(p, e)}
-                            className="w-full bg-[#d91424] hover:bg-red-700 text-white text-xs font-bold py-1.5 rounded-xl flex items-center justify-center gap-1.5 shadow-xs active:scale-95 transition cursor-pointer"
-                          >
-                            <IonIcon icon={cartOutline} className="text-xs" />
-                            <span>Tambah</span>
-                          </button>
-                        ) : (
-                          <div className="flex items-center justify-between bg-slate-100 p-1 rounded-xl border border-slate-200" onClick={(e) => e.stopPropagation()}>
-                            <button 
-                              type="button"
-                              onClick={(e) => handleStepQuantity(p, -1, e)}
-                              className="size-6 rounded-lg bg-white shadow-xs flex items-center justify-center text-slate-700 active:scale-90 cursor-pointer border border-slate-200"
-                            >
-                              <IonIcon icon={removeOutline} className="text-xs" />
-                            </button>
-                            <span className="text-xs font-bold text-slate-900 font-mono">{qtyInCart}</span>
-                            <button 
-                              type="button"
-                              onClick={(e) => handleStepQuantity(p, 1, e)}
-                              className="size-6 rounded-lg bg-[#d91424] text-white flex items-center justify-center active:scale-90 cursor-pointer shadow-xs"
-                            >
-                              <IonIcon icon={addOutline} className="text-xs" />
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* ========================================================================= */}
-          {/* 9. BOTTOM PROMO BANNER (Diskon Khusus Proyek)                              */}
-          {/* ========================================================================= */}
-          {!isFilteredMode && (
-            <div className="px-4 pt-2">
-              <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#d91424] via-[#b91c1c] to-[#991b1b] text-white p-4 shadow-md flex items-center justify-between gap-3">
-                <div className="relative z-10 flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5 mb-1">
-                    <span className="bg-white/20 text-white text-[9px] font-black uppercase px-2 py-0.5 rounded-full backdrop-blur-xs">
-                      % Promo Spesial
-                    </span>
-                  </div>
-                  <h3 className="text-sm font-black text-white leading-tight">
-                    Diskon Hingga 10%
-                  </h3>
-                  <p className="text-[10px] text-white/80 mt-0.5 leading-snug">
-                    Untuk pembelian Semen & Ready Mix
-                  </p>
-                  <button 
-                    type="button"
-                    onClick={() => setSelectedCategory('all')}
-                    className="mt-2.5 inline-flex items-center gap-1 bg-white hover:bg-slate-100 text-[#d91424] text-[11px] font-black px-3 py-1 rounded-full shadow-md active:scale-95 transition cursor-pointer"
-                  >
-                    <span>Lihat Promo</span>
-                    <IonIcon icon={arrowForwardOutline} className="text-[11px]" />
-                  </button>
-                </div>
-
-                <div className="w-20 h-20 rounded-xl overflow-hidden shrink-0 border border-white/30 relative shadow-md bg-white/10">
-                  <img 
-                    src="https://images.unsplash.com/photo-1541888946425-d0fbb186a5b3?auto=format&fit=crop&q=80&w=300"
-                    alt="Promo Material" 
-                    className="w-full h-full object-cover"
+                {bestSellerProducts.map((p) => (
+                  <ShowcaseCard
+                    key={p.uuid}
+                    product={p}
+                    qtyInCart={cart.lines.find((line) => line.product.uuid === p.uuid)?.quantity ?? 0}
+                    onOpen={() => navigate(`/product/${p.uuid}`)}
+                    onAdd={(event) => handleQuickAdd(p, event)}
+                    onStep={(delta, event) => handleStepQuantity(p, delta, event)}
                   />
-                </div>
+                ))}
               </div>
             </div>
           )}

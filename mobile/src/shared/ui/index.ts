@@ -16,6 +16,7 @@ export {
   Screen,
   Segment,
   StatusBadge,
+  SyncIcon,
   Stepper,
   StickyBar,
   TextArea,

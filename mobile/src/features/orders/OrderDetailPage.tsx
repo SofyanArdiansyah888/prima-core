@@ -15,7 +15,6 @@ import {
   locationOutline,
   logoWhatsapp,
   receiptOutline,
-  refreshOutline,
   shieldCheckmarkOutline,
   timeOutline,
   walletOutline,
@@ -26,7 +25,7 @@ import { api } from '../../data/api';
 import { formatDate, formatQty, formatRupiah } from '../../domain/format';
 import { orderStatusTone, paymentStatusLabel } from '../../domain/rules';
 import { STATUS_LABELS, STATUS_STEPS, type CustomerOrder } from '../../domain/types';
-import { Card, ConfirmModal, ErrorText, Eyebrow, NavBar, OrderDetailSkeleton, Screen, StatusBadge, StickyBar } from '../../shared/ui';
+import { Card, ConfirmModal, ErrorText, Eyebrow, NavBar, OrderDetailSkeleton, Screen, StatusBadge, StickyBar, SyncIcon } from '../../shared/ui';
 import { openSnapPayment } from '../../lib/midtrans';
 
 type ToastState = {
@@ -209,7 +208,7 @@ export default function OrderDetailPage() {
                   className="flex items-center gap-1 rounded-lg bg-slate-100 hover:bg-slate-200 px-2 py-1 text-[11px] font-bold text-slate-700 transition-colors cursor-pointer disabled:opacity-50"
                   title="Sinkronkan Status"
                 >
-                  <IonIcon icon={refreshOutline} className={`text-xs ${refreshing ? 'animate-spin text-[#0c1d37]' : 'text-slate-600'}`} />
+                  <SyncIcon spinning={refreshing} className="size-3.5 text-slate-600" />
                   <span>Sync</span>
                 </button>
                 <button
@@ -258,7 +257,7 @@ export default function OrderDetailPage() {
     >
       {/* Toast Notification */}
       <div
-        className={`fixed top-4 left-1/2 z-50 w-[92%] max-w-sm -translate-x-1/2 rounded-2xl border border-slate-700 bg-[#0c1d37] px-4 py-3 text-xs text-white shadow-2xl transition-all duration-300 sm:text-sm ${
+        className={`fixed top-24 left-1/2 z-[60] w-[92%] max-w-sm -translate-x-1/2 rounded-2xl border border-slate-700 bg-[#0c1d37] px-4 py-3 text-xs text-white shadow-2xl transition-all duration-300 sm:text-sm ${
           toast.show ? 'translate-y-0 opacity-100' : '-translate-y-16 pointer-events-none opacity-0'
         }`}
       >
@@ -434,39 +433,39 @@ export default function OrderDetailPage() {
             </Card>
 
             {/* ORDER ITEMS & MATERIAL DETAIL */}
-            <Card className="p-4 border border-slate-200/90 shadow-xs space-y-3">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
-                <h2 className="text-xs font-extrabold uppercase tracking-wide text-[#0c1d37] flex items-center gap-1.5">
-                  <IonIcon icon={cubeOutline} className="text-slate-500" />
-                  <span>Item & Spesifikasi Produk</span>
-                </h2>
+            <Card className="!p-3 border border-slate-200/90 shadow-xs space-y-2">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                <span className="flex items-center gap-1.5 text-[11px] font-extrabold uppercase tracking-wide text-[#0c1d37]">
+                  <IonIcon icon={cubeOutline} className="text-sm text-slate-500" />
+                  Item & Spesifikasi Produk
+                </span>
                 <span className="text-[10px] font-bold text-slate-400">
                   {order.items?.length || 0} Produk
                 </span>
               </div>
 
-              <div className="space-y-2.5">
+              <div className="space-y-1.5">
                 {order.items?.map((item, idx) => (
                   <div
                     key={`${item.code}-${idx}`}
-                    className="flex items-center justify-between rounded-xl bg-slate-50 border border-slate-100 p-3 text-xs"
+                    className="flex items-start justify-between gap-2 rounded-lg border border-slate-100 bg-slate-50 px-2.5 py-2"
                   >
-                    <div className="min-w-0 flex-1 pr-3">
-                      <h3 className="font-extrabold text-slate-900 leading-tight">{item.name || item.code}</h3>
-                      <div className="mt-1 flex items-center gap-2 text-[11px] text-slate-500">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[12px] font-bold leading-snug text-slate-900">{item.name || item.code}</p>
+                      <p className="mt-0.5 text-[10px] leading-tight text-slate-500">
                         <span className="font-mono font-semibold text-[#0c1d37]">{formatQty(item.quantity)} {item.unit}</span>
-                        <span>•</span>
-                        <span className="font-mono text-slate-600">@ {formatRupiah(item.unit_price)}</span>
-                      </div>
-                      {item.notes && (
-                        <p className="mt-1 text-[10px] text-amber-800 bg-amber-50 rounded px-1.5 py-0.5 inline-block">
-                          Catatan: {item.notes}
+                        <span className="mx-1">·</span>
+                        <span className="font-mono">@ {formatRupiah(item.unit_price)}</span>
+                      </p>
+                      {item.notes ? (
+                        <p className="mt-1 inline-block rounded bg-amber-50 px-1.5 py-0.5 text-[10px] leading-tight text-amber-800">
+                          {item.notes}
                         </p>
-                      )}
+                      ) : null}
                     </div>
-                    <div className="text-right shrink-0">
-                      <span className="text-[10px] text-slate-400 block">Subtotal</span>
-                      <span className="font-mono text-xs font-extrabold text-slate-900">
+                    <div className="shrink-0 text-right">
+                      <span className="block text-[9px] leading-none text-slate-400">Subtotal</span>
+                      <span className="font-mono text-[11px] font-bold leading-tight text-slate-900">
                         {formatRupiah(item.subtotal)}
                       </span>
                     </div>
@@ -476,12 +475,12 @@ export default function OrderDetailPage() {
             </Card>
 
             {/* PAYMENT & PRICE BREAKDOWN */}
-            <Card className="p-4 border border-slate-200/90 shadow-xs space-y-3">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
-                <h2 className="text-xs font-extrabold uppercase tracking-wide text-[#0c1d37] flex items-center gap-1.5">
-                  <IonIcon icon={walletOutline} className="text-slate-500" />
-                  <span>Rincian Pembayaran</span>
-                </h2>
+            <Card className="!p-3 border border-slate-200/90 shadow-xs space-y-2">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                <span className="flex items-center gap-1.5 text-[11px] font-extrabold uppercase tracking-wide text-[#0c1d37]">
+                  <IonIcon icon={walletOutline} className="text-sm text-slate-500" />
+                  Rincian Pembayaran
+                </span>
                 <span className={`rounded-md px-2 py-0.5 text-[10px] font-extrabold border ${
                   order.payment_status === 'PAID'
                     ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
@@ -493,37 +492,34 @@ export default function OrderDetailPage() {
                 </span>
               </div>
 
-              <div className="space-y-2 text-xs">
-                <div className="flex justify-between text-slate-600">
-                  <span>Metode Pembayaran</span>
-                  <span className="font-bold text-slate-900">{order.payment_method_label}</span>
+              <div className="space-y-1.5 text-[11px]">
+                <div className="flex justify-between gap-3 text-slate-600">
+                  <span>Metode</span>
+                  <span className="font-bold text-slate-900">{order.payment_method === 'MIDTRANS' ? 'Midtrans' : order.payment_method_label}</span>
                 </div>
-                <div className="flex justify-between text-slate-600">
-                  <span>Subtotal Dasar (DPP)</span>
+                <div className="flex justify-between gap-3 text-slate-600">
+                  <span>Subtotal</span>
                   <span className="font-mono font-medium text-slate-800">{formatRupiah(order.subtotal)}</span>
                 </div>
                 {Number(order.delivery_fee) > 0 && (
-                  <div className="flex justify-between text-slate-600">
-                    <span>Biaya Pengantaran ({order.distance_km || 0} km)</span>
+                  <div className="flex justify-between gap-3 text-slate-600">
+                    <span>Ongkir ({order.distance_km || 0} km)</span>
                     <span className="font-mono font-medium text-slate-800">{formatRupiah(order.delivery_fee)}</span>
                   </div>
                 )}
-                <div className="flex justify-between text-slate-600">
-                  <span>PPN Resmi (11%)</span>
+                <div className="flex justify-between gap-3 text-slate-600">
+                  <span>PPN 11%</span>
                   <span className="font-mono font-medium text-slate-800">{formatRupiah(order.ppn)}</span>
                 </div>
                 {Number(order.admin_fee) > 0 && (
-                  <div className="flex justify-between text-slate-600">
-                    <span className="flex items-center gap-1">
-                      <span>Biaya Layanan & Pembayaran</span>
-                      <span className="rounded bg-slate-100 px-1 py-0.2 text-[9px] text-slate-600 font-medium">Midtrans</span>
-                    </span>
+                  <div className="flex justify-between gap-3 text-slate-600">
+                    <span>Biaya layanan</span>
                     <span className="font-mono font-medium text-slate-800">{formatRupiah(order.admin_fee)}</span>
                   </div>
                 )}
-                <div className="flex justify-between border-t border-slate-200 pt-2.5 text-sm font-extrabold text-[#0c1d37]">
-                  <span>Total Tagihan Akhir</span>
-                  <span className="font-mono text-base font-black text-[#0c1d37]">{formatRupiah(order.total_price)}</span>
+                <div className="flex justify-between gap-3 border-t border-slate-200 pt-2 text-[12px] font-extrabold text-[#0c1d37]">
+                  <span>Total</span>
+                  <span className="font-mono">{formatRupiah(order.total_price)}</span>
                 </div>
               </div>
 
@@ -545,7 +541,7 @@ export default function OrderDetailPage() {
                     onClick={() => void handleManualRefresh()}
                     className="w-full flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 py-2 px-4 text-[11px] font-bold text-slate-700 transition-all cursor-pointer disabled:opacity-50"
                   >
-                    <IonIcon icon={refreshOutline} className={`text-xs ${refreshing ? 'animate-spin' : ''}`} />
+                    <SyncIcon spinning={refreshing} className="size-3.5" />
                     <span>{refreshing ? 'Memeriksa Midtrans…' : 'Sudah Bayar? Cek Status Pembayaran'}</span>
                   </button>
                 </div>
