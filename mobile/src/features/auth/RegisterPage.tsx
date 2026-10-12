@@ -152,7 +152,7 @@ export default function RegisterPage() {
                   Akun Baru
                 </span>
                 <span className="text-xs font-bold text-[#ea580c] uppercase tracking-wider">
-                  PT. PKM TONASA
+                  PRIMA SALES PRO
                 </span>
               </div>
               <h1 className="mb-1 text-2xl font-extrabold tracking-tight text-[#0c1d37]">

@@ -1,4 +1,4 @@
-import { Link, usePage } from '@inertiajs/react';
+import { Link } from '@inertiajs/react';
 import { home } from '@/routes';
 import type { AuthLayoutProps } from '@/types';
 
@@ -7,7 +7,6 @@ export default function AuthSplitLayout({
     title,
     description,
 }: AuthLayoutProps) {
-    const { name } = usePage().props;
 
     return (
         <div className="relative flex min-h-svh">
@@ -27,7 +26,7 @@ export default function AuthSplitLayout({
                         />
                         <div className="leading-tight">
                             <span className="text-base font-extrabold tracking-wide text-white block">
-                                {name || 'PKM Tonasa'}
+                                Prima Sales Pro
                             </span>
                             <span className="text-[10px] font-bold text-[#ea580c] uppercase tracking-wider">
                                 Semen Tonasa Group
@@ -72,7 +71,7 @@ export default function AuthSplitLayout({
                             className="size-10 object-contain"
                         />
                         <div className="leading-tight">
-                            <span className="text-sm font-extrabold text-foreground block">{name}</span>
+                            <span className="text-sm font-extrabold text-foreground block">Prima Sales Pro</span>
                             <span className="text-[10px] font-bold text-[#ea580c] uppercase tracking-wider">Semen Tonasa</span>
                         </div>
                     </Link>

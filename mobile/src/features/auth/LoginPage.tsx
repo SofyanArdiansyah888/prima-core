@@ -126,15 +126,15 @@ export default function LoginPage() {
                 <PkmLogo className="size-12 drop-shadow-md" />
                 <div className="leading-tight">
                   <div className="flex items-center gap-1.5">
-                    <span className="text-base font-extrabold tracking-wide text-[#0c1d37]">
-                      PT. PKM TONASA
+                    <span className="text-base font-black tracking-tight text-[#0c1d37]">
+                      PRIMA
                     </span>
-                    <span className="rounded-md bg-[#d91424]/10 px-1.5 py-0.5 text-[9px] font-extrabold text-[#d91424] uppercase tracking-wider">
-                      Resmi
+                    <span className="rounded bg-[#d91424] px-1.5 py-0.5 text-[9px] font-black italic text-white tracking-wider">
+                      SALES PRO
                     </span>
                   </div>
-                  <p className="text-xs font-bold text-[#ea580c] uppercase tracking-wider">
-                    Semen Tonasa Group
+                  <p className="text-xs font-bold text-[#ea580c] uppercase tracking-wider mt-0.5">
+                    PT. Prima Karya Manunggal
                   </p>
                 </div>
               </div>

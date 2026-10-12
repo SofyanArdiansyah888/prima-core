@@ -227,9 +227,11 @@ export function BrandBar({
         <div className="flex items-center gap-2.5">
           <PkmLogo className="size-8 drop-shadow-xs" />
           <div className="leading-tight">
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs font-extrabold tracking-wide text-[#0c1d37]">PKM TONASA</span>
-              <span className="rounded bg-[#d91424]/10 px-1 py-0.2 text-[8px] font-extrabold text-[#d91424] uppercase">Resmi</span>
+            <div className="flex items-center gap-1 leading-none mb-0.5">
+              <span className="font-black text-xs tracking-tight text-[#0c1d37]">PRIMA</span>
+              <span className="bg-[#d91424] text-white text-[8px] font-black italic px-1 py-0.2 rounded tracking-wider">
+                SALES PRO
+              </span>
             </div>
             <h1 className="text-sm font-bold text-slate-800">{title}</h1>
           </div>

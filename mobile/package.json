@@ -1,5 +1,5 @@
 {
-  "name": "mobile",
+  "name": "prima-sales-pro",
   "private": true,
   "version": "0.0.1",
   "type": "module",
@@ -53,5 +53,5 @@
     "vite": "^8.0.0",
     "vitest": "~4.0.18"
   },
-  "description": "An Ionic project"
+  "description": "Prima Sales Pro - Aplikasi Mobile Pemesanan PT Prima Karya Manunggal"
 }

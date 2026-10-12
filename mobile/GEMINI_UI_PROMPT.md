@@ -8,7 +8,7 @@ Kamu adalah desainer UI mobile untuk aplikasi pemesanan pelanggan PT Prima Karya
 
 ## Brand
 
-- Nama aplikasi: Pesan Tonasa
+- Nama aplikasi: Prima Sales Pro
 - Warna utama: emerald `#047857` pada tombol, tab aktif, dan harga
 - Netral: stone `#fafaf9` latar, `#1c1917` teks, garis `#e7e5e4`, kartu putih
 - Judul layar: font serif (Source Serif 4). Teks isi: Source Sans 3. Kode produk dan nomor pesanan: monospace
