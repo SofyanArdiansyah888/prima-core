@@ -2,12 +2,15 @@ import { Link } from '@inertiajs/react';
 import {
     Building2,
     Factory,
+    Image,
     LayoutGrid,
     Users,
     Package,
     Route,
+    Tags,
     ShoppingCart,
     FileSpreadsheet,
+    FileText,
     Truck,
 } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
@@ -53,6 +56,24 @@ const operationsNavItems: NavItem[] = [
     },
 ];
 
+const reportNavItems: NavItem[] = [
+    {
+        title: 'Penjualan',
+        href: '/laporan/penjualan',
+        icon: FileText,
+    },
+    {
+        title: 'Produksi',
+        href: '/laporan/produksi',
+        icon: FileSpreadsheet,
+    },
+    {
+        title: 'Distribusi',
+        href: '/laporan/distribusi',
+        icon: Truck,
+    },
+];
+
 const masterNavItems: NavItem[] = [
     {
         title: 'Cabang',
@@ -65,6 +86,11 @@ const masterNavItems: NavItem[] = [
         icon: Factory,
     },
     {
+        title: 'Kategori Produk',
+        href: '/master/product-categories',
+        icon: Tags,
+    },
+    {
         title: 'Master Produk',
         href: '/master/products',
         icon: Package,
@@ -73,6 +99,11 @@ const masterNavItems: NavItem[] = [
         title: 'Tarif Pengantaran',
         href: '/master/delivery-rates',
         icon: Route,
+    },
+    {
+        title: 'Banner Beranda',
+        href: '/master/banners',
+        icon: Image,
     },
     {
         title: 'Users',
@@ -155,6 +186,7 @@ export function AppSidebar() {
             <SidebarContent className="space-y-1 py-2">
                 <NavSection items={overviewItems} />
                 <NavSection label="Operasional & Distribusi" items={operationsNavItems} />
+                <NavSection label="Laporan" items={reportNavItems} />
                 <NavSection label="Master Data" items={masterNavItems} />
             </SidebarContent>
 

@@ -12,6 +12,7 @@ import {
   paperPlaneOutline,
 } from 'ionicons/icons';
 import { Link, useNavigate } from 'react-router-dom';
+import { api } from '../../data/api';
 import PkmLogo from '../../shared/ui/PkmLogo';
 import { AuthInput, PasswordInput, PhoneInput, Screen } from '../../shared/ui';
 
@@ -62,19 +63,25 @@ export default function ForgotPasswordPage() {
       normalizedPhone = '0' + normalizedPhone;
     }
 
-    setTimeout(() => {
-      setSubmitting(false);
+    try {
+      await api.requestOtp({ phone: normalizedPhone, purpose: 'reset' });
       setStep('verify');
       triggerToast(`Kode verifikasi OTP telah dikirim ke WhatsApp ${normalizedPhone}`, 'success');
-    }, 1000);
+    } catch (reason) {
+      const msg = reason instanceof Error ? reason.message : 'Gagal mengirim OTP.';
+      setError(msg);
+      triggerToast(msg, 'error');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleResetPassword = (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
-    if (otp.length < 4) {
-      setError('Masukkan kode verifikasi OTP yang valid.');
+    if (otp.length !== 6) {
+      setError('Masukkan kode verifikasi OTP 6 digit.');
       return;
     }
 
@@ -89,13 +96,31 @@ export default function ForgotPasswordPage() {
     }
 
     setSubmitting(true);
-    setTimeout(() => {
-      setSubmitting(false);
+    let normalizedPhone = phone.trim().replace(/[^0-9]/g, '');
+    if (normalizedPhone.startsWith('62')) {
+      normalizedPhone = '0' + normalizedPhone.slice(2);
+    } else if (!normalizedPhone.startsWith('0')) {
+      normalizedPhone = '0' + normalizedPhone;
+    }
+
+    try {
+      await api.resetPassword({
+        phone: normalizedPhone,
+        code: otp.trim(),
+        password: newPassword,
+        password_confirmation: confirmPassword,
+      });
       triggerToast('Kata sandi berhasil diperbarui! Silakan masuk.', 'success');
       setTimeout(() => {
         navigate('/login', { replace: true });
       }, 1500);
-    }, 1200);
+    } catch (reason) {
+      const msg = reason instanceof Error ? reason.message : 'Gagal memperbarui kata sandi.';
+      setError(msg);
+      triggerToast(msg, 'error');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (

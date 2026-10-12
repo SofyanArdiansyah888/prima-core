@@ -20,7 +20,7 @@ export default function AuthSplitLayout({
                 <div className="relative z-10 flex h-full flex-col justify-between p-10 text-white">
                     <Link href={home()} className="flex items-center gap-3">
                         <img
-                            src="/logo-pkm.svg"
+                            src="/logo-pkm.png"
                             alt="Logo PT. Prima Karya Manunggal Semen Tonasa"
                             className="size-10 object-contain drop-shadow-sm"
                         />
@@ -66,7 +66,7 @@ export default function AuthSplitLayout({
                         className="mb-8 flex items-center gap-3 lg:hidden"
                     >
                         <img
-                            src="/logo-pkm.svg"
+                            src="/logo-pkm.png"
                             alt="Logo PT. Prima Karya Manunggal"
                             className="size-10 object-contain"
                         />

@@ -81,7 +81,7 @@ class PlaceOrder
             }
 
             return $order->load([
-                'batchingPlant:id,code,name',
+                'batchingPlant:id,code,name,phone,whatsapp',
                 'items.product:id,uuid,code,name,unit,category',
             ]);
         });

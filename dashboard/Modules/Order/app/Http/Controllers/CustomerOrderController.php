@@ -29,7 +29,7 @@ class CustomerOrderController extends Controller
         $orders = Order::query()
             ->where('customer_id', $this->customer($request)->id)
             ->with([
-                'batchingPlant:id,code,name',
+                'batchingPlant:id,code,name,phone,whatsapp',
                 'items.product:id,uuid,code,name,unit,category',
             ])
             ->orderByDesc('id')
@@ -68,7 +68,7 @@ class CustomerOrderController extends Controller
         }
 
         $order->load([
-            'batchingPlant:id,code,name',
+            'batchingPlant:id,code,name,phone,whatsapp',
             'items.product:id,uuid,code,name,unit,category',
         ]);
 
@@ -83,7 +83,7 @@ class CustomerOrderController extends Controller
 
         $order = $midtrans->checkPaymentStatus($order);
         $order->load([
-            'batchingPlant:id,code,name',
+            'batchingPlant:id,code,name,phone,whatsapp',
             'items.product:id,uuid,code,name,unit,category',
         ]);
 
@@ -97,7 +97,7 @@ class CustomerOrderController extends Controller
         $this->owned($request, $order);
 
         $order->load([
-            'batchingPlant:id,code,name',
+            'batchingPlant:id,code,name,phone,whatsapp',
             'items.product:id,uuid,code,name,unit,category',
         ]);
 
@@ -143,7 +143,7 @@ class CustomerOrderController extends Controller
 
         $order->update(['status' => 'CANCELLED']);
         $order->load([
-            'batchingPlant:id,code,name',
+            'batchingPlant:id,code,name,phone,whatsapp',
             'items.product:id,uuid,code,name,unit,category',
         ]);
 
@@ -199,6 +199,8 @@ class CustomerOrderController extends Controller
             'plant' => $order->batchingPlant ? [
                 'code' => $order->batchingPlant->code,
                 'name' => $order->batchingPlant->name,
+                'phone' => $order->batchingPlant->phone,
+                'whatsapp' => $order->batchingPlant->whatsapp,
             ] : null,
             'items' => $order->items->map(fn ($item) => [
                 'code' => $item->product?->code,

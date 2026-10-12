@@ -1,10 +1,27 @@
-export type ProductCategory = 'cement' | 'readymix';
+export type ProductCategory = string;
+
+export type HomeBanner = {
+  uuid: string;
+  badge: string;
+  title: string;
+  description: string | null;
+  cta_label: string;
+  category: string | null;
+  image_url: string;
+};
+
+export type CatalogCategory = {
+  slug: string;
+  name: string;
+  default_unit: string;
+};
 
 export type Product = {
   uuid: string;
   code: string;
   name: string;
   category: ProductCategory;
+  category_name?: string | null;
   unit: string;
   base_price: number;
   min_order: number;
@@ -82,7 +99,7 @@ export type CustomerOrder = {
   status_label: string;
   can_cancel: boolean;
   notes: string | null;
-  plant: { code: string; name: string } | null;
+  plant: { code: string; name: string; phone: string | null; whatsapp: string | null } | null;
   items: OrderItem[];
   created_at: string | null;
 };

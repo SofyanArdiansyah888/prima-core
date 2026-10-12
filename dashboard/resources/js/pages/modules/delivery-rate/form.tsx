@@ -24,10 +24,12 @@ type PlantRate = {
 export default function DeliveryRateForm({
     rate,
     plants,
+    categories,
     rateTypes,
 }: {
     rate: PlantRate | null;
     plants: { id: number; uuid: string; code: string; name: string }[];
+    categories: { value: string; label: string }[];
     rateTypes: { value: string; label: string }[];
 }) {
     const isEdit = Boolean(rate);
@@ -100,6 +102,24 @@ export default function DeliveryRateForm({
                                     ))}
                                 </select>
                                 {errors.batching_plant_id && <p className="mt-1 text-xs text-rose-600">{errors.batching_plant_id}</p>}
+                            </div>
+
+                            <div className="sm:col-span-2">
+                                <Label htmlFor="product_category">Kategori Produk</Label>
+                                <select
+                                    id="product_category"
+                                    value={data.product_category}
+                                    onChange={(e) => setData('product_category', e.target.value)}
+                                    className="mt-1.5 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 dark:border-slate-800 dark:bg-slate-900 dark:text-white"
+                                >
+                                    <option value="">Semua kategori</option>
+                                    {categories.map((category) => (
+                                        <option key={category.value} value={category.value}>
+                                            {category.label}
+                                        </option>
+                                    ))}
+                                </select>
+                                {errors.product_category && <p className="mt-1 text-xs text-rose-600">{errors.product_category}</p>}
                             </div>
 
                             <div>

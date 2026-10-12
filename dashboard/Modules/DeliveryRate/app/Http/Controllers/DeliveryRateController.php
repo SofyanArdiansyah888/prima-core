@@ -13,6 +13,7 @@ use Modules\DeliveryRate\Http\Requests\StoreDeliveryRateRequest;
 use Modules\DeliveryRate\Http\Requests\UpdateDeliveryRateRequest;
 use Modules\DeliveryRate\Models\PlantDeliveryRate;
 use Modules\DeliveryRate\Services\PlantDistanceService;
+use Modules\ProductCategory\Models\ProductCategory;
 
 class DeliveryRateController extends Controller
 {
@@ -42,6 +43,7 @@ class DeliveryRateController extends Controller
         return Inertia::render('modules/delivery-rate/form', [
             'rate' => null,
             'plants' => BatchingPlant::query()->where('is_active', true)->orderBy('code')->get(['id', 'uuid', 'code', 'name']),
+            'categories' => ProductCategory::formOptions(),
             'rateTypes' => [
                 ['value' => 'PER_UNIT_PER_KM', 'label' => 'Tarif Per Unit Per Km'],
                 ['value' => 'FLAT_PER_TRIP', 'label' => 'Flat Per Rit / Trip'],
@@ -67,6 +69,7 @@ class DeliveryRateController extends Controller
         return Inertia::render('modules/delivery-rate/form', [
             'rate' => $deliveryRate,
             'plants' => BatchingPlant::query()->where('is_active', true)->orderBy('code')->get(['id', 'uuid', 'code', 'name']),
+            'categories' => ProductCategory::formOptions($deliveryRate->product_category),
             'rateTypes' => [
                 ['value' => 'PER_UNIT_PER_KM', 'label' => 'Tarif Per Unit Per Km'],
                 ['value' => 'FLAT_PER_TRIP', 'label' => 'Flat Per Rit / Trip'],

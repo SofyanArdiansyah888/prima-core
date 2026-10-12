@@ -10,6 +10,7 @@ use Inertia\Response;
 use Modules\Product\Http\Requests\StoreProductRequest;
 use Modules\Product\Http\Requests\UpdateProductRequest;
 use Modules\Product\Models\Product;
+use Modules\ProductCategory\Models\ProductCategory;
 use Modules\Shared\Services\CodeGenerator;
 
 class ProductController extends Controller
@@ -38,13 +39,7 @@ class ProductController extends Controller
 
         return Inertia::render('modules/product/index', [
             'products' => $products,
-            'categories' => [
-                ['value' => 'readymix', 'label' => 'Ready Mix Concrete'],
-                ['value' => 'cement', 'label' => 'Semen & Curah'],
-                ['value' => 'mortar', 'label' => 'Mortar & Instan'],
-                ['value' => 'grout', 'label' => 'Grout & Spesial'],
-                ['value' => 'additive', 'label' => 'Admixture & Additive'],
-            ],
+            'categories' => ProductCategory::formOptions($category !== '' ? $category : null),
             'filters' => [
                 'search' => $search,
                 'category' => $category,
@@ -57,24 +52,21 @@ class ProductController extends Controller
     {
         return Inertia::render('modules/product/form', [
             'product' => null,
-            'categories' => [
-                ['value' => 'readymix', 'label' => 'Ready Mix Concrete'],
-                ['value' => 'cement', 'label' => 'Semen & Curah'],
-                ['value' => 'mortar', 'label' => 'Mortar & Instan'],
-                ['value' => 'grout', 'label' => 'Grout & Spesial'],
-                ['value' => 'additive', 'label' => 'Admixture & Additive'],
-            ],
+            'categories' => ProductCategory::formOptions(),
         ]);
     }
 
     public function store(StoreProductRequest $request, CodeGenerator $codes): RedirectResponse
     {
         $data = $request->validated();
-        $code = $data['code'] ?? $codes->nextProductCode($data['category']);
+        $category = ProductCategory::query()->where('slug', $data['category'])->firstOrFail();
+        $code = $data['code'] ?? $codes->nextProductCode($category->slug);
 
         Product::query()->create([
             ...$data,
             'code' => $code,
+            'category' => $category->slug,
+            'category_id' => $category->id,
             'is_active' => $data['is_active'] ?? true,
         ]);
 
@@ -85,19 +77,19 @@ class ProductController extends Controller
     {
         return Inertia::render('modules/product/form', [
             'product' => $product,
-            'categories' => [
-                ['value' => 'readymix', 'label' => 'Ready Mix Concrete'],
-                ['value' => 'cement', 'label' => 'Semen & Curah'],
-                ['value' => 'mortar', 'label' => 'Mortar & Instan'],
-                ['value' => 'grout', 'label' => 'Grout & Spesial'],
-                ['value' => 'additive', 'label' => 'Admixture & Additive'],
-            ],
+            'categories' => ProductCategory::formOptions($product->category),
         ]);
     }
 
     public function update(UpdateProductRequest $request, Product $product): RedirectResponse
     {
-        $product->update($request->validated());
+        $data = $request->validated();
+        $category = ProductCategory::query()->where('slug', $data['category'])->firstOrFail();
+        $product->update([
+            ...$data,
+            'category' => $category->slug,
+            'category_id' => $category->id,
+        ]);
 
         return redirect()->route('products.index')->with('success', 'Produk berhasil diperbarui.');
     }

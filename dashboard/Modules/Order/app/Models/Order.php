@@ -2,13 +2,17 @@
 
 namespace Modules\Order\Models;
 
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Modules\BatchingPlant\Models\BatchingPlant;
 use Modules\Customer\Models\Customer;
+use Modules\Order\Observers\OrderObserver;
 use Modules\Shared\Concerns\HasUuid;
 use Modules\WorkOrder\Models\WorkOrder;
+
+#[ObservedBy([OrderObserver::class])]
 
 class Order extends Model
 {

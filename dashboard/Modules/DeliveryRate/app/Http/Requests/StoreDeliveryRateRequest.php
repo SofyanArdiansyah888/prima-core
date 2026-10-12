@@ -3,6 +3,7 @@
 namespace Modules\DeliveryRate\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StoreDeliveryRateRequest extends FormRequest
 {
@@ -15,7 +16,7 @@ class StoreDeliveryRateRequest extends FormRequest
     {
         return [
             'batching_plant_id' => ['required', 'exists:batching_plants,id'],
-            'product_category' => ['nullable', 'string', 'in:readymix,cement,mortar,grout,additive'],
+            'product_category' => ['nullable', 'string', Rule::exists('product_categories', 'slug')->where('is_active', true)],
             'min_distance_km' => ['required', 'numeric', 'min:0'],
             'max_distance_km' => ['required', 'numeric', 'gt:min_distance_km'],
             'rate_type' => ['required', 'string', 'in:PER_UNIT_PER_KM,FLAT_PER_TRIP,TIER_RADIUS'],
@@ -25,5 +26,12 @@ class StoreDeliveryRateRequest extends FormRequest
             'notes' => ['nullable', 'string'],
             'is_active' => ['nullable', 'boolean'],
         ];
+    }
+
+    protected function prepareForValidation(): void
+    {
+        if ($this->input('product_category') === '') {
+            $this->merge(['product_category' => null]);
+        }
     }
 }

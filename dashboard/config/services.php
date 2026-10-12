@@ -35,6 +35,11 @@ return [
         ],
     ],
 
+    'fonnte' => [
+        'token' => env('FONNTE_TOKEN'),
+        'admin_phone' => env('FONNTE_ADMIN_PHONE'),
+    ],
+
     'midtrans' => [
         'server_key' => env('MIDTRANS_SERVER_KEY', 'SB-Mid-server-test'),
         'client_key' => env('MIDTRANS_CLIENT_KEY', 'SB-Mid-client-test'),

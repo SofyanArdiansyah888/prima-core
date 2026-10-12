@@ -8,6 +8,7 @@ use Modules\DeliveryRate\Database\Seeders\DeliveryRateDatabaseSeeder;
 use Modules\Dispatch\Database\Seeders\DispatchDatabaseSeeder;
 use Modules\Order\Database\Seeders\OrderDatabaseSeeder;
 use Modules\Product\Database\Seeders\ProductDatabaseSeeder;
+use Modules\ProductCategory\Database\Seeders\ProductCategoryDatabaseSeeder;
 use Modules\WorkOrder\Database\Seeders\WorkOrderDatabaseSeeder;
 
 class DatabaseSeeder extends Seeder
@@ -16,6 +17,7 @@ class DatabaseSeeder extends Seeder
     {
         $this->call([
             MasterDataSeeder::class,
+            ProductCategoryDatabaseSeeder::class,
             ProductDatabaseSeeder::class,
             CustomerDatabaseSeeder::class,
             DeliveryRateDatabaseSeeder::class,

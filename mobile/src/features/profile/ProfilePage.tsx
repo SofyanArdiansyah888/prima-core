@@ -78,7 +78,7 @@ export default function ProfilePage() {
                 <IonIcon icon={shieldCheckmarkOutline} className="text-xs text-emerald-400" />
               </div>
               <h2 className="text-sm font-extrabold text-white truncate mt-0.5">
-                {name || customer?.name || 'Pelanggan PKM'}
+                {name || customer?.name || 'Pelanggan'}
               </h2>
               <p className="text-[11px] font-mono text-slate-300 truncate">
                 {phone || customer?.phone}
@@ -167,7 +167,7 @@ export default function ProfilePage() {
       <ConfirmModal
         isOpen={showLogoutModal}
         title="Keluar dari Akun?"
-        description="Apakah Anda yakin ingin keluar dari akun PKM Tonasa pada perangkat ini?"
+        description="Apakah Anda yakin ingin keluar dari akun Prima Sales Pro pada perangkat ini?"
         confirmText="Ya, Keluar Akun"
         cancelText="Batal"
         tone="danger"

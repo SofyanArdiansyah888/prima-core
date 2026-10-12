@@ -67,6 +67,20 @@ class CodeGenerator
         return sprintf('SJ-%s-%d%s', $clean, $yearMonth, $seq);
     }
 
+    public function nextBannerCode(): string
+    {
+        $seq = $this->nextNumber('banner', 'GEN', null, 2);
+
+        return sprintf('BNR-%s', $seq);
+    }
+
+    public function nextCategoryCode(): string
+    {
+        $seq = $this->nextNumber('product_category', 'GEN', null, 2);
+
+        return sprintf('CAT-%s', $seq);
+    }
+
     public function nextProductCode(string $category): string
     {
         $cat = strtoupper(substr(preg_replace('/[^A-Z0-9]/', '', $category) ?? 'GEN', 0, 4));

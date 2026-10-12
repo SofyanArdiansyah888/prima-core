@@ -1,0 +1,10 @@
+{
+    "name": "nwidart/banner",
+    "description": "",
+    "autoload": {
+        "psr-4": {
+            "Modules\\Banner\\": "app/",
+            "Modules\\Banner\\Database\\Seeders\\": "database/seeders/"
+        }
+    }
+}

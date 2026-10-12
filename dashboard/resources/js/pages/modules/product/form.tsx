@@ -29,18 +29,25 @@ export default function ProductForm({
     categories,
 }: {
     product: Product | null;
-    categories: { value: string; label: string }[];
+    categories: {
+        value: string;
+        label: string;
+        default_unit: string;
+        default_max_trip_capacity: number;
+        default_allow_combined_delivery: boolean;
+    }[];
 }) {
     const isEdit = Boolean(product);
+    const initialCategory = categories.find((item) => item.value === product?.category) ?? categories[0];
 
     const { data, setData, post, put, processing, errors } = useForm({
         code: product?.code ?? '',
         name: product?.name ?? '',
-        category: product?.category ?? 'readymix',
-        unit: product?.unit ?? 'm³',
+        category: product?.category ?? initialCategory?.value ?? '',
+        unit: product?.unit ?? initialCategory?.default_unit ?? 'Sak',
         base_price: product?.base_price ?? '',
-        max_trip_capacity: product?.max_trip_capacity ?? '',
-        allow_combined_delivery: product?.allow_combined_delivery ?? false,
+        max_trip_capacity: product?.max_trip_capacity ?? initialCategory?.default_max_trip_capacity ?? '',
+        allow_combined_delivery: product?.allow_combined_delivery ?? initialCategory?.default_allow_combined_delivery ?? false,
         min_order: product?.min_order ?? '',
         slump: product?.slump ?? '',
         recommended_for: product?.recommended_for ?? '',
@@ -101,12 +108,13 @@ export default function ProductForm({
                                     value={data.category}
                                     onChange={(e) => {
                                         const cat = e.target.value;
+                                        const selected = categories.find((item) => item.value === cat);
                                         setData({
                                             ...data,
                                             category: cat,
-                                            unit: cat === 'readymix' ? 'm³' : (cat === 'cement' ? 'Sak' : 'Sak'),
-                                            allow_combined_delivery: cat !== 'readymix',
-                                            max_trip_capacity: cat === 'readymix' ? 7 : (cat === 'cement' ? 200 : 250),
+                                            unit: selected?.default_unit ?? data.unit,
+                                            allow_combined_delivery: selected?.default_allow_combined_delivery ?? data.allow_combined_delivery,
+                                            max_trip_capacity: selected?.default_max_trip_capacity ?? data.max_trip_capacity,
                                         });
                                     }}
                                     className="mt-1.5 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 dark:border-slate-800 dark:bg-slate-900 dark:text-white"

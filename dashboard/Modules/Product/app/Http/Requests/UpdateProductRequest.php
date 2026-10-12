@@ -3,6 +3,7 @@
 namespace Modules\Product\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class UpdateProductRequest extends FormRequest
 {
@@ -15,7 +16,7 @@ class UpdateProductRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
-            'category' => ['required', 'string', 'in:readymix,cement,mortar,grout,additive'],
+            'category' => ['required', 'string', Rule::exists('product_categories', 'slug')->where('is_active', true)],
             'unit' => ['required', 'string', 'max:16'],
             'base_price' => ['required', 'numeric', 'min:0'],
             'max_trip_capacity' => ['required', 'numeric', 'min:0.1'],

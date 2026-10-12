@@ -18,7 +18,7 @@
 
 - Routes: `/master/batching-plants`
 - Controller: `Modules\BatchingPlant\Http\Controllers\BatchingPlantController`
-- Model: `Modules\BatchingPlant\Models\BatchingPlant` (`branch_id` FK)
+- Model: `Modules\BatchingPlant\Models\BatchingPlant` (`branch_id` FK, `phone`, `whatsapp` untuk kartu dispatcher di detail pesanan mobile)
 - Pages: `resources/js/pages/modules/batching-plant/{index,form}.tsx`
 
 ## User
@@ -36,6 +36,22 @@
 - API: `/api/customer/v1` — daftar, masuk, profil, katalog, quote ongkir, buat/lacak/batal pesanan B2C
 - App: [`mobile/`](../mobile/) Ionic React + Tailwind
 - Seed lokal: `081300000001` / `password`
+
+## Banner
+
+- Routes: `/master/banners`, `GET /api/customer/v1/banners`
+- Controller: `Modules\Banner\Http\Controllers\BannerController`
+- Model: `Modules\Banner\Models\Banner`
+- Pages: `resources/js/pages/modules/banner/{index,form}.tsx`
+- Fitur: Master isi slider beranda aplikasi pelanggan.
+
+## ProductCategory
+
+- Routes: `/master/product-categories`
+- Controller: `Modules\ProductCategory\Http\Controllers\ProductCategoryController`
+- Model: `Modules\ProductCategory\Models\ProductCategory`
+- Pages: `resources/js/pages/modules/product-category/{index,form}.tsx`
+- Fitur: Master kategori produk. Slug dipakai `products.category`. Satuan dan kapasitas default mengikuti kategori saat produk dibuat.
 
 ## Product
 
@@ -77,6 +93,13 @@
 - Model: `Modules\Dispatch\Models\SuratJalan`, `Modules\Dispatch\Models\SuratJalanItem`
 - Pages: `resources/js/pages/modules/dispatch/{index,form,show,print}.tsx`
 - Fitur: Ritase armada, jembatan timbang (gross/tare/netto), telematics IoT, partial delivery, multi-drop combined customer, dan cetak Surat Jalan resmi Tonasa.
+
+## Report
+
+- Routes: `/laporan/penjualan`, `/laporan/produksi`, `/laporan/distribusi` plus `/excel` dan `/pdf`
+- Controller: `App\Http\Controllers\ReportController`
+- Page: `resources/js/pages/modules/report/index.tsx`
+- Fitur: Filter tanggal dan plant, unduh Excel dan PDF ringkasan.
 
 ## Core app
 

@@ -1,4 +1,4 @@
-import type { Customer, CustomerOrder, Product, ProductCategory, Quote } from '../domain/types';
+import type { CatalogCategory, Customer, CustomerOrder, HomeBanner, Product, Quote } from '../domain/types';
 
 const rawApiUrl = (import.meta.env.VITE_API_URL as string | undefined) || 'https://pkm.orcaid.cloud';
 const API_URL = rawApiUrl.replace(/\/+$/, '');
@@ -77,6 +77,24 @@ export const api = {
       body: JSON.stringify(payload),
     }, false);
   },
+  requestOtp(payload: { phone: string; purpose: 'login' | 'reset' }) {
+    return request<{ message: string }>('/otp/request', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }, false);
+  },
+  verifyOtp(payload: { phone: string; code: string }) {
+    return request<{ token: string; customer: Customer }>('/otp/verify', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }, false);
+  },
+  resetPassword(payload: { phone: string; code: string; password: string; password_confirmation: string }) {
+    return request<{ message: string }>('/password/reset', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }, false);
+  },
   logout() {
     return request<{ message: string }>('/logout', { method: 'POST' });
   },
@@ -89,8 +107,15 @@ export const api = {
       body: JSON.stringify(payload),
     });
   },
-  products(category: ProductCategory) {
-    return request<{ data: Product[] }>(`/products?category=${category}`);
+  categories() {
+    return request<{ data: CatalogCategory[] }>('/categories');
+  },
+  banners() {
+    return request<{ data: HomeBanner[] }>('/banners');
+  },
+  products(category?: string) {
+    const query = category ? `?category=${encodeURIComponent(category)}` : '';
+    return request<{ data: Product[] }>(`/products${query}`);
   },
   product(uuid: string) {
     return request<{ data: Product }>(`/products/${uuid}`);

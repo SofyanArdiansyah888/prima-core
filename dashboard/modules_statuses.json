@@ -4,6 +4,8 @@
     "BatchingPlant": true,
     "User": true,
     "Product": true,
+    "ProductCategory": true,
+    "Banner": true,
     "Order": true,
     "WorkOrder": true,
     "Dispatch": true,

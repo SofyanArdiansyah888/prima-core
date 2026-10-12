@@ -564,27 +564,35 @@ export default function OrderDetailPage() {
               </div>
 
               <p className="text-xs text-slate-500 leading-relaxed">
-                Butuh koordinasi slump beton, penyesuaian armada mixer, atau kendala di lokasi proyek? Hubungi petugas dispatching plant.
+                Butuh koordinasi slump beton, penyesuaian armada mixer, atau kendala di lokasi proyek? Hubungi petugas dispatching {order.plant?.name ?? 'plant'}.
               </p>
 
-              <div className="grid grid-cols-2 gap-2 pt-1">
-                <a
-                  href="tel:041021012"
-                  className="flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 py-2.5 px-3 text-xs font-bold text-slate-700 transition-colors"
-                >
-                  <IonIcon icon={callOutline} className="text-sm text-slate-600" />
-                  <span>Telepon Plant</span>
-                </a>
-                <a
-                  href={`https://wa.me/628114400234?text=Halo%20Dispatcher%20PKM,%20saya%20ingin%20koordinasi%20pesanan%20${order.code}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex items-center justify-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 py-2.5 px-3 text-xs font-bold text-white shadow-2xs transition-colors"
-                >
-                  <IonIcon icon={logoWhatsapp} className="text-sm" />
-                  <span>WhatsApp CS</span>
-                </a>
-              </div>
+              {order.plant?.phone || order.plant?.whatsapp ? (
+                <div className={`grid gap-2 pt-1 ${order.plant?.phone && order.plant?.whatsapp ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                  {order.plant?.phone ? (
+                    <a
+                      href={`tel:${order.plant.phone.replace(/[^\d+]/g, '')}`}
+                      className="flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 py-2.5 px-3 text-xs font-bold text-slate-700 transition-colors"
+                    >
+                      <IonIcon icon={callOutline} className="text-sm text-slate-600" />
+                      <span>Telepon Plant</span>
+                    </a>
+                  ) : null}
+                  {order.plant?.whatsapp ? (
+                    <a
+                      href={`https://wa.me/${order.plant.whatsapp}?text=${encodeURIComponent(`Halo Dispatcher, saya ingin koordinasi pesanan ${order.code}`)}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex items-center justify-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 py-2.5 px-3 text-xs font-bold text-white shadow-2xs transition-colors"
+                    >
+                      <IonIcon icon={logoWhatsapp} className="text-sm" />
+                      <span>WhatsApp Plant</span>
+                    </a>
+                  ) : null}
+                </div>
+              ) : (
+                <p className="text-xs font-medium text-slate-400">Nomor dispatcher plant belum diisi.</p>
+              )}
             </Card>
           </motion.div>
         ) : null}

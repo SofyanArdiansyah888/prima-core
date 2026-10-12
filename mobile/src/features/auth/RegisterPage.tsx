@@ -79,7 +79,7 @@ export default function RegisterPage() {
         password,
         password_confirmation: passwordConfirmation,
       });
-      triggerToast('Registrasi berhasil! Selamat datang di PKM Tonasa.', 'success');
+      triggerToast('Registrasi berhasil! Selamat datang di Prima Sales Pro.', 'success');
       navigate('/tabs/home', { replace: true });
     } catch (reason) {
       const msg = reason instanceof Error ? reason.message : 'Gagal mendaftar akun pelanggan.';

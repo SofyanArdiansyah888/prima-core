@@ -3,6 +3,8 @@
 namespace Modules\Product\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Modules\ProductCategory\Models\ProductCategory;
 use Modules\Shared\Concerns\HasUuid;
 
 class Product extends Model
@@ -14,6 +16,7 @@ class Product extends Model
         'code',
         'name',
         'category',
+        'category_id',
         'unit',
         'base_price',
         'max_trip_capacity',
@@ -37,5 +40,31 @@ class Product extends Model
             'specs' => 'array',
             'is_active' => 'boolean',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        static::saving(function (Product $product): void {
+            if ($product->category_id) {
+                $master = ProductCategory::query()->find($product->category_id);
+                if ($master) {
+                    $product->category = $master->slug;
+                }
+
+                return;
+            }
+
+            if (is_string($product->category) && $product->category !== '') {
+                $master = ProductCategory::query()->where('slug', $product->category)->first();
+                if ($master) {
+                    $product->category_id = $master->id;
+                }
+            }
+        });
+    }
+
+    public function productCategory(): BelongsTo
+    {
+        return $this->belongsTo(ProductCategory::class, 'category_id');
     }
 }

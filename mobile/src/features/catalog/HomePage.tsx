@@ -19,7 +19,7 @@ import { api } from '../../data/api';
 import { useCart } from '../../data/cart';
 import { formatQty, formatRupiah } from '../../domain/format';
 import { categoryLabel, quantityAfterStep } from '../../domain/rules';
-import type { Product } from '../../domain/types';
+import type { HomeBanner, Product } from '../../domain/types';
 import { 
   CategoryModal, 
   ErrorText, 
@@ -29,45 +29,7 @@ import {
 } from '../../shared/ui';
 import PkmLogo from '../../shared/ui/PkmLogo';
 
-type CategoryFilter = 'all' | 'cement' | 'mortar' | 'readymix' | 'tools' | 'promo';
-
-const QUICK_CATEGORIES: { id: CategoryFilter; label: string; iconType: string }[] = [
-  { id: 'cement', label: 'Semen', iconType: 'cement' },
-  { id: 'mortar', label: 'Beton Instan', iconType: 'mortar' },
-  { id: 'readymix', label: 'Ready Mix', iconType: 'readymix' },
-  { id: 'tools', label: 'Aksesoris & Peralatan', iconType: 'tools' },
-  { id: 'promo', label: 'Promo', iconType: 'promo' },
-];
-
-const HERO_SLIDES = [
-  {
-    id: 1,
-    badge: '★ Produk Unggulan',
-    title: 'Ready Mix Untuk Proyek Anda',
-    desc: 'Kualitas terjamin, pasokan tepat waktu, untuk hasil pembangunan terbaik.',
-    cta: 'Lihat Produk',
-    categoryTarget: 'readymix' as CategoryFilter,
-    image: 'https://images.unsplash.com/photo-1541888946425-d0fbb186a5b3?auto=format&fit=crop&q=80&w=600',
-  },
-  {
-    id: 2,
-    badge: '★ Semen Standar SNI',
-    title: 'Semen Portland Kokoh & Rekat',
-    desc: 'Daya ikat kuat untuk pondasi, plesteran, dan konstruksi struktural tahan lama.',
-    cta: 'Pesan Semen',
-    categoryTarget: 'cement' as CategoryFilter,
-    image: 'https://images.unsplash.com/photo-1581094794329-c8112a89af12?auto=format&fit=crop&q=80&w=600',
-  },
-  {
-    id: 3,
-    badge: '★ Layanan Armada Batching Plant',
-    title: 'Distribusi Cepat & Slump Akurat',
-    desc: 'Didukung armada mixer prima siap melayani pengecoran proyek Anda.',
-    cta: 'Cek Armada',
-    categoryTarget: 'readymix' as CategoryFilter,
-    image: 'https://images.unsplash.com/photo-1517646287270-a5a9ca602e5c?auto=format&fit=crop&q=80&w=600',
-  },
-];
+type CatalogChip = { id: string; label: string };
 
 const PRODUCT_IMAGES: Record<string, string> = {
   'ST-OPC-50KG': 'https://images.unsplash.com/photo-1581094794329-c8112a89af12?auto=format&fit=crop&q=80&w=400',
@@ -133,7 +95,9 @@ function CategoryIcon({ type }: { type: string }) {
 export default function HomePage() {
   const navigate = useNavigate();
   const cart = useCart();
-  const [selectedCategory, setSelectedCategory] = useState<CategoryFilter>('all');
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [quickCategories, setQuickCategories] = useState<CatalogChip[]>([]);
+  const [heroSlides, setHeroSlides] = useState<HomeBanner[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [currentSlide, setCurrentSlide] = useState(0);
   const [products, setProducts] = useState<Product[]>([]);
@@ -143,21 +107,26 @@ export default function HomePage() {
 
   // Auto-rotate hero slider every 5 seconds
   useEffect(() => {
+    if (heroSlides.length < 2) return;
     const timer = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % HERO_SLIDES.length);
+      setCurrentSlide((prev) => (prev + 1) % heroSlides.length);
     }, 5000);
     return () => clearInterval(timer);
-  }, []);
+  }, [heroSlides.length]);
 
   const loadAllProducts = async () => {
     setLoading(true);
     setError('');
     try {
-      const [resCement, resReadymix] = await Promise.all([
-        api.products('cement'),
-        api.products('readymix'),
+      const [categoryResponse, productResponse, bannerResponse] = await Promise.all([
+        api.categories(),
+        api.products(),
+        api.banners(),
       ]);
-      setProducts([...resCement.data, ...resReadymix.data]);
+      setQuickCategories(categoryResponse.data.map((item) => ({ id: item.slug, label: item.name })));
+      setProducts(productResponse.data);
+      setHeroSlides(bannerResponse.data);
+      setCurrentSlide(0);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Gagal memuat produk.');
     } finally {
@@ -171,11 +140,14 @@ export default function HomePage() {
 
   const handlePullRefresh = async (event: CustomEvent<RefresherEventDetail>) => {
     try {
-      const [resCement, resReadymix] = await Promise.all([
-        api.products('cement'),
-        api.products('readymix'),
+      const [categoryResponse, productResponse, bannerResponse] = await Promise.all([
+        api.categories(),
+        api.products(),
+        api.banners(),
       ]);
-      setProducts([...resCement.data, ...resReadymix.data]);
+      setQuickCategories(categoryResponse.data.map((item) => ({ id: item.slug, label: item.name })));
+      setProducts(productResponse.data);
+      setHeroSlides(bannerResponse.data);
       setError('');
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Gagal memperbarui data.');
@@ -218,14 +190,7 @@ export default function HomePage() {
   // Filtered products based on search or category
   const filteredProducts = useMemo(() => {
     return products.filter((p) => {
-      let matchesCat = true;
-      if (selectedCategory === 'cement') {
-        matchesCat = p.category === 'cement' && !p.code.toLowerCase().includes('bulk') && !p.name.toLowerCase().includes('curah');
-      } else if (selectedCategory === 'mortar') {
-        matchesCat = p.category === 'cement' && (p.code.toLowerCase().includes('bulk') || p.name.toLowerCase().includes('curah') || p.name.toLowerCase().includes('mortar'));
-      } else if (selectedCategory === 'readymix') {
-        matchesCat = p.category === 'readymix';
-      }
+      const matchesCat = selectedCategory === 'all' || p.category === selectedCategory;
 
       const q = searchQuery.toLowerCase().trim();
       const matchesSearch = !q || 
@@ -248,7 +213,7 @@ export default function HomePage() {
     return products.length > 4 ? products.slice(2, 7) : products;
   }, [products]);
 
-  const activeHero = HERO_SLIDES[currentSlide];
+  const activeHero = heroSlides[currentSlide] ?? heroSlides[0];
   const isFilteredMode = selectedCategory !== 'all' || searchQuery.trim().length > 0;
 
   return (
@@ -341,8 +306,8 @@ export default function HomePage() {
               </div>
 
               {/* 5 Quick Category Cards */}
-              <div className="grid grid-cols-5 gap-2">
-                {QUICK_CATEGORIES.map((cat) => {
+              <div className="grid grid-cols-4 gap-2 sm:grid-cols-5">
+                {quickCategories.map((cat) => {
                   const isSelected = selectedCategory === cat.id;
                   return (
                     <button
@@ -356,7 +321,7 @@ export default function HomePage() {
                           ? 'bg-[#d91424] text-white shadow-md scale-105 ring-2 ring-[#d91424]/30' 
                           : 'bg-red-50/80 text-[#d91424] border border-red-100 hover:bg-red-100/90 active:scale-95'
                       }`}>
-                        <CategoryIcon type={cat.iconType} />
+                        <CategoryIcon type={cat.id} />
                       </div>
                       <span className={`text-[10px] font-bold mt-1.5 line-clamp-2 leading-tight ${
                         isSelected ? 'text-[#d91424]' : 'text-slate-700'
@@ -373,29 +338,38 @@ export default function HomePage() {
           {/* ========================================================================= */}
           {/* 4. HERO BANNER CAROUSEL: High Impact Promo Card                           */}
           {/* ========================================================================= */}
-          {!isFilteredMode && (
+          {!isFilteredMode && activeHero && (
             <div className="px-4 pt-1">
               <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-950 text-white shadow-md border border-slate-200/20">
                 <AnimatePresence mode="wait">
                   <motion.div
-                    key={activeHero.id}
+                    key={activeHero.uuid}
+                    drag="x"
+                    dragConstraints={{ left: 0, right: 0 }}
+                    dragElastic={0.2}
+                    onDragEnd={(_, info) => {
+                      if (heroSlides.length < 2) return;
+                      if (info.offset.x < -40) {
+                        setCurrentSlide((prev) => (prev + 1) % heroSlides.length);
+                      } else if (info.offset.x > 40) {
+                        setCurrentSlide((prev) => (prev - 1 + heroSlides.length) % heroSlides.length);
+                      }
+                    }}
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: -20 }}
                     transition={{ duration: 0.3 }}
-                    className="relative p-4 sm:p-5 flex items-center justify-between min-h-[155px] gap-3"
+                    className="relative p-4 sm:p-5 flex items-center justify-between min-h-[155px] gap-3 touch-pan-y"
                   >
-                    {/* Background Visual Overlay */}
                     <div className="absolute inset-0 z-0 opacity-25">
                       <img 
-                        src={activeHero.image} 
-                        alt="Hero background" 
+                        src={activeHero.image_url} 
+                        alt="" 
                         className="w-full h-full object-cover"
                       />
                       <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-900/90 to-transparent" />
                     </div>
 
-                    {/* Text & Action CTA */}
                     <div className="relative z-10 flex-1 min-w-0 pr-2">
                       <div className="inline-flex items-center gap-1 bg-[#d91424] text-white text-[9px] font-black uppercase px-2.5 py-0.5 rounded-full shadow-xs mb-2">
                         <IonIcon icon={starOutline} className="text-[10px]" />
@@ -406,23 +380,24 @@ export default function HomePage() {
                         {activeHero.title}
                       </h3>
                       <p className="text-[11px] text-slate-300 line-clamp-2 mt-1 leading-relaxed">
-                        {activeHero.desc}
+                        {activeHero.description}
                       </p>
 
                       <button
                         type="button"
-                        onClick={() => setSelectedCategory(activeHero.categoryTarget)}
+                        onClick={() => {
+                          if (activeHero.category) setSelectedCategory(activeHero.category);
+                        }}
                         className="mt-3 inline-flex items-center gap-1 bg-[#d91424] hover:bg-red-700 text-white text-xs font-bold px-3.5 py-1.5 rounded-full shadow-md active:scale-95 transition-all cursor-pointer"
                       >
-                        <span>{activeHero.cta}</span>
+                        <span>{activeHero.cta_label}</span>
                         <IonIcon icon={arrowForwardOutline} className="text-xs" />
                       </button>
                     </div>
 
-                    {/* Right Hero Graphic Thumbnail */}
                     <div className="relative z-10 w-24 h-24 sm:w-28 sm:h-28 rounded-xl overflow-hidden shrink-0 border-2 border-white/20 shadow-lg bg-slate-800">
                       <SafeImage 
-                        src={activeHero.image} 
+                        src={activeHero.image_url} 
                         alt={activeHero.title} 
                         type="readymix"
                         className="w-full h-full object-cover"
@@ -431,11 +406,10 @@ export default function HomePage() {
                   </motion.div>
                 </AnimatePresence>
 
-                {/* Dot Pagination Indicators */}
                 <div className="relative z-10 flex justify-center items-center gap-1.5 pb-2.5">
-                  {HERO_SLIDES.map((_, idx) => (
+                  {heroSlides.map((slide, idx) => (
                     <button
-                      key={idx}
+                      key={slide.uuid}
                       type="button"
                       onClick={() => setCurrentSlide(idx)}
                       className={`h-1.5 rounded-full transition-all cursor-pointer ${
@@ -460,7 +434,7 @@ export default function HomePage() {
                 </span>
                 {selectedCategory !== 'all' && (
                   <span className="bg-[#d91424]/10 text-[#d91424] text-[10px] font-bold px-2 py-0.5 rounded-full">
-                    {QUICK_CATEGORIES.find(c => c.id === selectedCategory)?.label || selectedCategory}
+                    {quickCategories.find((item) => item.id === selectedCategory)?.label || selectedCategory}
                   </span>
                 )}
               </div>

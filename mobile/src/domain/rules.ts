@@ -9,8 +9,9 @@ export function quantityAfterStep(quantity: number, delta: number, minOrder: num
   return next < minOrder ? quantity : next;
 }
 
-export function categoryLabel(category: string): string {
-  return category === 'cement' ? 'Semen' : 'Ready Mix';
+export function categoryLabel(category: string, name?: string | null): string {
+  if (name) return name;
+  return category === 'cement' ? 'Semen' : category === 'readymix' ? 'Ready Mix' : category;
 }
 
 export function segmentLabel(category: ProductCategory): string {

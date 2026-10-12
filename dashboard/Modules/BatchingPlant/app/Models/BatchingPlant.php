@@ -6,7 +6,9 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Modules\Branch\Models\Branch;
+use Modules\DeliveryRate\Models\PlantDeliveryRate;
 use Modules\Shared\Concerns\HasUuid;
 use Modules\Shared\Enums\PlantStatus;
 
@@ -21,6 +23,7 @@ class BatchingPlant extends Model
         'name',
         'address',
         'phone',
+        'whatsapp',
         'lat',
         'lng',
         'daily_capacity_m3',
@@ -49,8 +52,8 @@ class BatchingPlant extends Model
         return $this->belongsToMany(User::class)->withTimestamps();
     }
 
-    public function deliveryRates(): \Illuminate\Database\Eloquent\Relations\HasMany
+    public function deliveryRates(): HasMany
     {
-        return $this->hasMany(\Modules\DeliveryRate\Models\PlantDeliveryRate::class);
+        return $this->hasMany(PlantDeliveryRate::class);
     }
 }

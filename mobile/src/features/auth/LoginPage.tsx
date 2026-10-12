@@ -10,9 +10,10 @@ import {
   paperPlaneOutline,
 } from 'ionicons/icons';
 import { Link, useNavigate } from 'react-router-dom';
+import { api } from '../../data/api';
 import { useAuth } from '../../data/auth';
 import PkmLogo from '../../shared/ui/PkmLogo';
-import { PasswordInput, PhoneInput, Screen } from '../../shared/ui';
+import { AuthInput, PasswordInput, PhoneInput, Screen } from '../../shared/ui';
 
 type ToastState = {
   show: boolean;
@@ -21,12 +22,14 @@ type ToastState = {
 };
 
 export default function LoginPage() {
-  const { login } = useAuth();
+  const { login, acceptSession } = useAuth();
   const navigate = useNavigate();
 
   const [method, setMethod] = useState<'password' | 'otp'>('password');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
+  const [otpCode, setOtpCode] = useState('');
+  const [otpSent, setOtpSent] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -58,10 +61,24 @@ export default function LoginPage() {
     }
 
     if (method === 'otp') {
-      setTimeout(() => {
+      try {
+        if (!otpSent) {
+          await api.requestOtp({ phone: normalizedPhone, purpose: 'login' });
+          setOtpSent(true);
+          triggerToast(`Kode OTP dikirim via WhatsApp ke ${normalizedPhone}`, 'success');
+        } else {
+          const response = await api.verifyOtp({ phone: normalizedPhone, code: otpCode.trim() });
+          acceptSession(response.token, response.customer);
+          triggerToast('Berhasil masuk! Mengalihkan...', 'success');
+          navigate('/tabs/home', { replace: true });
+        }
+      } catch (reason) {
+        const msg = reason instanceof Error ? reason.message : 'OTP gagal diproses.';
+        setError(msg);
+        triggerToast(msg, 'error');
+      } finally {
         setSubmitting(false);
-        triggerToast(`Kode OTP 6-digit dikirim via WhatsApp ke ${normalizedPhone}`, 'success');
-      }, 1200);
+      }
       return;
     }
 
@@ -170,6 +187,8 @@ export default function LoginPage() {
                 type="button"
                 onClick={() => {
                   setMethod('otp');
+                  setOtpSent(false);
+                  setOtpCode('');
                   setError('');
                 }}
                 className={`flex flex-1 items-center justify-center gap-2 rounded-lg py-2 px-3 text-xs font-bold transition-all ${method === 'otp'
@@ -220,7 +239,7 @@ export default function LoginPage() {
               )}
 
               {/* OTP Notice (Only on OTP Method) */}
-              {method === 'otp' && (
+              {method === 'otp' && !otpSent && (
                 <div className="rounded-xl border border-amber-200 bg-amber-50/90 p-3 text-xs text-amber-900">
                   <div className="mb-1 flex items-center gap-2 font-bold text-amber-950">
                     <IonIcon icon={logoWhatsapp} className="text-base text-emerald-600" />
@@ -230,6 +249,17 @@ export default function LoginPage() {
                     Kode verifikasi 6-digit OTP akan dikirimkan langsung ke nomor WhatsApp Anda saat tombol di bawah ditekan.
                   </p>
                 </div>
+              )}
+
+              {method === 'otp' && otpSent && (
+                <AuthInput
+                  label="Kode OTP"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  value={otpCode}
+                  onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  required
+                />
               )}
 
               {/* Remember Me Checkbox */}
@@ -258,10 +288,14 @@ export default function LoginPage() {
                     {submitting
                       ? method === 'password'
                         ? 'Memverifikasi...'
+                        : otpSent
+                        ? 'Memverifikasi OTP...'
                         : 'Mengirim OTP...'
                       : method === 'password'
                         ? 'Masuk ke Aplikasi'
-                        : 'Kirim Kode OTP WhatsApp'}
+                        : otpSent
+                          ? 'Masuk dengan OTP'
+                          : 'Kirim Kode OTP WhatsApp'}
                   </span>
                   <IonIcon
                     icon={arrowForwardOutline}

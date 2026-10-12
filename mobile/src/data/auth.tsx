@@ -7,6 +7,7 @@ type AuthContextValue = {
   customer: Customer | null;
   ready: boolean;
   login: (phone: string, password: string) => Promise<void>;
+  acceptSession: (token: string, customer: Customer) => void;
   register: (payload: { name: string; phone: string; email?: string; password: string; password_confirmation: string }) => Promise<void>;
   logout: () => Promise<void>;
   refresh: () => Promise<void>;
@@ -71,6 +72,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async login(phone, password) {
       const response = await api.login({ phone, password });
       applySession(response.token, response.customer);
+    },
+    acceptSession(nextToken, nextCustomer) {
+      applySession(nextToken, nextCustomer);
     },
     async register(payload) {
       const response = await api.register(payload);

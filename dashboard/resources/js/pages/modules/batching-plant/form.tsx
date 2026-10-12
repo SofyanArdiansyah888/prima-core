@@ -16,6 +16,7 @@ type Plant = {
     name: string;
     address: string | null;
     phone: string | null;
+    whatsapp: string | null;
     lat: string | number | null;
     lng: string | number | null;
     daily_capacity_m3: number | null;
@@ -147,6 +148,24 @@ export default function PlantForm({
                                             className="h-10 border-slate-200 font-mono text-sm focus-visible:ring-emerald-500/20 focus-visible:border-emerald-600 dark:border-slate-800"
                                         />
                                         <InputError message={errors.phone} />
+                                    </div>
+
+                                    <div className="space-y-1.5">
+                                        <Label htmlFor="whatsapp" className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                                            WhatsApp Dispatcher
+                                        </Label>
+                                        <Input
+                                            id="whatsapp"
+                                            name="whatsapp"
+                                            defaultValue={plant?.whatsapp ?? ''}
+                                            placeholder="Contoh: 081234567890"
+                                            inputMode="tel"
+                                            className="h-10 border-slate-200 font-mono text-sm focus-visible:ring-emerald-500/20 focus-visible:border-emerald-600 dark:border-slate-800"
+                                        />
+                                        <p className="text-xs text-slate-500">
+                                            Dipakai tombol WhatsApp pada kartu Bantuan & Dispatcher Plant di detail pesanan mobile.
+                                        </p>
+                                        <InputError message={errors.whatsapp} />
                                     </div>
 
                                     <div className="space-y-1.5">

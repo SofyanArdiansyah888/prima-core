@@ -31,11 +31,11 @@ export function SafeImage({
     return (
       <div 
         className={`flex items-center justify-center bg-slate-50 text-slate-400 select-none overflow-hidden p-2 ${className}`}
-        aria-label={alt || 'Logo PKM Tonasa'}
+        aria-label={alt || 'Logo Prima Sales Pro'}
       >
         <img
-          src="/logo-pkm-bw.svg"
-          alt="PKM Tonasa"
+          src="/logo-pkm.png"
+          alt="Prima Sales Pro"
           className="max-h-10 max-w-10 size-2/3 object-contain opacity-35 grayscale"
         />
       </div>

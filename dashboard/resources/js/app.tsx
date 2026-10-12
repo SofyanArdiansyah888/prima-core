@@ -6,7 +6,9 @@ import AppLayout from '@/layouts/app-layout';
 import AuthLayout from '@/layouts/auth-layout';
 import SettingsLayout from '@/layouts/settings/layout';
 
-const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
+const appName =
+    document.querySelector('meta[name="app-name"]')?.getAttribute('content') ||
+    'Prima Sales Pro';
 
 createInertiaApp({
     title: (title) => (title ? `${title} - ${appName}` : appName),
