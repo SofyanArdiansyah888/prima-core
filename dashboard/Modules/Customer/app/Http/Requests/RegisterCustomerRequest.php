@@ -3,6 +3,7 @@
 namespace Modules\Customer\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Modules\Customer\Support\PhoneNumber;
 
 class RegisterCustomerRequest extends FormRequest
 {
@@ -13,9 +14,12 @@ class RegisterCustomerRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
-        if ($this->input('email') === '') {
-            $this->merge(['email' => null]);
-        }
+        $phone = $this->input('phone');
+
+        $this->merge([
+            'phone' => is_string($phone) ? PhoneNumber::normalize($phone) : $phone,
+            'email' => $this->input('email') === '' ? null : $this->input('email'),
+        ]);
     }
 
     /**
@@ -25,9 +29,25 @@ class RegisterCustomerRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
-            'phone' => ['required', 'string', 'max:50', 'unique:customers,phone'],
+            'phone' => ['required', 'string', 'regex:/^08\d{8,12}$/', 'unique:customers,phone'],
             'email' => ['nullable', 'email', 'max:255', 'unique:customers,email'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
+            'code' => ['required', 'string', 'size:6'],
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'phone.regex' => 'Nomor WhatsApp tidak valid.',
+            'phone.unique' => 'Nomor WhatsApp sudah terdaftar.',
+            'password.min' => 'Kata sandi minimal 8 karakter.',
+            'password.confirmed' => 'Konfirmasi kata sandi tidak cocok.',
+            'code.required' => 'Masukkan kode verifikasi WhatsApp.',
+            'code.size' => 'Kode verifikasi harus 6 digit.',
         ];
     }
 }

@@ -9,12 +9,14 @@ use Illuminate\Validation\ValidationException;
 use Modules\Customer\Http\Requests\LoginCustomerRequest;
 use Modules\Customer\Http\Requests\RegisterCustomerRequest;
 use Modules\Customer\Models\Customer;
+use Modules\Customer\Services\CustomerOtpService;
 
 class AuthController extends Controller
 {
-    public function register(RegisterCustomerRequest $request): JsonResponse
+    public function register(RegisterCustomerRequest $request, CustomerOtpService $otp): JsonResponse
     {
         $data = $request->validated();
+        $otp->consume($data['phone'], 'register', $data['code']);
 
         $customer = Customer::query()->create([
             'name' => $data['name'],

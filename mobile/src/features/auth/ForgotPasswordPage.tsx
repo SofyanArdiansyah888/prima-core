@@ -13,6 +13,7 @@ import {
 } from 'ionicons/icons';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../../data/api';
+import { normalizePhone } from '../../domain/phone';
 import PkmLogo from '../../shared/ui/PkmLogo';
 import { AuthInput, PasswordInput, PhoneInput, Screen } from '../../shared/ui';
 
@@ -27,6 +28,7 @@ export default function ForgotPasswordPage() {
 
   const [step, setStep] = useState<'request' | 'verify'>('request');
   const [phone, setPhone] = useState('');
+  const [sentPhone, setSentPhone] = useState('');
   const [otp, setOtp] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -46,27 +48,15 @@ export default function ForgotPasswordPage() {
     }, 3500);
   };
 
-  const handleRequestOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!phone.trim()) {
-      setError('Masukkan nomor handphone / WhatsApp terlebih dahulu.');
-      return;
-    }
-
+  const sendResetCode = async (target: string) => {
     setSubmitting(true);
     setError('');
 
-    let normalizedPhone = phone.trim().replace(/[^0-9]/g, '');
-    if (normalizedPhone.startsWith('62')) {
-      normalizedPhone = '0' + normalizedPhone.slice(2);
-    } else if (!normalizedPhone.startsWith('0')) {
-      normalizedPhone = '0' + normalizedPhone;
-    }
-
     try {
-      await api.requestOtp({ phone: normalizedPhone, purpose: 'reset' });
+      await api.requestOtp({ phone: target, purpose: 'reset' });
+      setSentPhone(target);
       setStep('verify');
-      triggerToast(`Kode verifikasi OTP telah dikirim ke WhatsApp ${normalizedPhone}`, 'success');
+      triggerToast(`Kode verifikasi OTP telah dikirim ke WhatsApp ${target}`, 'success');
     } catch (reason) {
       const msg = reason instanceof Error ? reason.message : 'Gagal mengirim OTP.';
       setError(msg);
@@ -74,6 +64,17 @@ export default function ForgotPasswordPage() {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleRequestOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const target = normalizePhone(phone);
+    if (!/^08\d{8,12}$/.test(target)) {
+      setError('Masukkan nomor WhatsApp yang valid.');
+      return;
+    }
+
+    await sendResetCode(target);
   };
 
   const handleResetPassword = async (e: React.FormEvent) => {
@@ -85,8 +86,8 @@ export default function ForgotPasswordPage() {
       return;
     }
 
-    if (newPassword.length < 6) {
-      setError('Kata sandi baru minimal 6 karakter.');
+    if (newPassword.length < 8) {
+      setError('Kata sandi baru minimal 8 karakter.');
       return;
     }
 
@@ -96,16 +97,10 @@ export default function ForgotPasswordPage() {
     }
 
     setSubmitting(true);
-    let normalizedPhone = phone.trim().replace(/[^0-9]/g, '');
-    if (normalizedPhone.startsWith('62')) {
-      normalizedPhone = '0' + normalizedPhone.slice(2);
-    } else if (!normalizedPhone.startsWith('0')) {
-      normalizedPhone = '0' + normalizedPhone;
-    }
 
     try {
       await api.resetPassword({
-        phone: normalizedPhone,
+        phone: sentPhone,
         code: otp.trim(),
         password: newPassword,
         password_confirmation: confirmPassword,
@@ -257,7 +252,7 @@ export default function ForgotPasswordPage() {
 
                 <PasswordInput
                   label="Kata Sandi Baru"
-                  hint="(min. 6 karakter)"
+                  hint="(min. 8 karakter)"
                   placeholder="Masukkan kata sandi baru"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
@@ -276,10 +271,11 @@ export default function ForgotPasswordPage() {
                   <span className="text-slate-500">Tidak menerima kode?</span>
                   <button
                     type="button"
+                    disabled={submitting}
                     onClick={() => {
-                      triggerToast('Kode baru telah dikirim kembali via WhatsApp', 'info');
+                      void sendResetCode(sentPhone);
                     }}
-                    className="font-bold text-[#d91424] hover:text-[#ea580c] hover:underline cursor-pointer"
+                    className="font-bold text-[#d91424] hover:text-[#ea580c] hover:underline cursor-pointer disabled:opacity-60"
                   >
                     Kirim Ulang Kode
                   </button>

@@ -65,7 +65,7 @@ async function request<T>(path: string, options: RequestInit = {}, auth = true):
 }
 
 export const api = {
-  register(payload: { name: string; phone: string; email?: string; password: string; password_confirmation: string }) {
+  register(payload: { name: string; phone: string; password: string; password_confirmation: string; code: string; email?: string }) {
     return request<{ token: string; customer: Customer }>('/register', {
       method: 'POST',
       body: JSON.stringify(payload),
@@ -77,7 +77,7 @@ export const api = {
       body: JSON.stringify(payload),
     }, false);
   },
-  requestOtp(payload: { phone: string; purpose: 'login' | 'reset' }) {
+  requestOtp(payload: { phone: string; purpose: 'login' | 'reset' | 'register' }) {
     return request<{ message: string }>('/otp/request', {
       method: 'POST',
       body: JSON.stringify(payload),

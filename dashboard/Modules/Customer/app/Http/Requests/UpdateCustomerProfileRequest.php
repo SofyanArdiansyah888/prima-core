@@ -5,6 +5,7 @@ namespace Modules\Customer\Http\Requests;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Modules\Customer\Models\Customer;
+use Modules\Customer\Support\PhoneNumber;
 
 class UpdateCustomerProfileRequest extends FormRequest
 {
@@ -15,9 +16,16 @@ class UpdateCustomerProfileRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
+        $phone = $this->input('phone');
+        $payload = [
+            'phone' => is_string($phone) ? PhoneNumber::normalize($phone) : $phone,
+        ];
+
         if ($this->input('email') === '') {
-            $this->merge(['email' => null]);
+            $payload['email'] = null;
         }
+
+        $this->merge($payload);
     }
 
     /**

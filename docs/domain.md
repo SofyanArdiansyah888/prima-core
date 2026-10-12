@@ -36,3 +36,5 @@ Generator: `Modules\Shared\Services\CodeGenerator` + tabel `document_sequences`.
 ## Status plant
 
 `OPERATIONAL` | `MAINTENANCE` | `INACTIVE`
+
+Status pesanan, pembayaran, surat jalan, dan SPK: [`status.md`](status.md).

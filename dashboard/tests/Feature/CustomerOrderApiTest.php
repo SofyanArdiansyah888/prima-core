@@ -2,12 +2,15 @@
 
 namespace Tests\Feature;
 
+use ArrayObject;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\BatchingPlant\Models\BatchingPlant;
 use Modules\Branch\Models\Branch;
 use Modules\Customer\Models\Customer;
 use Modules\Order\Models\Order;
 use Modules\Product\Models\Product;
+use Modules\Shared\Services\FonnteService;
+use RuntimeException;
 use Tests\TestCase;
 
 class CustomerOrderApiTest extends TestCase
@@ -16,12 +19,19 @@ class CustomerOrderApiTest extends TestCase
 
     public function test_customer_can_register_and_login(): void
     {
+        $inbox = $this->captureWhatsapp();
+
+        $this->postJson('/api/customer/v1/otp/request', [
+            'phone' => '81234567890',
+            'purpose' => 'register',
+        ])->assertOk();
+
         $register = $this->postJson('/api/customer/v1/register', [
             'name' => 'Toko Berkah',
-            'phone' => '081234567890',
-            'email' => 'berkah@example.com',
+            'phone' => '6281234567890',
             'password' => 'password',
             'password_confirmation' => 'password',
+            'code' => $this->otpFrom($inbox),
         ]);
 
         $register->assertCreated();
@@ -43,6 +53,55 @@ class CustomerOrderApiTest extends TestCase
             ->getJson('/api/customer/v1/me')
             ->assertOk()
             ->assertJsonPath('data.name', 'Toko Berkah');
+    }
+
+    public function test_customer_can_reset_password_with_whatsapp_otp(): void
+    {
+        Customer::query()->create([
+            'name' => 'Toko Berkah',
+            'phone' => '081234567890',
+            'password' => 'password',
+            'is_active' => true,
+        ]);
+
+        $inbox = $this->captureWhatsapp();
+
+        $this->postJson('/api/customer/v1/otp/request', [
+            'phone' => '6281234567890',
+            'purpose' => 'reset',
+        ])->assertOk()
+            ->assertJsonPath('message', 'Kode OTP dikirim ke WhatsApp.');
+
+        $this->postJson('/api/customer/v1/password/reset', [
+            'phone' => '081234567890',
+            'code' => $this->otpFrom($inbox),
+            'password' => 'password2',
+            'password_confirmation' => 'password2',
+        ])->assertOk();
+
+        $this->postJson('/api/customer/v1/login', [
+            'phone' => '081234567890',
+            'password' => 'password',
+        ])->assertStatus(422);
+
+        $this->postJson('/api/customer/v1/login', [
+            'phone' => '081234567890',
+            'password' => 'password2',
+        ])->assertOk();
+    }
+
+    public function test_otp_request_fails_when_whatsapp_send_fails(): void
+    {
+        $fonnte = \Mockery::mock(FonnteService::class);
+        $fonnte->shouldReceive('sendNow')->once()->andThrow(new RuntimeException('Token Fonnte kosong.'));
+        $this->app->instance(FonnteService::class, $fonnte);
+
+        $this->postJson('/api/customer/v1/otp/request', [
+            'phone' => '081234567890',
+            'purpose' => 'register',
+        ])->assertStatus(422)->assertJsonValidationErrors('phone');
+
+        $this->assertDatabaseCount('customer_otps', 0);
     }
 
     public function test_catalog_requires_auth_and_filters_category(): void
@@ -190,10 +249,10 @@ class CustomerOrderApiTest extends TestCase
         $this->assertNotEmpty($payRes->json('data.snap_token'));
 
         // Test webhook
-        $orderId = $code . '-sample';
+        $orderId = $code.'-sample';
         $grossAmount = (string) $expectedTotal;
         $serverKey = (string) config('services.midtrans.server_key', '');
-        $signatureKey = hash('sha512', $orderId . '200' . $grossAmount . $serverKey);
+        $signatureKey = hash('sha512', $orderId.'200'.$grossAmount.$serverKey);
 
         $webhook = $this->postJson('/api/customer/v1/payments/midtrans-webhook', [
             'order_id' => $orderId,
@@ -207,6 +266,37 @@ class CustomerOrderApiTest extends TestCase
 
         $webhook->assertOk();
         $webhook->assertJsonPath('payment_status', 'PAID');
+    }
+
+    /**
+     * @return ArrayObject<int, array{phone: string, message: string}>
+     */
+    private function captureWhatsapp(): ArrayObject
+    {
+        /** @var ArrayObject<int, array{phone: string, message: string}> $inbox */
+        $inbox = new ArrayObject;
+        $fonnte = \Mockery::mock(FonnteService::class);
+        $fonnte->shouldReceive('sendNow')->andReturnUsing(function (string $phone, string $message) use ($inbox): void {
+            $inbox->append([
+                'phone' => $phone,
+                'message' => $message,
+            ]);
+        });
+        $this->app->instance(FonnteService::class, $fonnte);
+
+        return $inbox;
+    }
+
+    /**
+     * @param  ArrayObject<int, array{phone: string, message: string}>  $inbox
+     */
+    private function otpFrom(ArrayObject $inbox): string
+    {
+        $message = (string) ($inbox[0]['message'] ?? '');
+        preg_match('/(\d{6})/', $message, $matches);
+        $this->assertNotSame('', $matches[1] ?? '');
+
+        return $matches[1];
     }
 
     private function customerToken(): string

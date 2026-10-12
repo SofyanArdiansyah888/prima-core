@@ -33,7 +33,7 @@
 
 - Path: `dashboard/Modules/Customer`
 - Model: `Modules\Customer\Models\Customer` (terpisah dari user staf)
-- API: `/api/customer/v1` — daftar, masuk, profil, katalog, quote ongkir, buat/lacak/batal pesanan B2C
+- API: `/api/customer/v1` — daftar dan lupa sandi lewat OTP WhatsApp (Fonnte), masuk, profil, katalog, quote ongkir, buat/lacak/batal pesanan B2C
 - App: [`mobile/`](../mobile/) Ionic React + Tailwind
 - Seed lokal: `081300000001` / `password`
 

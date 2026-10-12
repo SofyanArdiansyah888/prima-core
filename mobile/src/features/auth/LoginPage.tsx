@@ -12,6 +12,7 @@ import {
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../../data/api';
 import { useAuth } from '../../data/auth';
+import { normalizePhone } from '../../domain/phone';
 import PkmLogo from '../../shared/ui/PkmLogo';
 import { AuthInput, PasswordInput, PhoneInput, Screen } from '../../shared/ui';
 
@@ -52,13 +53,7 @@ export default function LoginPage() {
     setSubmitting(true);
     setError('');
 
-    // Normalize phone number to standard format
-    let normalizedPhone = phone.trim().replace(/[^0-9]/g, '');
-    if (normalizedPhone.startsWith('62')) {
-      normalizedPhone = '0' + normalizedPhone.slice(2);
-    } else if (!normalizedPhone.startsWith('0')) {
-      normalizedPhone = '0' + normalizedPhone;
-    }
+    const normalizedPhone = normalizePhone(phone);
 
     if (method === 'otp') {
       try {

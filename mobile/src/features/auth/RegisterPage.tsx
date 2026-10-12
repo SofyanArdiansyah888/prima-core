@@ -6,12 +6,15 @@ import {
   arrowForwardOutline,
   checkmarkCircleOutline,
   closeOutline,
-  mailOutline,
+  keyOutline,
+  logoWhatsapp,
   paperPlaneOutline,
   personOutline,
 } from 'ionicons/icons';
 import { Link, useNavigate } from 'react-router-dom';
+import { api } from '../../data/api';
 import { useAuth } from '../../data/auth';
+import { normalizePhone } from '../../domain/phone';
 import PkmLogo from '../../shared/ui/PkmLogo';
 import { AuthInput, PasswordInput, PhoneInput, Screen } from '../../shared/ui';
 
@@ -25,9 +28,11 @@ export default function RegisterPage() {
   const { register } = useAuth();
   const navigate = useNavigate();
 
+  const [step, setStep] = useState<'form' | 'verify'>('form');
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
-  const [email, setEmail] = useState('');
+  const [sentPhone, setSentPhone] = useState('');
+  const [otp, setOtp] = useState('');
   const [password, setPassword] = useState('');
   const [passwordConfirmation, setPasswordConfirmation] = useState('');
   const [error, setError] = useState('');
@@ -46,13 +51,37 @@ export default function RegisterPage() {
     }, 3500);
   };
 
-  const handleSubmit = async (event: React.FormEvent) => {
+  const sendRegisterCode = async (target: string) => {
+    setSubmitting(true);
+    setError('');
+
+    try {
+      await api.requestOtp({ phone: target, purpose: 'register' });
+      setSentPhone(target);
+      setStep('verify');
+      triggerToast(`Kode verifikasi dikirim ke WhatsApp ${target}`, 'success');
+    } catch (reason) {
+      const msg = reason instanceof Error ? reason.message : 'Gagal mengirim kode WhatsApp.';
+      setError(msg);
+      triggerToast(msg, 'error');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleRequestOtp = async (event: React.FormEvent) => {
     event.preventDefault();
     setError('');
 
-    if (password.length < 6) {
-      setError('Kata sandi minimal 6 karakter.');
-      triggerToast('Kata sandi minimal 6 karakter.', 'error');
+    const target = normalizePhone(phone);
+    if (!/^08\d{8,12}$/.test(target)) {
+      setError('Masukkan nomor WhatsApp yang valid.');
+      return;
+    }
+
+    if (password.length < 8) {
+      setError('Kata sandi minimal 8 karakter.');
+      triggerToast('Kata sandi minimal 8 karakter.', 'error');
       return;
     }
 
@@ -62,22 +91,27 @@ export default function RegisterPage() {
       return;
     }
 
-    setSubmitting(true);
+    await sendRegisterCode(target);
+  };
 
-    let normalizedPhone = phone.trim().replace(/[^0-9]/g, '');
-    if (normalizedPhone.startsWith('62')) {
-      normalizedPhone = '0' + normalizedPhone.slice(2);
-    } else if (!normalizedPhone.startsWith('0')) {
-      normalizedPhone = '0' + normalizedPhone;
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setError('');
+
+    if (otp.length !== 6) {
+      setError('Masukkan kode verifikasi OTP 6 digit.');
+      return;
     }
+
+    setSubmitting(true);
 
     try {
       await register({
         name: name.trim(),
-        phone: normalizedPhone,
-        email: email.trim() || undefined,
+        phone: sentPhone,
         password,
         password_confirmation: passwordConfirmation,
+        code: otp.trim(),
       });
       triggerToast('Registrasi berhasil! Selamat datang di Prima Sales Pro.', 'success');
       navigate('/tabs/home', { replace: true });
@@ -156,10 +190,12 @@ export default function RegisterPage() {
                 </span>
               </div>
               <h1 className="mb-1 text-2xl font-extrabold tracking-tight text-[#0c1d37]">
-                Daftar Pelanggan
+                {step === 'form' ? 'Daftar Pelanggan' : 'Verifikasi WhatsApp'}
               </h1>
               <p className="text-xs leading-relaxed text-slate-500">
-                Pendaftaran mandiri untuk pemesanan semen sak & beton ready-mix resmi.
+                {step === 'form'
+                  ? 'Daftar dengan nomor WhatsApp. Kode verifikasi dikirim lewat WhatsApp sebelum akun dibuat.'
+                  : `Masukkan kode 6 digit yang dikirim ke WhatsApp ${sentPhone}.`}
               </p>
             </section>
 
@@ -172,7 +208,8 @@ export default function RegisterPage() {
             )}
 
             {/* Registration Form */}
-            <form onSubmit={handleSubmit} className="space-y-3">
+            {step === 'form' ? (
+            <form onSubmit={handleRequestOtp} className="space-y-3">
               <AuthInput
                 label="Nama Lengkap / Nama Toko"
                 placeholder="Contoh: H. Ahmad Rusdi / Toko Berkah"
@@ -184,27 +221,15 @@ export default function RegisterPage() {
               />
 
               <PhoneInput
-                label="Nomor Handphone / WhatsApp"
+                label="Nomor WhatsApp"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 required
               />
 
-              <AuthInput
-                label="Alamat Email"
-                hint="(opsional)"
-                type="email"
-                inputMode="email"
-                placeholder="nama@email.com"
-                icon={mailOutline}
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                autoComplete="email"
-              />
-
               <PasswordInput
                 label="Kata Sandi"
-                hint="(min. 6 karakter)"
+                hint="(min. 8 karakter)"
                 placeholder="Buat kata sandi akun"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -221,7 +246,59 @@ export default function RegisterPage() {
                 required
               />
 
-              {/* Submit CTA */}
+              <div className="rounded-xl border border-blue-100 bg-blue-50/70 p-3 text-xs text-slate-600">
+                <div className="mb-1 flex items-center gap-1.5 font-bold text-[#0c1d37]">
+                  <IonIcon icon={logoWhatsapp} className="text-base text-emerald-600" />
+                  <span>Verifikasi lewat WhatsApp</span>
+                </div>
+                <p className="text-[11px] leading-relaxed">
+                  Kode dikirim ke nomor WhatsApp ini. Email tidak dipakai untuk pendaftaran.
+                </p>
+              </div>
+
+              <div className="pt-2">
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#0c1d37] via-[#162e55] to-[#0c1d37] hover:from-[#091528] hover:to-[#091528] py-3.5 px-4 text-sm font-bold text-white shadow-lg shadow-[#0c1d37]/25 transition-all active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed cursor-pointer"
+                >
+                  <span>{submitting ? 'Mengirim Kode...' : 'Kirim Kode WhatsApp'}</span>
+                  <IonIcon
+                    icon={arrowForwardOutline}
+                    className={`text-sm ${submitting ? 'animate-spin' : ''}`}
+                  />
+                </button>
+              </div>
+            </form>
+            ) : (
+            <form onSubmit={handleSubmit} className="space-y-3">
+              <AuthInput
+                label="Kode Verifikasi OTP"
+                hint="(6 digit dari WhatsApp)"
+                icon={keyOutline}
+                type="text"
+                inputMode="numeric"
+                maxLength={6}
+                placeholder="Contoh: 123456"
+                value={otp}
+                onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                required
+              />
+
+              <div className="flex items-center justify-between text-xs pt-1">
+                <span className="text-slate-500">Tidak menerima kode?</span>
+                <button
+                  type="button"
+                  disabled={submitting}
+                  onClick={() => {
+                    void sendRegisterCode(sentPhone);
+                  }}
+                  className="font-bold text-[#d91424] hover:text-[#ea580c] hover:underline cursor-pointer disabled:opacity-60"
+                >
+                  Kirim Ulang Kode
+                </button>
+              </div>
+
               <div className="pt-2">
                 <button
                   type="submit"
@@ -236,6 +313,7 @@ export default function RegisterPage() {
                 </button>
               </div>
             </form>
+            )}
 
             {/* Footer */}
             <footer className="mt-5 border-t border-slate-200 pt-4 text-center">
