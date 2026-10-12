@@ -46,7 +46,7 @@ export default function ForgotPasswordPage() {
     }, 3500);
   };
 
-  const handleRequestOtp = (e: React.FormEvent) => {
+  const handleRequestOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!phone.trim()) {
       setError('Masukkan nomor handphone / WhatsApp terlebih dahulu.');
@@ -76,7 +76,7 @@ export default function ForgotPasswordPage() {
     }
   };
 
-  const handleResetPassword = (e: React.FormEvent) => {
+  const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 

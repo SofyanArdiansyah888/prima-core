@@ -2,7 +2,7 @@ import { useState, type ImgHTMLAttributes } from 'react';
 
 export interface SafeImageProps extends ImgHTMLAttributes<HTMLImageElement> {
   fallbackSrc?: string;
-  type?: 'cement' | 'readymix' | 'news' | 'general';
+  type?: string;
 }
 
 export function SafeImage({
