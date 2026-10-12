@@ -1,10 +1,12 @@
 FROM php:8.3-fpm-bookworm
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    git unzip libzip-dev libpng-dev libonig-dev libxml2-dev libpq-dev curl gnupg \
+    git unzip libzip-dev libpng-dev libjpeg62-turbo-dev libfreetype6-dev \
+    libonig-dev libxml2-dev libpq-dev curl gnupg \
     && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && apt-get install -y --no-install-recommends nodejs \
-    && docker-php-ext-install pdo_pgsql mbstring zip bcmath \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install pdo_pgsql mbstring zip bcmath gd \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
