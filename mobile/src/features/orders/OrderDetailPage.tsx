@@ -25,7 +25,7 @@ import { api } from '../../data/api';
 import { formatDate, formatQty, formatRupiah } from '../../domain/format';
 import { orderStatusTone, paymentStatusLabel } from '../../domain/rules';
 import { STATUS_LABELS, STATUS_STEPS, type CustomerOrder } from '../../domain/types';
-import { Card, ConfirmModal, ErrorText, Eyebrow, NavBar, OrderDetailSkeleton, Screen, StatusBadge, StickyBar, SyncIcon } from '../../shared/ui';
+import { Card, ErrorText, Eyebrow, NavBar, OrderDetailSkeleton, Screen, StatusBadge, StickyBar, SyncIcon } from '../../shared/ui';
 import { openSnapPayment } from '../../lib/midtrans';
 
 type ToastState = {
@@ -39,10 +39,8 @@ export default function OrderDetailPage() {
   const navigate = useNavigate();
   const [order, setOrder] = useState<CustomerOrder | null>(null);
   const [error, setError] = useState('');
-  const [cancelling, setCancelling] = useState(false);
   const [paying, setPaying] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [showCancelModal, setShowCancelModal] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -125,23 +123,6 @@ export default function OrderDetailPage() {
     setCopiedCode(true);
     triggerToast(`Kode pesanan ${order.code} disalin ke papan klip!`, 'success');
     setTimeout(() => setCopiedCode(false), 2000);
-  };
-
-  const cancel = async () => {
-    if (!order) return;
-
-    setCancelling(true);
-    try {
-      const response = await api.cancelOrder(order.uuid);
-      setOrder(response.data);
-      setShowCancelModal(false);
-      triggerToast('Pesanan berhasil dibatalkan.', 'info');
-      setError('');
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'Gagal membatalkan pesanan.');
-    } finally {
-      setCancelling(false);
-    }
   };
 
   const handlePay = async () => {
@@ -237,33 +218,17 @@ export default function OrderDetailPage() {
           }
         />
       )}
-      footer={order && (!isCancelled || order.can_cancel) ? (
+      footer={order && isPendingPayment ? (
         <StickyBar>
-          <div className="space-y-2">
-            {isPendingPayment && (
-              <button
-                type="button"
-                disabled={paying}
-                onClick={() => void handlePay()}
-                className="w-full rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 py-3 text-xs font-black text-white shadow-md transition-all cursor-pointer flex items-center justify-center gap-2"
-              >
-                <IonIcon icon={walletOutline} className="text-base" />
-                <span>{paying ? 'Menghubungkan Midtrans…' : `Bayar Sekarang (${formatRupiah(order.total_price)})`}</span>
-              </button>
-            )}
-
-            {order.can_cancel && (
-              <button
-                type="button"
-                disabled={cancelling}
-                className="w-full rounded-xl border border-red-200 bg-red-50 hover:bg-red-100 py-2.5 text-xs font-bold text-[#d91424] disabled:opacity-50 transition-colors cursor-pointer flex items-center justify-center gap-1.5"
-                onClick={() => setShowCancelModal(true)}
-              >
-                <IonIcon icon={closeCircleOutline} className="text-base" />
-                <span>{cancelling ? 'Membatalkan…' : 'Batalkan Pesanan Ini'}</span>
-              </button>
-            )}
-          </div>
+          <button
+            type="button"
+            disabled={paying}
+            onClick={() => void handlePay()}
+            className="w-full rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 py-3 text-xs font-black text-white shadow-md transition-all cursor-pointer flex items-center justify-center gap-2"
+          >
+            <IonIcon icon={walletOutline} className="text-base" />
+            <span>{paying ? 'Menghubungkan Midtrans…' : `Bayar Sekarang (${formatRupiah(order.total_price)})`}</span>
+          </button>
         </StickyBar>
       ) : null}
     >
@@ -604,19 +569,6 @@ export default function OrderDetailPage() {
           </motion.div>
         ) : null}
       </div>
-
-      {/* Confirmation Modal for Order Cancellation */}
-      <ConfirmModal
-        isOpen={showCancelModal}
-        title="Batalkan Pesanan Ini?"
-        description={`Apakah Anda yakin ingin membatalkan pesanan "${order?.code}"? Pesanan yang telah dibatalkan tidak dapat diproses kembali oleh sistem batching plant.`}
-        confirmText="Ya, Batalkan Pesanan"
-        cancelText="Kembali"
-        tone="danger"
-        iconType="alert"
-        onConfirm={() => void cancel()}
-        onClose={() => setShowCancelModal(false)}
-      />
     </Screen>
   );
 }
