@@ -185,7 +185,19 @@ export default function OrderDetailPage() {
     }
   };
 
-  const currentIndex = order ? STATUS_STEPS.indexOf(order.status as typeof STATUS_STEPS[number]) : -1;
+  const normalizeStatus = (status?: string): (typeof STATUS_STEPS)[number] | 'CANCELLED' | 'UNKNOWN' => {
+    if (!status) return 'UNKNOWN';
+    if (status === 'DRAFT' || status === 'CONFIRMED') return 'CONFIRMED';
+    if (status === 'WORK_ORDER_CREATED' || status === 'IN_PRODUCTION' || status === 'PROCESSING') return 'PROCESSING';
+    if (status === 'PARTIAL_DELIVERY' || status === 'ON_DELIVERY') return 'ON_DELIVERY';
+    if (status === 'COMPLETED') return 'COMPLETED';
+    if (status === 'CANCELLED') return 'CANCELLED';
+    return 'UNKNOWN';
+  };
+  const normalizedStatus = normalizeStatus(order?.status);
+  const currentIndex = normalizedStatus !== 'UNKNOWN' && normalizedStatus !== 'CANCELLED'
+    ? STATUS_STEPS.indexOf(normalizedStatus)
+    : -1;
   const isCompleted = order?.status === 'COMPLETED';
   const isCancelled = order?.status === 'CANCELLED';
   const isActive = order && !isCompleted && !isCancelled;
@@ -358,8 +370,8 @@ export default function OrderDetailPage() {
                   {isCancelled
                     ? 'Dibatalkan'
                     : isCompleted
-                    ? 'Semua Tahap Selesai (5/5)'
-                    : `Langkah ${Math.max(1, currentIndex + 1)} dari 5`}
+                    ? 'Semua Tahap Selesai (4/4)'
+                    : `Langkah ${Math.max(1, currentIndex + 1)} dari 4`}
                 </span>
               </div>
 
@@ -377,11 +389,10 @@ export default function OrderDetailPage() {
                     const isPassed = isCompleted ? true : currentIndex >= index;
                     const isCurrent = isCompleted ? false : currentIndex === index;
 
-                    const stepSubtext: Record<string, string> = {
+                    const stepSubtext: Record<(typeof STATUS_STEPS)[number], string> = {
                       CONFIRMED: 'Order diverifikasi & dialokasikan ke jadwal plant',
-                      WORK_ORDER_CREATED: 'Surat Perintah Kerja (SPK) batching terbit resmi',
-                      IN_PRODUCTION: 'Pemuatan semen / penimbangan agregat ready mix',
-                      PARTIAL_DELIVERY: 'Armada bergerak menuju lokasi proyek pengecoran',
+                      PROCESSING: 'Batching plant memproses produksi beton sesuai formula',
+                      ON_DELIVERY: 'Truk mixer dalam perjalanan mengantarkan beton ke proyek',
                       COMPLETED: 'Pengecoran selesai, e-POD & Surat Jalan tervalidasi',
                     };
 

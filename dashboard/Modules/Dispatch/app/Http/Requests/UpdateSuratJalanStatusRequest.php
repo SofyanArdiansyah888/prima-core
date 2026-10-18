@@ -14,7 +14,7 @@ class UpdateSuratJalanStatusRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'status' => ['required', 'string', 'in:PREPARED,DEPARTED,ON_THE_WAY,ARRIVED,UNLOADING,COMPLETED,RETURNED'],
+            'status' => ['required', 'string', 'in:ON_THE_WAY,COMPLETED,CANCELLED'],
             'recipient_name' => ['nullable', 'string', 'max:128'],
             'received_at' => ['nullable', 'date'],
             'notes' => ['nullable', 'string'],

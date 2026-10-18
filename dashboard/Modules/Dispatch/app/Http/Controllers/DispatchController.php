@@ -56,13 +56,9 @@ class DispatchController extends Controller
             'suratJalans' => $suratJalans,
             'plants' => BatchingPlant::query()->where('is_active', true)->orderBy('code')->get(['id', 'uuid', 'code', 'name']),
             'statuses' => [
-                ['value' => 'PREPARED', 'label' => 'Siap Berangkat'],
-                ['value' => 'DEPARTED', 'label' => 'Berangkat dari Plant'],
                 ['value' => 'ON_THE_WAY', 'label' => 'Dalam Perjalanan'],
-                ['value' => 'ARRIVED', 'label' => 'Tiba di Lokasi Proyek'],
-                ['value' => 'UNLOADING', 'label' => 'Sedang Pengecoran / Bongkar'],
                 ['value' => 'COMPLETED', 'label' => 'Pengantaran Selesai'],
-                ['value' => 'RETURNED', 'label' => 'Armada Kembali ke Plant'],
+                ['value' => 'CANCELLED', 'label' => 'Dibatalkan'],
             ],
             'filters' => [
                 'search' => $search,
@@ -80,7 +76,7 @@ class DispatchController extends Controller
             ->whereNotIn('status', ['COMPLETED', 'CANCELLED'])
             ->with([
                 'items.product',
-                'workOrders' => fn ($q) => $q->whereNotIn('status', ['COMPLETED', 'CANCELLED']),
+                'workOrders' => fn ($q) => $q->whereRaw('dispatched_quantity < target_quantity'),
             ])
             ->when($plantId, fn ($q) => $q->where('batching_plant_id', $plantId))
             ->orderByDesc('id')
@@ -112,7 +108,7 @@ class DispatchController extends Controller
                 'vehicle_type' => $data['vehicle_type'],
                 'driver_name' => $data['driver_name'],
                 'driver_phone' => $data['driver_phone'] ?? null,
-                'status' => 'DEPARTED',
+                'status' => 'ON_THE_WAY',
                 'departure_time' => now(),
                 'gross_weight_kg' => $data['gross_weight_kg'] ?? null,
                 'tare_weight_kg' => $data['tare_weight_kg'] ?? null,
@@ -154,7 +150,7 @@ class DispatchController extends Controller
                     if ($order) {
                         $allFulfilled = $order->items->every(fn ($i) => (float) $i->fulfilled_quantity >= (float) $i->quantity);
                         $order->update([
-                            'status' => $allFulfilled ? 'COMPLETED' : 'PARTIAL_DELIVERY',
+                            'status' => $allFulfilled ? 'COMPLETED' : 'ON_DELIVERY',
                         ]);
                     }
                 }
@@ -164,10 +160,8 @@ class DispatchController extends Controller
                     $wo = WorkOrder::find($item['work_order_id']);
                     if ($wo) {
                         $newDispatched = (float) $wo->dispatched_quantity + (float) $item['quantity_delivered'];
-                        $woStatus = $newDispatched >= (float) $wo->target_quantity ? 'COMPLETED' : 'IN_PRODUCTION';
                         $wo->update([
                             'dispatched_quantity' => $newDispatched,
-                            'status' => $woStatus,
                         ]);
                     }
                 }
@@ -211,7 +205,7 @@ class DispatchController extends Controller
         $status = $data['status'];
 
         $updateData = ['status' => $status];
-        if ($status === 'ARRIVED' && empty($suratJalan->arrival_time)) {
+        if ($status === 'COMPLETED' && empty($suratJalan->arrival_time)) {
             $updateData['arrival_time'] = now();
         }
 

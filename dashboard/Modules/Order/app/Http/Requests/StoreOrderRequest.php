@@ -26,7 +26,7 @@ class StoreOrderRequest extends FormRequest
             'distance_km' => ['nullable', 'numeric', 'min:0'],
             'delivery_fee' => ['required', 'numeric', 'min:0'],
             'payment_method' => ['required', 'string', 'max:64'],
-            'payment_status' => ['required', 'string', 'in:PENDING,PAID,APPROVED_CREDIT'],
+            'payment_status' => ['required', 'string', 'in:PENDING,PAID,FAILED'],
             'po_number' => ['nullable', 'string', 'max:64'],
             'notes' => ['nullable', 'string'],
             'items' => ['required', 'array', 'min:1'],

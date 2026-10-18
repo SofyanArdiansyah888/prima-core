@@ -41,8 +41,8 @@ class OrderDatabaseSeeder extends Seeder
                     'ppn' => 2055900,
                     'total_price' => 21195900,
                     'payment_method' => 'CREDIT_B2B',
-                    'payment_status' => 'APPROVED_CREDIT',
-                    'status' => 'IN_PRODUCTION',
+                    'payment_status' => 'PAID',
+                    'status' => 'PROCESSING',
                     'po_number' => 'PO-MKU/PKM/2026/042',
                     'notes' => 'Pengecoran slab dak lantai 2, slump 12cm.',
                 ]
@@ -81,8 +81,8 @@ class OrderDatabaseSeeder extends Seeder
                     'ppn' => 68750000,
                     'total_price' => 697250000,
                     'payment_method' => 'CREDIT_B2B',
-                    'payment_status' => 'APPROVED_CREDIT',
-                    'status' => 'PARTIAL_DELIVERY',
+                    'payment_status' => 'PAID',
+                    'status' => 'ON_DELIVERY',
                     'po_number' => 'PO-BPN/TONASA/VIII/2026',
                     'notes' => 'Pengiriman 500 Ton dengan armada curah max 300 Ton (2 ritase trip: 300T + 200T).',
                 ]

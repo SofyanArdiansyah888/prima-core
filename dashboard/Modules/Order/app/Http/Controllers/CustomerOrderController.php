@@ -220,11 +220,9 @@ class CustomerOrderController extends Controller
     private function statusLabel(?string $status): string
     {
         return match ($status) {
-            'DRAFT' => 'Draf',
             'CONFIRMED' => 'Dikonfirmasi',
-            'WORK_ORDER_CREATED' => 'SPK Terbit',
-            'IN_PRODUCTION' => 'Dalam Produksi',
-            'PARTIAL_DELIVERY' => 'Sebagian Terkirim',
+            'PROCESSING', 'WORK_ORDER_CREATED', 'IN_PRODUCTION' => 'Diproses',
+            'ON_DELIVERY', 'PARTIAL_DELIVERY' => 'Dalam Pengiriman',
             'COMPLETED' => 'Selesai',
             'CANCELLED' => 'Dibatalkan',
             default => $status ?? '',

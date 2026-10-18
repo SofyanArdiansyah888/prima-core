@@ -55,9 +55,8 @@ class OrderController extends Controller
             'plants' => BatchingPlant::query()->where('is_active', true)->orderBy('code')->get(['id', 'uuid', 'code', 'name']),
             'statuses' => [
                 ['value' => 'CONFIRMED', 'label' => 'Dikonfirmasi'],
-                ['value' => 'WORK_ORDER_CREATED', 'label' => 'SPK Terbit'],
-                ['value' => 'IN_PRODUCTION', 'label' => 'Dalam Produksi'],
-                ['value' => 'PARTIAL_DELIVERY', 'label' => 'Sebagian Terkirim'],
+                ['value' => 'PROCESSING', 'label' => 'Diproses'],
+                ['value' => 'ON_DELIVERY', 'label' => 'Dalam Pengiriman'],
                 ['value' => 'COMPLETED', 'label' => 'Selesai'],
                 ['value' => 'CANCELLED', 'label' => 'Dibatalkan'],
             ],

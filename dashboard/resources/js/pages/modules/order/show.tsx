@@ -57,22 +57,26 @@ import { useState } from 'react';
 import { ConfirmModal } from '@/components/ui/confirm-modal';
 
 const statusLabels: Record<string, string> = {
-    DRAFT: 'Draf',
     CONFIRMED: 'Dikonfirmasi',
-    WORK_ORDER_CREATED: 'SPK Terbit',
-    IN_PRODUCTION: 'Dalam Produksi',
-    PARTIAL_DELIVERY: 'Sebagian Terkirim',
+    PROCESSING: 'Diproses',
+    ON_DELIVERY: 'Dalam Pengiriman',
     COMPLETED: 'Selesai',
     CANCELLED: 'Dibatalkan',
+    // Backward compat
+    DRAFT: 'Draf',
+    WORK_ORDER_CREATED: 'Diproses',
+    IN_PRODUCTION: 'Diproses',
+    PARTIAL_DELIVERY: 'Dalam Pengiriman',
 };
 
 const paymentLabels: Record<string, string> = {
     PENDING: 'Menunggu Pembayaran',
     PAID: 'Lunas',
-    APPROVED_CREDIT: 'Disetujui Kredit',
-    CHALLENGE: 'Challenge (Review)',
-    FAILED: 'Gagal / Kadaluarsa',
-    REFUNDED: 'Dikembalikan',
+    FAILED: 'Gagal / Dibatalkan',
+    // Backward compat
+    APPROVED_CREDIT: 'Lunas',
+    CHALLENGE: 'Menunggu Pembayaran',
+    REFUNDED: 'Gagal / Dibatalkan',
 };
 
 export default function OrderShow({ order }: { order: OrderDetail }) {
@@ -94,15 +98,15 @@ export default function OrderShow({ order }: { order: OrderDetail }) {
     const triggerStatusChange = (newStatus: string) => {
         let variant: 'emerald' | 'purple' | 'amber' | 'destructive' = 'emerald';
         if (newStatus === 'CANCELLED') variant = 'destructive';
-        if (newStatus === 'IN_PRODUCTION') variant = 'purple';
-        if (newStatus === 'CONFIRMED') variant = 'emerald';
+        if (newStatus === 'PROCESSING') variant = 'amber';
+        if (newStatus === 'COMPLETED') variant = 'emerald';
 
         const label = statusLabels[newStatus] ?? newStatus;
 
         setConfirmDialog({
             open: true,
             title: 'Konfirmasi Perubahan Status',
-            description: `Apakah Anda yakin ingin memperbarui status pesanan ${order.code} menjadi "${label} (${newStatus})"?`,
+            description: `Apakah Anda yakin ingin memperbarui status pesanan ${order.code} menjadi "${label}"?`,
             newStatus,
             variant,
         });
@@ -131,13 +135,12 @@ export default function OrderShow({ order }: { order: OrderDetail }) {
                             <div className="flex items-center gap-2 flex-wrap">
                                 <span className="font-mono text-sm font-bold text-slate-900 dark:text-white">{order.code}</span>
                                 <span className="inline-flex items-center rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300">
-                                    {statusLabels[order.status] ?? order.status} ({order.status})
+                                    {statusLabels[order.status] ?? order.status}
                                 </span>
-                                <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-                                    order.payment_status === 'PAID'
+                                <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${order.payment_status === 'PAID'
                                         ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
                                         : 'bg-amber-500/10 text-amber-700 dark:text-amber-300'
-                                }`}>
+                                    }`}>
                                     {paymentLabels[order.payment_status] ?? order.payment_status}
                                 </span>
                             </div>
@@ -168,14 +171,14 @@ export default function OrderShow({ order }: { order: OrderDetail }) {
                             <Button
                                 size="sm"
                                 variant="outline"
-                                onClick={() => triggerStatusChange('IN_PRODUCTION')}
+                                onClick={() => triggerStatusChange('PROCESSING')}
                                 className="h-8 text-xs font-bold border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100"
                             >
-                                Mulai Produksi
+                                Proses Pesanan
                             </Button>
                         )}
 
-                        {order.status === 'IN_PRODUCTION' && (
+                        {(order.status === 'PROCESSING' || order.status === 'ON_DELIVERY') && (
                             <Button
                                 size="sm"
                                 variant="outline"
@@ -308,11 +311,10 @@ export default function OrderShow({ order }: { order: OrderDetail }) {
                             </div>
                             <div className="flex justify-between items-center text-xs text-slate-600 dark:text-slate-400">
                                 <span>Status Bayar:</span>
-                                <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-bold ${
-                                    order.payment_status === 'PAID'
+                                <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-bold ${order.payment_status === 'PAID'
                                         ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400'
                                         : 'bg-amber-500/15 text-amber-700 dark:text-amber-400'
-                                }`}>
+                                    }`}>
                                     {order.payment_status === 'PAID' ? 'LUNAS' : order.payment_status}
                                 </span>
                             </div>
@@ -430,9 +432,23 @@ export default function OrderShow({ order }: { order: OrderDetail }) {
                                                     <span className="font-mono text-xs font-bold text-purple-700 dark:text-purple-300">
                                                         {wo.code}
                                                     </span>
-                                                    <span className="inline-flex items-center rounded-full bg-purple-500/10 px-2 py-0.5 text-[11px] font-semibold text-purple-700 dark:text-purple-300">
-                                                        {wo.status}
-                                                    </span>
+                                                    {(() => {
+                                                        const target = Number(wo.target_quantity) || 0;
+                                                        const dispatched = Number(wo.dispatched_quantity) || 0;
+                                                        const percent = target > 0 ? Math.min(100, Math.round((dispatched / target) * 100)) : 0;
+                                                        const isFulfilled = percent >= 100;
+                                                        return (
+                                                            <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+                                                                isFulfilled
+                                                                    ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+                                                                    : percent > 0
+                                                                    ? 'bg-blue-500/10 text-blue-700 dark:text-blue-300'
+                                                                    : 'bg-amber-500/10 text-amber-700 dark:text-amber-300'
+                                                            }`}>
+                                                                {isFulfilled ? 'Selesai Terpenuhi (100%)' : percent > 0 ? `Terkirim ${percent}%` : 'Antrean Produksi'}
+                                                            </span>
+                                                        );
+                                                    })()}
                                                 </div>
                                                 <p className="text-xs text-slate-500 mt-1">
                                                     Jadwal: {formatDate(wo.scheduled_date)} ({wo.scheduled_time_slot || 'Standar'}) · Operator: {wo.assigned_user?.name ?? '—'}

@@ -130,7 +130,7 @@ class DispatchDatabaseSeeder extends Seeder
                     'vehicle_type' => 'FLATBED_SAK',
                     'driver_name' => 'Pak Ilham Nur',
                     'driver_phone' => '0821-3344-5566',
-                    'status' => 'DEPARTED',
+                    'status' => 'ON_THE_WAY',
                     'departure_time' => now()->subMinutes(15),
                     'gross_weight_kg' => 19500,
                     'tare_weight_kg' => 10500,

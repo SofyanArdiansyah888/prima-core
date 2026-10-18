@@ -95,30 +95,39 @@ export default function DispatchIndex({
     // Calculate Quick KPI Stats
     const stats = useMemo(() => {
         const total = suratJalans.total ?? suratJalans.data.length;
-        const prepared = suratJalans.data.filter((s) => s.status === 'PREPARED' || s.status === 'DEPARTED').length;
         const inTransit = suratJalans.data.filter(
-            (s) => s.status === 'ON_THE_WAY' || s.status === 'ARRIVED' || s.status === 'UNLOADING'
+            (s) => s.status === 'ON_THE_WAY' || s.status === 'DEPARTED' || s.status === 'ARRIVED' || s.status === 'UNLOADING' || s.status === 'PREPARED'
         ).length;
-        const completed = suratJalans.data.filter((s) => s.status === 'COMPLETED' || s.status === 'RETURNED').length;
-        return { total, prepared, inTransit, completed };
+        const completed = suratJalans.data.filter((s) => s.status === 'COMPLETED').length;
+        const cancelled = suratJalans.data.filter((s) => s.status === 'CANCELLED' || s.status === 'RETURNED').length;
+        return { total, inTransit, completed, cancelled };
     }, [suratJalans]);
+
+    const statusLabels: Record<string, string> = {
+        ON_THE_WAY: 'Dalam Perjalanan',
+        COMPLETED: 'Pengantaran Selesai',
+        CANCELLED: 'Dibatalkan',
+        // Backward compat
+        PREPARED: 'Dalam Perjalanan',
+        DEPARTED: 'Dalam Perjalanan',
+        ARRIVED: 'Dalam Perjalanan',
+        UNLOADING: 'Dalam Perjalanan',
+        RETURNED: 'Dibatalkan',
+    };
 
     const getStatusBadge = (st: string) => {
         switch (st) {
-            case 'PREPARED':
-                return 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800';
-            case 'DEPARTED':
-                return 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800';
             case 'ON_THE_WAY':
-                return 'bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-800';
+            case 'PREPARED':
+            case 'DEPARTED':
             case 'ARRIVED':
-                return 'bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-300 dark:border-indigo-800';
             case 'UNLOADING':
-                return 'bg-orange-50 text-[#ea580c] border-[#ea580c]/30 dark:bg-orange-900/30 dark:text-orange-300 dark:border-orange-800';
+                return 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800';
             case 'COMPLETED':
                 return 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800';
+            case 'CANCELLED':
             case 'RETURNED':
-                return 'bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700';
+                return 'bg-red-50 text-[#d91424] border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-800';
             default:
                 return 'bg-slate-100 text-slate-700 border-slate-200';
         }
@@ -143,6 +152,7 @@ export default function DispatchIndex({
                             Penerbitan Surat Jalan (Single Trip / Multi-Drop), nota timbangan digital, dan monitoring GPS armada mixer.
                         </p>
                     </div>
+
                     <Button asChild className="h-10 rounded-xl bg-[#0c1d37] hover:bg-[#162e55] px-4 font-bold text-white shadow-md shadow-[#0c1d37]/15 transition-all">
                         <Link href="/dispatch/surat-jalan/create">
                             <Plus className="size-4 mr-1.5" /> Terbitkan Surat Jalan
@@ -156,17 +166,17 @@ export default function DispatchIndex({
                         <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Total Surat Jalan</span>
                         <span className="font-mono text-xl font-extrabold text-[#0c1d37] dark:text-white mt-0.5 block">{stats.total}</span>
                     </div>
-                    <div className="rounded-2xl border border-blue-100 bg-blue-50/50 p-3.5 shadow-2xs dark:border-blue-900/40 dark:bg-blue-950/20">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-blue-700 dark:text-blue-300 block">Persiapan / Muat</span>
-                        <span className="font-mono text-xl font-extrabold text-blue-700 dark:text-blue-300 mt-0.5 block">{stats.prepared}</span>
-                    </div>
-                    <div className="rounded-2xl border border-purple-100 bg-purple-50/50 p-3.5 shadow-2xs dark:border-purple-900/40 dark:bg-purple-950/20">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-purple-800 dark:text-purple-300 block">Dalam Perjalanan / Tuang</span>
-                        <span className="font-mono text-xl font-extrabold text-purple-700 dark:text-purple-400 mt-0.5 block">{stats.inTransit}</span>
+                    <div className="rounded-2xl border border-amber-100 bg-amber-50/50 p-3.5 shadow-2xs dark:border-amber-900/40 dark:bg-amber-950/20">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800 dark:text-amber-300 block">Dalam Perjalanan</span>
+                        <span className="font-mono text-xl font-extrabold text-amber-700 dark:text-amber-400 mt-0.5 block">{stats.inTransit}</span>
                     </div>
                     <div className="rounded-2xl border border-emerald-100 bg-emerald-50/50 p-3.5 shadow-2xs dark:border-emerald-900/40 dark:bg-emerald-950/20">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300 block">Terkirim / Selesai</span>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300 block">Pengantaran Selesai</span>
                         <span className="font-mono text-xl font-extrabold text-emerald-700 dark:text-emerald-400 mt-0.5 block">{stats.completed}</span>
+                    </div>
+                    <div className="rounded-2xl border border-red-100 bg-red-50/50 p-3.5 shadow-2xs dark:border-red-900/40 dark:bg-red-950/20">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-red-700 dark:text-red-300 block">Batal / Retur</span>
+                        <span className="font-mono text-xl font-extrabold text-red-700 dark:text-red-400 mt-0.5 block">{stats.cancelled}</span>
                     </div>
                 </div>
 
@@ -361,7 +371,7 @@ export default function DispatchIndex({
                                                 {/* 6. STATUS */}
                                                 <td className="px-4 py-3 align-top text-center whitespace-nowrap">
                                                     <span className={`inline-flex items-center rounded-md border px-2 py-0.5 text-[10px] font-extrabold ${getStatusBadge(sj.status)}`}>
-                                                        {sj.status}
+                                                        {statusLabels[sj.status] ?? sj.status}
                                                     </span>
                                                 </td>
 

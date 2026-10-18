@@ -21,7 +21,6 @@ class WorkOrderController extends Controller
     public function index(Request $request): Response
     {
         $search = $request->string('search')->trim()->toString();
-        $status = $request->string('status')->trim()->toString();
         $plantId = $request->input('batching_plant_id');
 
         $workOrders = WorkOrder::query()
@@ -41,7 +40,6 @@ class WorkOrderController extends Controller
                         });
                 });
             })
-            ->when($status !== '', fn ($q) => $q->where('status', $status))
             ->when($plantId, fn ($q) => $q->where('batching_plant_id', $plantId))
             ->orderByDesc('scheduled_date')
             ->orderByDesc('id')
@@ -51,16 +49,8 @@ class WorkOrderController extends Controller
         return Inertia::render('modules/work-order/index', [
             'workOrders' => $workOrders,
             'plants' => BatchingPlant::query()->where('is_active', true)->orderBy('code')->get(['id', 'uuid', 'code', 'name']),
-            'statuses' => [
-                ['value' => 'SCHEDULED', 'label' => 'Terjadwal'],
-                ['value' => 'IN_PRODUCTION', 'label' => 'Sedang Produksi / Batching'],
-                ['value' => 'READY_FOR_DISPATCH', 'label' => 'Siap Kirim'],
-                ['value' => 'COMPLETED', 'label' => 'Selesai'],
-                ['value' => 'CANCELLED', 'label' => 'Dibatalkan'],
-            ],
             'filters' => [
                 'search' => $search,
-                'status' => $status,
                 'batching_plant_id' => $plantId,
             ],
         ]);
@@ -102,7 +92,7 @@ class WorkOrderController extends Controller
         // Update order status
         $order = Order::find($data['order_id']);
         if ($order && in_array($order->status, ['CONFIRMED', 'DRAFT'])) {
-            $order->update(['status' => 'WORK_ORDER_CREATED']);
+            $order->update(['status' => 'PROCESSING']);
         }
 
         return redirect()->route('work-orders.index')->with('success', "Work Order {$code} berhasil diterbitkan.");
@@ -122,17 +112,10 @@ class WorkOrderController extends Controller
         ]);
     }
 
-    public function updateStatus(UpdateWorkOrderStatusRequest $request, WorkOrder $workOrder): RedirectResponse
-    {
-        $workOrder->update($request->validated());
-
-        return redirect()->route('work-orders.show', $workOrder)->with('success', 'Status Work Order berhasil diperbarui.');
-    }
-
     public function destroy(WorkOrder $workOrder): RedirectResponse
     {
-        $workOrder->update(['status' => 'CANCELLED']);
+        $workOrder->delete();
 
-        return redirect()->route('work-orders.index')->with('success', 'Work Order dibatalkan.');
+        return redirect()->route('work-orders.index')->with('success', 'Work Order berhasil dihapus.');
     }
 }

@@ -63,23 +63,31 @@ export default function DispatchShow({ suratJalan }: { suratJalan: SuratJalanDet
         variant: 'emerald',
     });
 
+    const statusLabels: Record<string, string> = {
+        ON_THE_WAY: 'Dalam Perjalanan',
+        COMPLETED: 'Pengantaran Selesai',
+        CANCELLED: 'Dibatalkan',
+        // Backward compat
+        PREPARED: 'Dalam Perjalanan',
+        DEPARTED: 'Dalam Perjalanan',
+        ARRIVED: 'Dalam Perjalanan',
+        UNLOADING: 'Dalam Perjalanan',
+        RETURNED: 'Dibatalkan',
+    };
+
     const triggerStatusUpdate = (newStatus: string) => {
         let title = 'Konfirmasi Status Pengantaran';
-        let desc = `Perbarui status pengantaran armada ${suratJalan.vehicle_number} menjadi "${newStatus}"?`;
+        let desc = `Perbarui status pengantaran armada ${suratJalan.vehicle_number} menjadi "${statusLabels[newStatus] ?? newStatus}"?`;
         let variant: 'emerald' | 'purple' | 'amber' | 'destructive' = 'emerald';
 
-        if (newStatus === 'ON_THE_WAY') {
-            title = 'Armada Dalam Perjalanan';
-            desc = `Tandai armada ${suratJalan.vehicle_number} telah berangkat dan sedang dalam perjalanan menuju lokasi proyek?`;
-            variant = 'purple';
-        } else if (newStatus === 'ARRIVED') {
-            title = 'Armada Tiba di Proyek';
-            desc = `Konfirmasi armada telah tiba di lokasi penerima proyek?`;
-            variant = 'emerald';
-        } else if (newStatus === 'COMPLETED') {
+        if (newStatus === 'COMPLETED') {
             title = 'Selesaikan Pengantaran (Serah Terima)';
             desc = `Konfirmasi seluruh material telah dibongkar dan diterima oleh pihak proyek?`;
             variant = 'emerald';
+        } else if (newStatus === 'CANCELLED') {
+            title = 'Batalkan Surat Jalan';
+            desc = `Tandai pengiriman armada ${suratJalan.vehicle_number} dibatalkan atau retur kembali ke plant?`;
+            variant = 'destructive';
         }
 
         setConfirmDialog({
@@ -113,8 +121,14 @@ export default function DispatchShow({ suratJalan }: { suratJalan: SuratJalanDet
                         <div>
                             <div className="flex items-center gap-2">
                                 <span className="font-mono text-sm font-bold text-slate-900 dark:text-white">{suratJalan.code}</span>
-                                <span className="inline-flex items-center rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300">
-                                    {suratJalan.status}
+                                <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                                    suratJalan.status === 'COMPLETED'
+                                        ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+                                        : suratJalan.status === 'CANCELLED'
+                                        ? 'bg-red-500/10 text-[#d91424] dark:text-red-300'
+                                        : 'bg-amber-500/10 text-amber-700 dark:text-amber-300'
+                                }`}>
+                                    {statusLabels[suratJalan.status] ?? suratJalan.status}
                                 </span>
                             </div>
                             <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white mt-1">
@@ -129,24 +143,19 @@ export default function DispatchShow({ suratJalan }: { suratJalan: SuratJalanDet
                     </div>
 
                     <div className="flex items-center gap-2">
-                        {suratJalan.status === 'DEPARTED' && (
-                            <Button size="sm" onClick={() => triggerStatusUpdate('ON_THE_WAY')} className="bg-purple-600 text-white text-xs">
-                                <Truck className="size-3.5" /> Dalam Perjalanan
-                            </Button>
+                        {suratJalan.status !== 'COMPLETED' && suratJalan.status !== 'CANCELLED' && (
+                            <>
+                                <Button size="sm" onClick={() => triggerStatusUpdate('COMPLETED')} className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl h-9 px-3">
+                                    <CheckCircle2 className="size-3.5 mr-1" /> Selesaikan Pengantaran
+                                </Button>
+                                <Button size="sm" variant="outline" onClick={() => triggerStatusUpdate('CANCELLED')} className="text-[#d91424] border-red-200 hover:bg-red-50 text-xs font-bold rounded-xl h-9 px-3">
+                                    Batal / Retur
+                                </Button>
+                            </>
                         )}
-                        {suratJalan.status === 'ON_THE_WAY' && (
-                            <Button size="sm" onClick={() => triggerStatusUpdate('ARRIVED')} className="bg-indigo-600 text-white text-xs">
-                                <MapPin className="size-3.5" /> Tiba di Proyek
-                            </Button>
-                        )}
-                        {suratJalan.status === 'ARRIVED' && (
-                            <Button size="sm" onClick={() => triggerStatusUpdate('COMPLETED')} className="bg-emerald-600 text-white text-xs">
-                                <CheckCircle2 className="size-3.5" /> Selesaikan Pengantaran
-                            </Button>
-                        )}
-                        <Button asChild size="sm" className="bg-slate-800 text-white hover:bg-slate-900 text-xs">
+                        <Button asChild size="sm" className="bg-slate-800 text-white hover:bg-slate-900 text-xs rounded-xl h-9 px-3">
                             <Link href={`/dispatch/surat-jalan/${suratJalan.uuid}/print`} target="_blank">
-                                <Printer className="size-3.5" /> Cetak Dokumen SJ
+                                <Printer className="size-3.5 mr-1 text-amber-400" /> Cetak Dokumen SJ
                             </Link>
                         </Button>
                     </div>

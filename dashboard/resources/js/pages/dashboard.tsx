@@ -110,46 +110,51 @@ type RecentDispatch = {
 };
 
 const ORDER_STATUS_COLOR: Record<string, string> = {
-    PENDING: 'bg-amber-500/10 text-amber-700 border-amber-500/20 dark:text-amber-300',
     CONFIRMED: 'bg-blue-500/10 text-blue-700 border-blue-500/20 dark:text-blue-300',
-    IN_PRODUCTION: 'bg-purple-500/10 text-purple-700 border-purple-500/20 dark:text-purple-300',
-    WORK_ORDER_CREATED: 'bg-purple-500/10 text-purple-700 border-purple-500/20 dark:text-purple-300',
-    PARTIAL_DELIVERY: 'bg-blue-500/10 text-blue-700 border-blue-500/20 dark:text-blue-300',
+    PROCESSING: 'bg-amber-500/10 text-amber-700 border-amber-500/20 dark:text-amber-300',
+    ON_DELIVERY: 'bg-purple-500/10 text-purple-700 border-purple-500/20 dark:text-purple-300',
     COMPLETED: 'bg-emerald-500/10 text-emerald-700 border-emerald-500/20 dark:text-emerald-300',
     CANCELLED: 'bg-rose-500/10 text-rose-700 border-rose-500/20 dark:text-rose-300',
     // payment
+    PENDING: 'bg-amber-500/10 text-amber-700 border-amber-500/20 dark:text-amber-300',
     PAID: 'bg-emerald-500/10 text-emerald-700 border-emerald-500/20 dark:text-emerald-300',
-    APPROVED_CREDIT: 'bg-teal-500/10 text-teal-700 border-teal-500/20 dark:text-teal-300',
-    PENDING_PAYMENT: 'bg-amber-500/10 text-amber-700 border-amber-500/20 dark:text-amber-300',
+    FAILED: 'bg-rose-500/10 text-rose-700 border-rose-500/20 dark:text-rose-300',
+    // backward compat
+    WORK_ORDER_CREATED: 'bg-amber-500/10 text-amber-700 border-amber-500/20 dark:text-amber-300',
+    IN_PRODUCTION: 'bg-amber-500/10 text-amber-700 border-amber-500/20 dark:text-amber-300',
+    PARTIAL_DELIVERY: 'bg-purple-500/10 text-purple-700 border-purple-500/20 dark:text-purple-300',
+    APPROVED_CREDIT: 'bg-emerald-500/10 text-emerald-700 border-emerald-500/20 dark:text-emerald-300',
 };
 
 const DISPATCH_STATUS_COLOR: Record<string, string> = {
-    DEPARTED: 'bg-blue-500/10 text-blue-700 border-blue-500/20 dark:text-blue-300',
-    ON_THE_WAY: 'bg-purple-500/10 text-purple-700 border-purple-500/20 dark:text-purple-300',
-    ARRIVED: 'bg-amber-500/10 text-amber-700 border-amber-500/20 dark:text-amber-300',
+    ON_THE_WAY: 'bg-amber-500/10 text-amber-700 border-amber-500/20 dark:text-amber-300',
     COMPLETED: 'bg-emerald-500/10 text-emerald-700 border-emerald-500/20 dark:text-emerald-300',
+    CANCELLED: 'bg-rose-500/10 text-rose-700 border-rose-500/20 dark:text-rose-300',
+    // backward compat
+    DEPARTED: 'bg-amber-500/10 text-amber-700 border-amber-500/20 dark:text-amber-300',
+    ARRIVED: 'bg-amber-500/10 text-amber-700 border-amber-500/20 dark:text-amber-300',
 };
 
 const STATUS_LABEL: Record<string, string> = {
     // Order
-    PENDING: 'Pending',
     CONFIRMED: 'Dikonfirmasi',
-    IN_PRODUCTION: 'Produksi',
-    WORK_ORDER_CREATED: 'SPK Dibuat',
-    PARTIAL_DELIVERY: 'Sebagian Terkirim',
+    PROCESSING: 'Diproses',
+    ON_DELIVERY: 'Dalam Pengiriman',
     COMPLETED: 'Selesai',
-    CANCELLED: 'Batal',
-    // Work Order
-    SCHEDULED: 'Terjadwal',
-    READY_FOR_DISPATCH: 'Siap Kirim',
+    CANCELLED: 'Dibatalkan',
     // Dispatch
-    DEPARTED: 'Berangkat',
     ON_THE_WAY: 'Dalam Perjalanan',
-    ARRIVED: 'Tiba',
     // Payment
+    PENDING: 'Menunggu',
     PAID: 'Lunas',
-    APPROVED_CREDIT: 'Kredit OK',
-    PENDING_PAYMENT: 'Belum Bayar',
+    FAILED: 'Gagal',
+    // Backward compat
+    WORK_ORDER_CREATED: 'Diproses',
+    IN_PRODUCTION: 'Diproses',
+    PARTIAL_DELIVERY: 'Dalam Pengiriman',
+    DEPARTED: 'Dalam Perjalanan',
+    ARRIVED: 'Dalam Perjalanan',
+    APPROVED_CREDIT: 'Lunas',
 };
 
 export default function Dashboard({

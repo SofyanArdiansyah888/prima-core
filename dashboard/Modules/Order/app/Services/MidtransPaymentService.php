@@ -283,7 +283,7 @@ class MidtransPaymentService
 
         if ($transactionStatus === 'capture') {
             if ($fraudStatus === 'challenge') {
-                $newPaymentStatus = 'CHALLENGE';
+                $newPaymentStatus = 'PENDING';
             } elseif ($fraudStatus === 'accept') {
                 $newPaymentStatus = 'PAID';
                 $paidAt = $paidAt ?: ($settlementTime ? \Carbon\Carbon::parse($settlementTime) : now());
@@ -293,10 +293,8 @@ class MidtransPaymentService
             $paidAt = $paidAt ?: ($settlementTime ? \Carbon\Carbon::parse($settlementTime) : now());
         } elseif ($transactionStatus === 'pending') {
             $newPaymentStatus = 'PENDING';
-        } elseif (in_array($transactionStatus, ['deny', 'cancel', 'expire'])) {
+        } elseif (in_array($transactionStatus, ['deny', 'cancel', 'expire', 'refund', 'partial_refund'])) {
             $newPaymentStatus = 'FAILED';
-        } elseif (in_array($transactionStatus, ['refund', 'partial_refund'])) {
-            $newPaymentStatus = 'REFUNDED';
         }
 
         $currentPayload = is_array($order->payment_payload) ? $order->payment_payload : [];

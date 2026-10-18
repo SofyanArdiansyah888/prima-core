@@ -69,9 +69,9 @@ export default function OrdersPage() {
       // Status filter
       let matchesStatus = true;
       if (activeFilter === 'PROCESSING') {
-        matchesStatus = ['DRAFT', 'CONFIRMED', 'WORK_ORDER_CREATED', 'IN_PRODUCTION'].includes(order.status);
+        matchesStatus = ['CONFIRMED', 'PROCESSING', 'ON_DELIVERY', 'DRAFT', 'WORK_ORDER_CREATED', 'IN_PRODUCTION', 'PARTIAL_DELIVERY'].includes(order.status);
       } else if (activeFilter === 'COMPLETED') {
-        matchesStatus = ['PARTIAL_DELIVERY', 'COMPLETED'].includes(order.status);
+        matchesStatus = order.status === 'COMPLETED';
       } else if (activeFilter === 'CANCELLED') {
         matchesStatus = order.status === 'CANCELLED';
       }
@@ -95,12 +95,14 @@ export default function OrdersPage() {
     {
       id: 'PROCESSING',
       label: 'Diproses',
-      count: orders.filter((o) => ['DRAFT', 'CONFIRMED', 'WORK_ORDER_CREATED', 'IN_PRODUCTION'].includes(o.status)).length,
+      count: orders.filter((o) =>
+        ['CONFIRMED', 'PROCESSING', 'ON_DELIVERY', 'DRAFT', 'WORK_ORDER_CREATED', 'IN_PRODUCTION', 'PARTIAL_DELIVERY'].includes(o.status)
+      ).length,
     },
     {
       id: 'COMPLETED',
       label: 'Selesai',
-      count: orders.filter((o) => ['PARTIAL_DELIVERY', 'COMPLETED'].includes(o.status)).length,
+      count: orders.filter((o) => o.status === 'COMPLETED').length,
     },
     {
       id: 'CANCELLED',

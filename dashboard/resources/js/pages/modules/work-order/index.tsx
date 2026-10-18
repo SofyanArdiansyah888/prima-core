@@ -67,16 +67,13 @@ type Paginated<T> = {
 export default function WorkOrderIndex({
     workOrders,
     plants,
-    statuses,
     filters,
 }: {
     workOrders: Paginated<WorkOrderRow>;
     plants: { id: number; code: string; name: string }[];
-    statuses: { value: string; label: string }[];
-    filters: { search?: string; status?: string; batching_plant_id?: string };
+    filters: { search?: string; batching_plant_id?: string };
 }) {
     const [search, setSearch] = useState(filters.search ?? '');
-    const [status, setStatus] = useState(filters.status ?? '');
     const [plantId, setPlantId] = useState(filters.batching_plant_id ?? '');
     const [copiedCode, setCopiedCode] = useState<string | null>(null);
     const flash = (usePage().props as { flash?: { success?: string; error?: string } }).flash;
@@ -88,7 +85,7 @@ export default function WorkOrderIndex({
 
     const submitSearch = (e: React.FormEvent) => {
         e.preventDefault();
-        router.get('/production/work-orders', { search, status, batching_plant_id: plantId }, { preserveState: true });
+        router.get('/production/work-orders', { search, batching_plant_id: plantId }, { preserveState: true });
     };
 
     const copyToClipboard = (e: React.MouseEvent, code: string) => {
@@ -99,35 +96,20 @@ export default function WorkOrderIndex({
         setTimeout(() => setCopiedCode(null), 2000);
     };
 
-    // Calculate Quick KPI Stats
+    // Calculate Quick KPI Stats based on volume fulfillment
     const stats = useMemo(() => {
         const total = workOrders.total ?? workOrders.data.length;
-        const scheduled = workOrders.data.filter((w) => w.status === 'SCHEDULED').length;
-        const inProd = workOrders.data.filter((w) => w.status === 'IN_PRODUCTION').length;
-        const readyOrDone = workOrders.data.filter((w) => w.status === 'READY_FOR_DISPATCH' || w.status === 'COMPLETED').length;
-        return { total, scheduled, inProd, readyOrDone };
+        const queued = workOrders.data.filter((w) => Number(w.dispatched_quantity) === 0).length;
+        const inProgress = workOrders.data.filter(
+            (w) => Number(w.dispatched_quantity) > 0 && Number(w.dispatched_quantity) < Number(w.target_quantity)
+        ).length;
+        const fulfilled = workOrders.data.filter((w) => Number(w.dispatched_quantity) >= Number(w.target_quantity)).length;
+        return { total, queued, inProgress, fulfilled };
     }, [workOrders]);
-
-    const getStatusBadge = (st: string) => {
-        switch (st) {
-            case 'SCHEDULED':
-                return 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800';
-            case 'IN_PRODUCTION':
-                return 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800';
-            case 'READY_FOR_DISPATCH':
-                return 'bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-800';
-            case 'COMPLETED':
-                return 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800';
-            case 'CANCELLED':
-                return 'bg-red-50 text-[#d91424] border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-800';
-            default:
-                return 'bg-slate-100 text-slate-700 border-slate-200';
-        }
-    };
 
     return (
         <>
-            <Head title="Work Order / Surat Perintah Kerja (SPK)" />
+            <Head title="Surat Perintah Kerja (SPK Produksi)" />
             <div className="flex flex-1 flex-col gap-5 p-4 md:p-6 max-w-[1600px] mx-auto w-full">
                 {/* Header */}
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -138,10 +120,10 @@ export default function WorkOrderIndex({
                             </span>
                         </div>
                         <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white">
-                            Surat Perintah Kerja (SPK / Work Orders)
+                            Surat Perintah Kerja (SPK Produksi)
                         </h1>
                         <p className="text-xs text-slate-500 dark:text-slate-400">
-                            Jadwal pencampuran formula beton, monitoring real-time volume batching, dan persiapan pengiriman armada.
+                            Tiket instruksi batching mix design beton, target volume, dan monitoring pemenuhan armada pengiriman.
                         </p>
                     </div>
                     <Button asChild className="h-10 rounded-xl bg-[#0c1d37] hover:bg-[#162e55] px-4 font-bold text-white shadow-md shadow-[#0c1d37]/15 transition-all">
@@ -154,20 +136,20 @@ export default function WorkOrderIndex({
                 {/* KPI Ribbon */}
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                     <div className="rounded-2xl border border-slate-200/80 bg-white p-3.5 shadow-2xs dark:border-slate-800 dark:bg-slate-900">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Total SPK Aktif</span>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Total SPK</span>
                         <span className="font-mono text-xl font-extrabold text-[#0c1d37] dark:text-white mt-0.5 block">{stats.total}</span>
                     </div>
                     <div className="rounded-2xl border border-blue-100 bg-blue-50/50 p-3.5 shadow-2xs dark:border-blue-900/40 dark:bg-blue-950/20">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-blue-700 dark:text-blue-300 block">Terjadwal (Scheduled)</span>
-                        <span className="font-mono text-xl font-extrabold text-blue-700 dark:text-blue-300 mt-0.5 block">{stats.scheduled}</span>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-blue-700 dark:text-blue-300 block">Antrian Belum Dikirim</span>
+                        <span className="font-mono text-xl font-extrabold text-blue-700 dark:text-blue-300 mt-0.5 block">{stats.queued}</span>
                     </div>
                     <div className="rounded-2xl border border-amber-100 bg-amber-50/50 p-3.5 shadow-2xs dark:border-amber-900/40 dark:bg-amber-950/20">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800 dark:text-amber-300 block">Sedang Batching</span>
-                        <span className="font-mono text-xl font-extrabold text-amber-700 dark:text-amber-400 mt-0.5 block">{stats.inProd}</span>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800 dark:text-amber-300 block">Pengiriman Berjalan</span>
+                        <span className="font-mono text-xl font-extrabold text-amber-700 dark:text-amber-400 mt-0.5 block">{stats.inProgress}</span>
                     </div>
                     <div className="rounded-2xl border border-emerald-100 bg-emerald-50/50 p-3.5 shadow-2xs dark:border-emerald-900/40 dark:bg-emerald-950/20">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300 block">Siap Kirim / Selesai</span>
-                        <span className="font-mono text-xl font-extrabold text-emerald-700 dark:text-emerald-400 mt-0.5 block">{stats.readyOrDone}</span>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300 block">Volume Tuntas (100%)</span>
+                        <span className="font-mono text-xl font-extrabold text-emerald-700 dark:text-emerald-400 mt-0.5 block">{stats.fulfilled}</span>
                     </div>
                 </div>
 
@@ -185,26 +167,10 @@ export default function WorkOrderIndex({
                         </div>
 
                         <select
-                            value={status}
-                            onChange={(e) => {
-                                setStatus(e.target.value);
-                                router.get('/production/work-orders', { search, status: e.target.value, batching_plant_id: plantId }, { preserveState: true });
-                            }}
-                            className="h-9.5 rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-xs font-semibold text-slate-700 outline-none focus:border-[#0c1d37] dark:border-slate-800 dark:bg-slate-800 dark:text-slate-200"
-                        >
-                            <option value="">Semua Status Produksi</option>
-                            {statuses.map((s) => (
-                                <option key={s.value} value={s.value}>
-                                    {s.label}
-                                </option>
-                            ))}
-                        </select>
-
-                        <select
                             value={plantId}
                             onChange={(e) => {
                                 setPlantId(e.target.value);
-                                router.get('/production/work-orders', { search, status, batching_plant_id: e.target.value }, { preserveState: true });
+                                router.get('/production/work-orders', { search, batching_plant_id: e.target.value }, { preserveState: true });
                             }}
                             className="h-9.5 rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-xs font-semibold text-slate-700 outline-none focus:border-[#0c1d37] dark:border-slate-800 dark:bg-slate-800 dark:text-slate-200"
                         >
@@ -235,16 +201,15 @@ export default function WorkOrderIndex({
                                     <th className="px-4 py-3">Kode SPK & Ref SO</th>
                                     <th className="px-4 py-3">Batching Plant & Operator</th>
                                     <th className="px-4 py-3">Mutu Produk & Recipe</th>
-                                    <th className="px-4 py-3">Jadwal Produksi</th>
-                                    <th className="px-4 py-3 min-w-[180px]">Progress Batching</th>
-                                    <th className="px-4 py-3 text-center">Status</th>
+                                    <th className="px-4 py-3">Jadwal Batching</th>
+                                    <th className="px-4 py-3 min-w-[200px]">Pemenuhan Volume</th>
                                     <th className="px-4 py-3 text-right">Tindakan</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                                 {workOrders.data.length === 0 ? (
                                     <tr>
-                                        <td colSpan={7} className="px-6 py-12 text-center">
+                                        <td colSpan={6} className="px-6 py-12 text-center">
                                             <div className="mx-auto flex max-w-xs flex-col items-center justify-center text-center">
                                                 <div className="flex size-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-400 dark:bg-slate-800">
                                                     <FileSpreadsheet className="size-6" />
@@ -262,8 +227,9 @@ export default function WorkOrderIndex({
                                 ) : (
                                     workOrders.data.map((wo) => {
                                         const target = Number(wo.target_quantity) || 0;
-                                        const produced = Number(wo.produced_quantity) || 0;
-                                        const percent = target > 0 ? Math.min(100, Math.round((produced / target) * 100)) : 0;
+                                        const dispatched = Number(wo.dispatched_quantity) || 0;
+                                        const percent = target > 0 ? Math.min(100, Math.round((dispatched / target) * 100)) : 0;
+                                        const isFulfilled = dispatched >= target && target > 0;
 
                                         return (
                                             <tr key={wo.uuid} className="transition-colors hover:bg-slate-50/70 dark:hover:bg-slate-800/40">
@@ -334,42 +300,34 @@ export default function WorkOrderIndex({
                                                     </div>
                                                 </td>
 
-                                                {/* 5. PROGRESS BATCHING */}
-                                                <td className="px-4 py-3 align-top min-w-[180px]">
+                                                {/* 5. VOLUME FULFILLMENT */}
+                                                <td className="px-4 py-3 align-top min-w-[200px]">
                                                     <div className="flex items-center justify-between text-[11px] mb-1">
                                                         <span className="font-mono font-bold text-slate-900 dark:text-white">
-                                                            {produced} / {target} {wo.unit}
+                                                            {dispatched} / {target} {wo.unit}
                                                         </span>
-                                                        <span className="font-mono font-extrabold text-[#ea580c]">
-                                                            {percent}%
+                                                        <span className={`inline-flex items-center rounded-md px-1.5 py-0.2 text-[10px] font-extrabold ${
+                                                            isFulfilled ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : dispatched > 0 ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'bg-slate-100 text-slate-600 border border-slate-200'
+                                                        }`}>
+                                                            {isFulfilled ? 'Tuntas 100%' : dispatched > 0 ? `Dikirim ${percent}%` : 'Antrian'}
                                                         </span>
                                                     </div>
                                                     <div className="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
                                                         <div
                                                             className={`h-full rounded-full transition-all duration-300 ${
-                                                                percent >= 100 ? 'bg-emerald-500' : percent > 0 ? 'bg-[#ea580c]' : 'bg-slate-300 dark:bg-slate-700'
+                                                                isFulfilled ? 'bg-emerald-500' : dispatched > 0 ? 'bg-[#ea580c]' : 'bg-slate-300 dark:bg-slate-700'
                                                             }`}
                                                             style={{ width: `${percent}%` }}
                                                         />
                                                     </div>
-                                                    <span className="text-[10px] text-slate-400 block mt-1 font-mono">
-                                                        Terkirim: {Number(wo.dispatched_quantity)} {wo.unit}
-                                                    </span>
                                                 </td>
 
-                                                {/* 6. STATUS */}
-                                                <td className="px-4 py-3 align-top text-center whitespace-nowrap">
-                                                    <span className={`inline-flex items-center rounded-md border px-2 py-0.5 text-[10px] font-extrabold ${getStatusBadge(wo.status)}`}>
-                                                        {wo.status}
-                                                    </span>
-                                                </td>
-
-                                                {/* 7. ACTIONS */}
+                                                {/* 6. ACTIONS */}
                                                 <td className="px-4 py-3 align-top text-right whitespace-nowrap">
                                                     <Button asChild size="sm" className="h-7.5 rounded-lg bg-[#0c1d37] hover:bg-[#162e55] text-white px-2.5 text-xs font-bold shadow-xs">
                                                         <Link href={`/production/work-orders/${wo.uuid}`}>
                                                             <Eye className="size-3.5 mr-1 text-slate-300" />
-                                                            <span>Detail & Batch</span>
+                                                            <span>Detail SPK</span>
                                                         </Link>
                                                     </Button>
                                                 </td>

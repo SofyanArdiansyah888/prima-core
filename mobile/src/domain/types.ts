@@ -120,16 +120,14 @@ export const PAYMENTS = [
 
 export const STATUS_STEPS = [
   'CONFIRMED',
-  'WORK_ORDER_CREATED',
-  'IN_PRODUCTION',
-  'PARTIAL_DELIVERY',
+  'PROCESSING',
+  'ON_DELIVERY',
   'COMPLETED',
 ] as const;
 
 export const STATUS_LABELS: Record<(typeof STATUS_STEPS)[number], string> = {
   CONFIRMED: 'Dikonfirmasi',
-  WORK_ORDER_CREATED: 'SPK terbit',
-  IN_PRODUCTION: 'Produksi',
-  PARTIAL_DELIVERY: 'Sebagian terkirim',
+  PROCESSING: 'Diproses',
+  ON_DELIVERY: 'Dalam Pengiriman',
   COMPLETED: 'Selesai',
 };

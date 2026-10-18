@@ -90,31 +90,35 @@ export default function OrderIndex({
     const stats = useMemo(() => {
         const total = orders.total ?? orders.data.length;
         const confirmed = orders.data.filter((o) => o.status === 'CONFIRMED').length;
-        const inProd = orders.data.filter((o) => o.status === 'IN_PRODUCTION' || o.status === 'WORK_ORDER_CREATED').length;
+        const inProd = orders.data.filter((o) => o.status === 'PROCESSING' || o.status === 'IN_PRODUCTION' || o.status === 'WORK_ORDER_CREATED').length;
         const completed = orders.data.filter((o) => o.status === 'COMPLETED').length;
         return { total, confirmed, inProd, completed };
     }, [orders]);
 
     const statusLabels: Record<string, string> = {
-        DRAFT: 'Draf',
         CONFIRMED: 'Dikonfirmasi',
-        WORK_ORDER_CREATED: 'SPK Terbit',
-        IN_PRODUCTION: 'Dalam Produksi',
-        PARTIAL_DELIVERY: 'Sebagian Terkirim',
+        PROCESSING: 'Diproses',
+        ON_DELIVERY: 'Dalam Pengiriman',
         COMPLETED: 'Selesai',
         CANCELLED: 'Dibatalkan',
+        // Backward-compat for legacy records
+        DRAFT: 'Draf',
+        WORK_ORDER_CREATED: 'Diproses',
+        IN_PRODUCTION: 'Diproses',
+        PARTIAL_DELIVERY: 'Dalam Pengiriman',
     };
 
     const getStatusBadge = (st: string) => {
         switch (st) {
             case 'CONFIRMED':
                 return 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800';
+            case 'PROCESSING':
             case 'WORK_ORDER_CREATED':
-                return 'bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-800';
             case 'IN_PRODUCTION':
                 return 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800';
+            case 'ON_DELIVERY':
             case 'PARTIAL_DELIVERY':
-                return 'bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-300 dark:border-indigo-800';
+                return 'bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-800';
             case 'COMPLETED':
                 return 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800';
             case 'CANCELLED':
@@ -162,7 +166,7 @@ export default function OrderIndex({
                         <span className="font-mono text-xl font-extrabold text-blue-700 dark:text-blue-300 mt-0.5 block">{stats.confirmed}</span>
                     </div>
                     <div className="rounded-2xl border border-amber-100 bg-amber-50/50 p-3.5 shadow-2xs dark:border-amber-900/40 dark:bg-amber-950/20">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800 dark:text-amber-300 block">Dalam Produksi</span>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800 dark:text-amber-300 block">Sedang Diproses</span>
                         <span className="font-mono text-xl font-extrabold text-amber-700 dark:text-amber-400 mt-0.5 block">{stats.inProd}</span>
                     </div>
                     <div className="rounded-2xl border border-emerald-100 bg-emerald-50/50 p-3.5 shadow-2xs dark:border-emerald-900/40 dark:bg-emerald-950/20">

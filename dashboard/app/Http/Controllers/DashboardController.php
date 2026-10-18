@@ -98,11 +98,6 @@ class DashboardController extends Controller
             ->groupBy('status')
             ->pluck('count', 'status');
 
-        $workOrderStatusBreakdown = WorkOrder::query()
-            ->selectRaw('status, COUNT(*) as count')
-            ->groupBy('status')
-            ->pluck('count', 'status');
-
         $dispatchStatusBreakdown = SuratJalan::query()
             ->selectRaw('status, COUNT(*) as count')
             ->groupBy('status')
@@ -118,16 +113,11 @@ class DashboardController extends Controller
                 'dispatches' => SuratJalan::query()->count(),
                 'products' => Product::query()->where('is_active', true)->count(),
                 // Status breakdowns
-                'ordersPending' => $orderStatusBreakdown->get('PENDING', 0),
                 'ordersConfirmed' => $orderStatusBreakdown->get('CONFIRMED', 0),
-                'ordersInProduction' => $orderStatusBreakdown->get('IN_PRODUCTION', 0),
+                'ordersProcessing' => $orderStatusBreakdown->get('PROCESSING', 0) + $orderStatusBreakdown->get('WORK_ORDER_CREATED', 0) + $orderStatusBreakdown->get('IN_PRODUCTION', 0),
+                'ordersOnDelivery' => $orderStatusBreakdown->get('ON_DELIVERY', 0) + $orderStatusBreakdown->get('PARTIAL_DELIVERY', 0),
                 'ordersCompleted' => $orderStatusBreakdown->get('COMPLETED', 0),
-                'workOrdersScheduled' => $workOrderStatusBreakdown->get('SCHEDULED', 0),
-                'workOrdersInProd' => $workOrderStatusBreakdown->get('IN_PRODUCTION', 0),
-                'workOrdersReadyDispatch' => $workOrderStatusBreakdown->get('READY_FOR_DISPATCH', 0),
-                'dispatchDeparted' => $dispatchStatusBreakdown->get('DEPARTED', 0),
-                'dispatchOnTheWay' => $dispatchStatusBreakdown->get('ON_THE_WAY', 0),
-                'dispatchArrived' => $dispatchStatusBreakdown->get('ARRIVED', 0),
+                'dispatchOnTheWay' => $dispatchStatusBreakdown->get('ON_THE_WAY', 0) + $dispatchStatusBreakdown->get('DEPARTED', 0) + $dispatchStatusBreakdown->get('ARRIVED', 0) + $dispatchStatusBreakdown->get('UNLOADING', 0),
                 'dispatchCompleted' => $dispatchStatusBreakdown->get('COMPLETED', 0),
             ],
             'plants' => $plants,

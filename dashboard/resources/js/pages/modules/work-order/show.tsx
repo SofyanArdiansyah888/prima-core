@@ -1,6 +1,6 @@
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react';
 import { formatDate, formatDateTime } from '@/lib/utils';
-import { ArrowLeft, Building2, Calendar, CheckCircle2, Factory, FileSpreadsheet, Play, Truck, User } from 'lucide-react';
+import { ArrowLeft, Building2, Calendar, Factory, FileSpreadsheet, Truck, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { dashboard } from '@/routes';
 
@@ -44,54 +44,11 @@ type WorkOrderDetail = {
     };
 };
 
-import { useState } from 'react';
-import { ConfirmModal } from '@/components/ui/confirm-modal';
-
 export default function WorkOrderShow({ workOrder }: { workOrder: WorkOrderDetail }) {
-    const [confirmDialog, setConfirmDialog] = useState<{
-        open: boolean;
-        title: string;
-        description: string;
-        newStatus: string;
-        variant?: 'emerald' | 'purple' | 'amber' | 'destructive';
-    }>({
-        open: false,
-        title: '',
-        description: '',
-        newStatus: '',
-        variant: 'purple',
-    });
-
-    const triggerStatusChange = (newStatus: string) => {
-        let variant: 'emerald' | 'purple' | 'amber' | 'destructive' = 'purple';
-        let title = 'Konfirmasi Perubahan Status SPK';
-        let desc = `Perbarui status Work Order ${workOrder.code} menjadi "${newStatus}"?`;
-
-        if (newStatus === 'IN_PRODUCTION') {
-            title = 'Mulai Produksi / Batching Beton';
-            desc = `Mulai proses batching resep ${workOrder.batch_recipe_code || 'Standar'} untuk volume ${Number(workOrder.target_quantity)} ${workOrder.unit}?`;
-            variant = 'amber';
-        } else if (newStatus === 'READY_FOR_DISPATCH') {
-            title = 'Set Siap Kirim (Dispatch)';
-            desc = `Tandai batching selesai dan siap dimuat ke armada pengangkut?`;
-            variant = 'emerald';
-        }
-
-        setConfirmDialog({
-            open: true,
-            title,
-            description: desc,
-            newStatus,
-            variant,
-        });
-    };
-
-    const handleConfirmStatus = () => {
-        router.put(`/production/work-orders/${workOrder.uuid}/status`, {
-            status: confirmDialog.newStatus,
-            produced_quantity: confirmDialog.newStatus === 'COMPLETED' ? workOrder.target_quantity : workOrder.produced_quantity,
-        });
-    };
+    const target = Number(workOrder.target_quantity) || 0;
+    const dispatched = Number(workOrder.dispatched_quantity) || 0;
+    const percent = target > 0 ? Math.min(100, Math.round((dispatched / target) * 100)) : 0;
+    const isFulfilled = dispatched >= target && target > 0;
 
     return (
         <>
@@ -107,11 +64,17 @@ export default function WorkOrderShow({ workOrder }: { workOrder: WorkOrderDetai
                         </Button>
                         <div>
                             <div className="flex items-center gap-2">
-                                <span className="font-mono text-sm font-bold text-purple-700 dark:text-purple-300">
+                                <span className="font-mono text-sm font-bold text-[#0c1d37] dark:text-white">
                                     {workOrder.code}
                                 </span>
-                                <span className="inline-flex items-center rounded-full bg-purple-500/10 px-2.5 py-0.5 text-xs font-semibold text-purple-700 dark:text-purple-300">
-                                    {workOrder.status}
+                                <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                                    isFulfilled
+                                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                        : dispatched > 0
+                                        ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                                        : 'bg-slate-100 text-slate-700 border border-slate-200'
+                                }`}>
+                                    {isFulfilled ? 'Tuntas Terpenuhi' : dispatched > 0 ? `Dikirim ${percent}%` : 'Antrian Dispatch'}
                                 </span>
                             </div>
                             <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white mt-1">
@@ -121,27 +84,9 @@ export default function WorkOrderShow({ workOrder }: { workOrder: WorkOrderDetai
                     </div>
 
                     <div className="flex items-center gap-2">
-                        {workOrder.status === 'SCHEDULED' && (
-                            <Button
-                                size="sm"
-                                onClick={() => triggerStatusChange('IN_PRODUCTION')}
-                                className="bg-amber-600 font-medium text-white hover:bg-amber-700 text-xs"
-                            >
-                                <Play className="size-3.5" /> Mulai Produksi / Batching
-                            </Button>
-                        )}
-                        {workOrder.status === 'IN_PRODUCTION' && (
-                            <Button
-                                size="sm"
-                                onClick={() => triggerStatusChange('READY_FOR_DISPATCH')}
-                                className="bg-purple-600 font-medium text-white hover:bg-purple-700 text-xs"
-                            >
-                                <CheckCircle2 className="size-3.5" /> Set Siap Kirim (Dispatch)
-                            </Button>
-                        )}
-                        <Button asChild size="sm" className="bg-emerald-700 text-white hover:bg-emerald-800 text-xs">
+                        <Button asChild size="sm" className="bg-[#0c1d37] hover:bg-[#162e55] text-white rounded-xl h-9.5 px-4 text-xs font-bold shadow-md shadow-[#0c1d37]/15">
                             <Link href={`/dispatch/surat-jalan/create?batching_plant_id=${workOrder.batching_plant.id}`}>
-                                <Truck className="size-3.5" /> Buat Surat Jalan
+                                <Truck className="size-3.5 mr-1.5" /> Terbitkan Surat Jalan
                             </Link>
                         </Button>
                     </div>
@@ -278,16 +223,6 @@ export default function WorkOrderShow({ workOrder }: { workOrder: WorkOrderDetai
                     </div>
                 </div>
 
-                <ConfirmModal
-                    open={confirmDialog.open}
-                    onOpenChange={(open) => setConfirmDialog((prev) => ({ ...prev, open }))}
-                    title={confirmDialog.title}
-                    description={confirmDialog.description}
-                    variant={confirmDialog.variant}
-                    confirmText="Ya, Lanjutkan"
-                    cancelText="Batal"
-                    onConfirm={handleConfirmStatus}
-                />
             </div>
         </>
     );
