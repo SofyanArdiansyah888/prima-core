@@ -268,6 +268,35 @@ class CustomerOrderApiTest extends TestCase
         $webhook->assertJsonPath('payment_status', 'PAID');
     }
 
+    public function test_order_creation_succeeds_even_when_fonnte_fails(): void
+    {
+        ['cement' => $cement] = $this->seedCatalog();
+        $token = $this->customerToken();
+
+        $fonnte = \Mockery::mock(\Modules\Shared\Services\FonnteService::class);
+        $fonnte->shouldReceive('deliver')->andThrow(new \RuntimeException('Fonnte menolak pengiriman: device disconnected'));
+        $fonnte->shouldReceive('sendNow')->andThrow(new \RuntimeException('Token Fonnte kosong.'));
+        $this->app->instance(\Modules\Shared\Services\FonnteService::class, $fonnte);
+
+        $orderRes = $this->withToken($token)->postJson('/api/customer/v1/orders', [
+            'project_title' => 'Pembangunan Gudang Semen',
+            'delivery_address' => 'Jl. Poros Tonasa II No. 10',
+            'delivery_lat' => -4.805,
+            'delivery_lng' => 119.561,
+            'payment_method' => 'TRANSFER',
+            'items' => [
+                ['product_uuid' => $cement->uuid, 'quantity' => 25],
+            ],
+        ]);
+
+        $orderRes->assertCreated();
+        $this->assertNotEmpty($orderRes->json('data.code'));
+        $this->assertDatabaseHas('orders', [
+            'code' => $orderRes->json('data.code'),
+            'project_title' => 'Pembangunan Gudang Semen',
+        ]);
+    }
+
     /**
      * @return ArrayObject<int, array{phone: string, message: string}>
      */

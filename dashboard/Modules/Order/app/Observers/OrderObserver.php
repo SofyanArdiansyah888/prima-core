@@ -11,15 +11,19 @@ class OrderObserver
 
     public function created(Order $order): void
     {
-        $message = "Pesanan {$order->code} berhasil dibuat. Status: {$this->label($order->status)}. Total Rp ".number_format((float) $order->total_price, 0, ',', '.');
-        $this->fonnte->send((string) $order->customer_phone, $message);
+        try {
+            $message = "Pesanan {$order->code} berhasil dibuat. Status: {$this->label($order->status)}. Total Rp ".number_format((float) $order->total_price, 0, ',', '.');
+            $this->fonnte->send((string) $order->customer_phone, $message);
 
-        $admin = config('services.fonnte.admin_phone');
-        if (is_string($admin) && trim($admin) !== '') {
-            $adminPhones = array_filter(array_map('trim', explode(',', $admin)));
-            foreach ($adminPhones as $adminPhone) {
-                $this->fonnte->send($adminPhone, "Pesanan baru {$order->code} dari {$order->customer_name}. Status: {$this->label($order->status)}.");
+            $admin = config('services.fonnte.admin_phone');
+            if (is_string($admin) && trim($admin) !== '') {
+                $adminPhones = array_filter(array_map('trim', explode(',', $admin)));
+                foreach ($adminPhones as $adminPhone) {
+                    $this->fonnte->send($adminPhone, "Pesanan baru {$order->code} dari {$order->customer_name}. Status: {$this->label($order->status)}.");
+                }
             }
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('Gagal mengantri notifikasi WhatsApp pesanan baru: '.$e->getMessage());
         }
     }
 
@@ -29,10 +33,14 @@ class OrderObserver
             return;
         }
 
-        $this->fonnte->send(
-            (string) $order->customer_phone,
-            "Status pesanan {$order->code} berubah menjadi {$this->label($order->status)}.",
-        );
+        try {
+            $this->fonnte->send(
+                (string) $order->customer_phone,
+                "Status pesanan {$order->code} berubah menjadi {$this->label($order->status)}.",
+            );
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('Gagal mengantri notifikasi WhatsApp perubahan status: '.$e->getMessage());
+        }
     }
 
     private function label(?string $status): string

@@ -4,6 +4,7 @@ namespace Modules\Product\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Storage;
 use Modules\ProductCategory\Models\ProductCategory;
 use Modules\Shared\Concerns\HasUuid;
 
@@ -17,6 +18,7 @@ class Product extends Model
         'name',
         'category',
         'category_id',
+        'image_path',
         'unit',
         'base_price',
         'max_trip_capacity',
@@ -28,6 +30,8 @@ class Product extends Model
         'tag',
         'specs',
         'is_active',
+        'is_featured',
+        'is_best_seller',
     ];
 
     protected function casts(): array
@@ -39,7 +43,22 @@ class Product extends Model
             'min_order' => 'decimal:2',
             'specs' => 'array',
             'is_active' => 'boolean',
+            'is_featured' => 'boolean',
+            'is_best_seller' => 'boolean',
         ];
+    }
+
+    public function imageUrl(): ?string
+    {
+        if (! $this->image_path) {
+            return null;
+        }
+
+        if (str_starts_with($this->image_path, 'http://') || str_starts_with($this->image_path, 'https://')) {
+            return $this->image_path;
+        }
+
+        return Storage::disk('public')->url($this->image_path);
     }
 
     protected static function booted(): void

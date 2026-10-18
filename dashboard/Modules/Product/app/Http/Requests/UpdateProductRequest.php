@@ -28,6 +28,9 @@ class UpdateProductRequest extends FormRequest
             'tag' => ['nullable', 'string', 'max:64'],
             'specs' => ['nullable', 'array'],
             'is_active' => ['required', 'boolean'],
+            'is_featured' => ['nullable', 'boolean'],
+            'is_best_seller' => ['nullable', 'boolean'],
+            'image' => ['nullable', 'image', 'max:5120'],
         ];
     }
 }

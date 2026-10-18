@@ -25,6 +25,8 @@ class ProductDatabaseSeeder extends Seeder
                 'description' => 'Beton non-struktural ideal untuk pembentukan lantai kerja (lean concrete), jalan lingkungan ringan, dan pengisian dasar.',
                 'specs' => ['fcMpa' => '14.5 MPa', 'aggregateSize' => '20 mm', 'settingTime' => '3 - 4 Jam', 'cementBrand' => 'Semen Tonasa PCC'],
                 'is_active' => true,
+                'is_featured' => false,
+                'is_best_seller' => false,
             ],
             [
                 'code' => 'RM-K225',
@@ -41,6 +43,8 @@ class ProductDatabaseSeeder extends Seeder
                 'description' => 'Beton standar struktural kelas II untuk dak lantai perumahan, sloof, kolom, dan ring balk ruko.',
                 'specs' => ['fcMpa' => '18.7 MPa', 'aggregateSize' => '20 mm', 'settingTime' => '3.5 - 4.5 Jam', 'cementBrand' => 'Semen Tonasa PCC'],
                 'is_active' => true,
+                'is_featured' => true,
+                'is_best_seller' => false,
             ],
             [
                 'code' => 'RM-K300',
@@ -57,6 +61,8 @@ class ProductDatabaseSeeder extends Seeder
                 'description' => 'Beton struktural favorit dengan daya tekan tinggi untuk gedung bertingkat, slab lantai, dan perkerasan kaku.',
                 'specs' => ['fcMpa' => '24.9 MPa', 'aggregateSize' => '20 mm', 'settingTime' => '3.5 - 5 Jam', 'cementBrand' => 'Semen Tonasa Type I / PCC'],
                 'is_active' => true,
+                'is_featured' => true,
+                'is_best_seller' => true,
             ],
             [
                 'code' => 'RM-K350',
@@ -73,6 +79,8 @@ class ProductDatabaseSeeder extends Seeder
                 'description' => 'Didesain khusus untuk struktur yang menahan lalu lintas beban berat, pergudangan, dan jalan tol rigid pavement.',
                 'specs' => ['fcMpa' => '29.0 MPa', 'aggregateSize' => '20 mm', 'settingTime' => '4 - 5 Jam', 'cementBrand' => 'Semen Tonasa OPC Type I'],
                 'is_active' => true,
+                'is_featured' => false,
+                'is_best_seller' => true,
             ],
             [
                 'code' => 'RM-K500',
@@ -89,6 +97,8 @@ class ProductDatabaseSeeder extends Seeder
                 'description' => 'Beton kekuatan ultra-tinggi untuk gedung tinggi >15 lantai dan girder jembatan prategang.',
                 'specs' => ['fcMpa' => '41.5 MPa', 'aggregateSize' => '15 mm', 'settingTime' => '4.5 - 6 Jam', 'cementBrand' => 'Semen Tonasa High Early'],
                 'is_active' => true,
+                'is_featured' => false,
+                'is_best_seller' => false,
             ],
             [
                 'code' => 'ST-OPC-50KG',
@@ -105,6 +115,8 @@ class ProductDatabaseSeeder extends Seeder
                 'description' => 'Semen Portland Ordinary tipe I produksi PT Semen Tonasa (SIG). Kuat tekan tinggi untuk pekerjaan struktural umum.',
                 'specs' => ['type' => 'OPC Type I (SNI 15-2049)', 'strengthClass' => '52.5 MPa (28 Hari)', 'packSize' => '50 kg / Sak', 'origin' => 'Pabrik Semen Tonasa, Pangkep'],
                 'is_active' => true,
+                'is_featured' => false,
+                'is_best_seller' => true,
             ],
             [
                 'code' => 'ST-PCC-50KG',
@@ -121,6 +133,8 @@ class ProductDatabaseSeeder extends Seeder
                 'description' => 'Semen Portland Komposit (PCC) Semen Tonasa dengan hidrasi lebih lambat & panas rendah.',
                 'specs' => ['type' => 'PCC (SNI 7064)', 'strengthClass' => '42.5 MPa (28 Hari)', 'packSize' => '50 kg / Sak'],
                 'is_active' => true,
+                'is_featured' => true,
+                'is_best_seller' => true,
             ],
             [
                 'code' => 'ST-BULK-300T',
@@ -137,6 +151,8 @@ class ProductDatabaseSeeder extends Seeder
                 'description' => 'Semen Tonasa curah (bulk) didistribusikan via truk kapsul/tangki khusus untuk kebutuhan batching plant dan infrastruktur masif.',
                 'specs' => ['type' => 'OPC Type I Curah', 'siloStorage' => 'Tonasa Port Terminal', 'transport' => 'Bulk Capsule Truck (Max 300 Ton/Rit)'],
                 'is_active' => true,
+                'is_featured' => false,
+                'is_best_seller' => false,
             ],
             [
                 'code' => 'MORTAR-BI-40KG',
@@ -153,6 +169,8 @@ class ProductDatabaseSeeder extends Seeder
                 'description' => 'Campuran semen-pasir instan pra-campur berstandar Tonasa Group. Tinggal tambah air di proyek.',
                 'specs' => ['type' => 'Mortar Instan Semen Tonasa', 'composition' => 'Semen PCC + Pasir Silika Graded', 'packSize' => '40 kg / Sak'],
                 'is_active' => true,
+                'is_featured' => true,
+                'is_best_seller' => false,
             ],
         ];
 

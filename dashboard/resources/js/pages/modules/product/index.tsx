@@ -1,5 +1,5 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { Package, Plus, Search, Pencil, Trash2 } from 'lucide-react';
+import { Package, Plus, Search, Pencil, Trash2, Star, Flame } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -20,7 +20,10 @@ type ProductRow = {
     min_order: number;
     slump: string | null;
     tag: string | null;
+    image_url?: string | null;
     is_active: boolean;
+    is_featured?: boolean;
+    is_best_seller?: boolean;
 };
 
 type Paginated<T> = {
@@ -197,25 +200,48 @@ export default function ProductIndex({
                                 )}
                                 {products.data.map((p) => (
                                     <tr key={p.uuid} className="transition-colors hover:bg-slate-50/70 dark:hover:bg-slate-800/40">
-                                        {/* 1. Produk (Nama + Kode + Slump/Tag) */}
+                                        {/* 1. Produk (Thumbnail + Nama + Kode + Badges) */}
                                         <td className="px-5 py-3.5">
-                                            <div className="flex flex-col gap-0.5">
-                                                <div className="flex items-center gap-2">
-                                                    <span className="font-semibold text-slate-900 dark:text-white">{p.name}</span>
-                                                    {p.tag && (
-                                                        <span className="inline-flex items-center rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-400">
-                                                            {p.tag}
-                                                        </span>
+                                            <div className="flex items-center gap-3">
+                                                <div className="size-11 shrink-0 rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700/60 flex items-center justify-center">
+                                                    {p.image_url ? (
+                                                        <img
+                                                            src={p.image_url}
+                                                            alt={p.name}
+                                                            className="h-full w-full object-cover"
+                                                        />
+                                                    ) : (
+                                                        <Package className="size-5 text-slate-400" />
                                                     )}
                                                 </div>
-                                                <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
-                                                    <span className="font-mono font-medium text-slate-700 dark:text-slate-300">{p.code}</span>
-                                                    {p.slump && (
-                                                        <>
-                                                            <span>•</span>
-                                                            <span>Slump: {p.slump}</span>
-                                                        </>
-                                                    )}
+                                                <div className="flex flex-col gap-0.5">
+                                                    <div className="flex flex-wrap items-center gap-1.5">
+                                                        <span className="font-semibold text-slate-900 dark:text-white">{p.name}</span>
+                                                        {p.is_featured && (
+                                                            <span className="inline-flex items-center gap-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 text-[9px] font-bold text-amber-700 dark:text-amber-400" title="Produk Unggulan">
+                                                                <Star className="size-2.5 fill-amber-500 text-amber-500" /> Unggulan
+                                                            </span>
+                                                        )}
+                                                        {p.is_best_seller && (
+                                                            <span className="inline-flex items-center gap-0.5 rounded-full bg-rose-500/10 border border-rose-500/20 px-1.5 py-0.5 text-[9px] font-bold text-rose-700 dark:text-rose-400" title="Produk Terlaris">
+                                                                <Flame className="size-2.5 fill-rose-500 text-rose-500" /> Terlaris
+                                                            </span>
+                                                        )}
+                                                        {p.tag && (
+                                                            <span className="inline-flex items-center rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-400">
+                                                                {p.tag}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                                                        <span className="font-mono font-medium text-slate-700 dark:text-slate-300">{p.code}</span>
+                                                        {p.slump && (
+                                                            <>
+                                                                <span>•</span>
+                                                                <span>Slump: {p.slump}</span>
+                                                            </>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </div>
                                         </td>

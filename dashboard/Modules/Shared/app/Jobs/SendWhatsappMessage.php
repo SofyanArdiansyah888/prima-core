@@ -37,7 +37,14 @@ class SendWhatsappMessage implements ShouldQueue
 
     public function handle(FonnteService $fonnte): void
     {
-        $fonnte->deliver($this->phone, $this->message);
+        try {
+            $fonnte->deliver($this->phone, $this->message);
+        } catch (Throwable $exception) {
+            Log::warning('Pengiriman notifikasi WhatsApp Fonnte gagal (non-blocking).', [
+                'recipient' => PhoneNumber::mask($this->phone),
+                'error' => $exception->getMessage(),
+            ]);
+        }
     }
 
     /**

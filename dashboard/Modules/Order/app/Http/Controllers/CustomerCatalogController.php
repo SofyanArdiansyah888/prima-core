@@ -38,6 +38,8 @@ class CustomerCatalogController extends Controller
             ->where('is_active', true)
             ->whereIn('category', $slugs)
             ->when($category !== '', fn ($query) => $query->where('category', $category))
+            ->when($request->has('featured'), fn ($query) => $query->where('is_featured', $request->boolean('featured')))
+            ->when($request->has('best_seller'), fn ($query) => $query->where('is_best_seller', $request->boolean('best_seller')))
             ->orderBy('category')
             ->orderBy('name')
             ->get()
@@ -85,6 +87,7 @@ class CustomerCatalogController extends Controller
             'name' => $product->name,
             'category' => $product->category,
             'category_name' => $product->productCategory?->name,
+            'image_url' => $product->imageUrl(),
             'unit' => $product->unit,
             'base_price' => (float) $product->base_price,
             'min_order' => (float) $product->min_order,
@@ -93,6 +96,8 @@ class CustomerCatalogController extends Controller
             'description' => $product->description,
             'tag' => $product->tag,
             'specs' => $product->specs,
+            'is_featured' => (bool) $product->is_featured,
+            'is_best_seller' => (bool) $product->is_best_seller,
         ];
     }
 }

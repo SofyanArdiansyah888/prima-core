@@ -28,29 +28,9 @@ import {
 } from '../../shared/ui';
 import PkmLogo from '../../shared/ui/PkmLogo';
 
+import { getProductImage } from '../../domain/product';
+
 type CatalogChip = { id: string; label: string };
-
-const PRODUCT_IMAGES: Record<string, string> = {
-  'ST-OPC-50KG': 'https://images.unsplash.com/photo-1581094794329-c8112a89af12?auto=format&fit=crop&q=80&w=400',
-  'ST-PCC-50KG': 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?auto=format&fit=crop&q=80&w=400',
-  'ST-BULK-300T': 'https://images.unsplash.com/photo-1541888946425-d0fbb186a5b3?auto=format&fit=crop&q=80&w=400',
-  'RM-K175': 'https://images.unsplash.com/photo-1517646287270-a5a9ca602e5c?auto=format&fit=crop&q=80&w=400',
-  'RM-K225': 'https://images.unsplash.com/photo-1589939705384-5185137a7f0f?auto=format&fit=crop&q=80&w=400',
-  'RM-K300': 'https://images.unsplash.com/photo-1517646287270-a5a9ca602e5c?auto=format&fit=crop&q=80&w=400',
-  'RM-K350': 'https://images.unsplash.com/photo-1541888946425-d0fbb186a5b3?auto=format&fit=crop&q=80&w=400',
-  'RM-K500': 'https://images.unsplash.com/photo-1590069261209-f8e9b8642343?auto=format&fit=crop&q=80&w=400',
-};
-
-function getProductImage(product: Product): string {
-  if (PRODUCT_IMAGES[product.code]) return PRODUCT_IMAGES[product.code];
-  if (product.category === 'readymix') {
-    return 'https://images.unsplash.com/photo-1517646287270-a5a9ca602e5c?auto=format&fit=crop&q=80&w=400';
-  }
-  if (product.code.toLowerCase().includes('bulk') || product.name.toLowerCase().includes('curah')) {
-    return 'https://images.unsplash.com/photo-1541888946425-d0fbb186a5b3?auto=format&fit=crop&q=80&w=400';
-  }
-  return 'https://images.unsplash.com/photo-1581094794329-c8112a89af12?auto=format&fit=crop&q=80&w=400';
-}
 
 export function CategoryGlyph({ type, className = 'size-7' }: { type: string; className?: string }) {
   const common = {
@@ -330,9 +310,18 @@ export default function HomePage() {
     return cart.lines.reduce((sum, line) => sum + line.product.base_price * line.quantity, 0);
   }, [cart.lines]);
 
-  // Filtered products based on search or category
+  const selectedCollection = searchParams.get('koleksi'); // 'unggulan' | 'terlaris' | null
+
+  // Filtered products based on search, category, or collection
   const filteredProducts = useMemo(() => {
     return products.filter((p) => {
+      if (selectedCollection === 'unggulan' && !p.is_featured) {
+        return false;
+      }
+      if (selectedCollection === 'terlaris' && !p.is_best_seller) {
+        return false;
+      }
+
       const matchesCat = selectedCategory === 'all' || p.category === selectedCategory;
 
       const q = searchQuery.toLowerCase().trim();
@@ -344,20 +333,22 @@ export default function HomePage() {
 
       return matchesCat && matchesSearch;
     });
-  }, [products, selectedCategory, searchQuery]);
+  }, [products, selectedCategory, selectedCollection, searchQuery]);
 
   // Featured Products (⭐ Produk Unggulan)
   const featuredProducts = useMemo(() => {
-    return products.slice(0, 4);
+    const fromFlag = products.filter((p) => p.is_featured);
+    return fromFlag.length > 0 ? fromFlag : products.slice(0, 4);
   }, [products]);
 
   // Best Seller Products (🔥 Produk Terlaris)
   const bestSellerProducts = useMemo(() => {
-    return products.length > 4 ? products.slice(2, 7) : products;
+    const fromFlag = products.filter((p) => p.is_best_seller);
+    return fromFlag.length > 0 ? fromFlag : (products.length > 4 ? products.slice(2, 7) : products);
   }, [products]);
 
   const activeHero = heroSlides[currentSlide] ?? heroSlides[0];
-  const isFilteredMode = selectedCategory !== 'all' || searchQuery.trim().length > 0;
+  const isFilteredMode = Boolean(selectedCollection) || selectedCategory !== 'all' || searchQuery.trim().length > 0;
 
   return (
     <Screen onRefresh={handlePullRefresh}>
@@ -561,10 +552,20 @@ export default function HomePage() {
           {/* ========================================================================= */}
           {isFilteredMode && (
             <div className="px-4 flex items-center justify-between">
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-1.5">
                 <span className="text-xs font-extrabold text-slate-800">
                   Hasil ({filteredProducts.length} Produk)
                 </span>
+                {selectedCollection === 'unggulan' && (
+                  <span className="bg-amber-500/15 text-amber-700 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+                    <span>★</span> Produk Unggulan
+                  </span>
+                )}
+                {selectedCollection === 'terlaris' && (
+                  <span className="bg-rose-500/15 text-rose-700 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+                    <span>🔥</span> Produk Terlaris
+                  </span>
+                )}
                 {selectedCategory !== 'all' && (
                   <span className="bg-[#d91424]/10 text-[#d91424] text-[10px] font-bold px-2 py-0.5 rounded-full">
                     {quickCategories.find((item) => item.id === selectedCategory)?.label || selectedCategory}
@@ -631,7 +632,7 @@ export default function HomePage() {
                 </div>
                 <button 
                   type="button"
-                  onClick={() => setSearchParams({ kategori: 'cement' }, { replace: true })}
+                  onClick={() => setSearchParams({ koleksi: 'unggulan' }, { replace: true })}
                   className="text-xs font-bold text-[#d91424] hover:text-red-700 flex items-center gap-0.5 cursor-pointer"
                 >
                   <span>Lihat Semua</span>
@@ -667,7 +668,7 @@ export default function HomePage() {
                 </div>
                 <button 
                   type="button"
-                  onClick={() => setSearchParams({ kategori: 'readymix' }, { replace: true })}
+                  onClick={() => setSearchParams({ koleksi: 'terlaris' }, { replace: true })}
                   className="text-xs font-bold text-[#d91424] hover:text-red-700 flex items-center gap-0.5 cursor-pointer"
                 >
                   <span>Lihat Semua</span>

@@ -30,6 +30,9 @@ export type Product = {
   description: string | null;
   tag: string | null;
   specs: Record<string, string | number> | null;
+  image_url?: string | null;
+  is_featured?: boolean;
+  is_best_seller?: boolean;
 };
 
 export type Customer = {

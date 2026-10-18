@@ -14,6 +14,7 @@ import { api } from '../../data/api';
 import { useCart } from '../../data/cart';
 import { formatQty, formatRupiah } from '../../domain/format';
 import { categoryLabel, quantityAfterStep } from '../../domain/rules';
+import { getProductImage } from '../../domain/product';
 import type { Product } from '../../domain/types';
 import { 
   Card, 
@@ -27,25 +28,6 @@ import {
   Stepper, 
   StickyBar 
 } from '../../shared/ui';
-
-const PRODUCT_IMAGES: Record<string, string> = {
-  'ST-BULK-300T': 'https://images.unsplash.com/photo-1541888946425-d0fbb186a5b3?auto=format&fit=crop&q=80&w=600',
-  'ST-OPC-50KG': 'https://images.unsplash.com/photo-1581094794329-c8112a89af12?auto=format&fit=crop&q=80&w=600',
-  'ST-PCC-50KG': 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?auto=format&fit=crop&q=80&w=600',
-  'RM-K175': 'https://images.unsplash.com/photo-1517646287270-a5a9ca602e5c?auto=format&fit=crop&q=80&w=600',
-  'RM-K225': 'https://images.unsplash.com/photo-1589939705384-5185137a7f0f?auto=format&fit=crop&q=80&w=600',
-  'RM-K300': 'https://images.unsplash.com/photo-1517646287270-a5a9ca602e5c?auto=format&fit=crop&q=80&w=600',
-  'RM-K350': 'https://images.unsplash.com/photo-1541888946425-d0fbb186a5b3?auto=format&fit=crop&q=80&w=600',
-  'RM-K500': 'https://images.unsplash.com/photo-1590069261209-f8e9b8642343?auto=format&fit=crop&q=80&w=600',
-};
-
-function getProductImage(product: Product): string {
-  if (PRODUCT_IMAGES[product.code]) return PRODUCT_IMAGES[product.code];
-  if (product.category === 'readymix') {
-    return 'https://images.unsplash.com/photo-1517646287270-a5a9ca602e5c?auto=format&fit=crop&q=80&w=600';
-  }
-  return 'https://images.unsplash.com/photo-1581094794329-c8112a89af12?auto=format&fit=crop&q=80&w=600';
-}
 
 export default function ProductPage() {
   const { uuid } = useParams();
