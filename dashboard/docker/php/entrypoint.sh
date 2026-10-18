@@ -33,14 +33,30 @@ if composer_stale; then
     php artisan optimize:clear --no-interaction || true
 fi
 
-# Build Vite frontend assets if manifest.json is missing
-if [ ! -f /var/www/html/public/build/manifest.json ]; then
-    echo "public/build/manifest.json not found. Building Vite assets..."
+vite_stale() {
+    if [ ! -f /var/www/html/public/build/manifest.json ]; then
+        return 0
+    fi
+    if [ /var/www/html/package.json -nt /var/www/html/public/build/manifest.json ]; then
+        return 0
+    fi
+    if [ -n "$(find /var/www/html/resources/js -type f -newer /var/www/html/public/build/manifest.json 2>/dev/null | head -n 1)" ]; then
+        return 0
+    fi
+    return 1
+}
+
+if vite_stale; then
+    echo "Vite assets are missing or out of date. Building Vite assets..."
     if [ ! -d /var/www/html/node_modules ]; then
         npm install
     fi
     npm run build
+    php artisan optimize:clear --no-interaction || true
 fi
+
+# Ensure storage symlink exists
+php artisan storage:link --no-interaction || true
 
 # Fix permissions for Laravel writable directories
 chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache /var/www/html/public/build
