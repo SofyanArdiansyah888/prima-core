@@ -1,8 +1,9 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { Plus, Search, Users, Pencil } from 'lucide-react';
+import { Plus, Search, Users, Pencil, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
+import { ConfirmModal } from '@/components/ui/confirm-modal';
 import { Input } from '@/components/ui/input';
 import { dashboard } from '@/routes';
 
@@ -38,7 +39,11 @@ export default function UserIndex({
     const [search, setSearch] = useState(filters.search ?? '');
     const [role, setRole] = useState(filters.role ?? '');
     const [branchId, setBranchId] = useState(filters.branch_id ?? '');
-    const flash = (usePage().props as { flash?: { success?: string; error?: string } }).flash;
+    const [deleteTarget, setDeleteTarget] = useState<UserRow | null>(null);
+    const { auth, flash } = usePage().props as {
+        auth?: { user?: { id: number; name: string } };
+        flash?: { success?: string; error?: string };
+    };
 
     useEffect(() => {
         if (flash?.success) toast.success(flash.success);
@@ -259,6 +264,18 @@ export default function UserIndex({
                                                         <span className="sr-only">Edit</span>
                                                     </Link>
                                                 </Button>
+                                                {u.id !== auth?.user?.id && (
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="size-8 p-0 text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40"
+                                                        onClick={() => setDeleteTarget(u)}
+                                                        title="Hapus Pengguna"
+                                                    >
+                                                        <Trash2 className="size-3.5" />
+                                                        <span className="sr-only">Hapus</span>
+                                                    </Button>
+                                                )}
                                             </div>
                                         </td>
                                     </tr>
@@ -301,6 +318,26 @@ export default function UserIndex({
                         </div>
                     )}
                 </div>
+
+                <ConfirmModal
+                    open={Boolean(deleteTarget)}
+                    onOpenChange={(open) => {
+                        if (!open) setDeleteTarget(null);
+                    }}
+                    title="Hapus Pengguna"
+                    description={`Apakah Anda yakin ingin menghapus user "${deleteTarget?.name}" (${deleteTarget?.code ?? deleteTarget?.email})? User yang sudah terpakai dalam transaksi penugasan SPK tidak dapat dihapus.`}
+                    variant="destructive"
+                    confirmText="Hapus User"
+                    cancelText="Batal"
+                    onConfirm={() => {
+                        if (deleteTarget) {
+                            router.delete(`/master/users/${deleteTarget.uuid}`, {
+                                preserveScroll: true,
+                                onFinish: () => setDeleteTarget(null),
+                            });
+                        }
+                    }}
+                />
             </div>
         </>
     );

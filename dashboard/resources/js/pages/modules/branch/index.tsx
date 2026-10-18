@@ -1,8 +1,9 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { Building2, Plus, Search, Pencil } from 'lucide-react';
+import { Building2, Plus, Search, Pencil, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
+import { ConfirmModal } from '@/components/ui/confirm-modal';
 import { Input } from '@/components/ui/input';
 import { dashboard } from '@/routes';
 
@@ -31,6 +32,7 @@ export default function BranchIndex({
     filters: { search?: string; is_active?: string };
 }) {
     const [search, setSearch] = useState(filters.search ?? '');
+    const [deleteTarget, setDeleteTarget] = useState<BranchRow | null>(null);
     const flash = (usePage().props as { flash?: { success?: string; error?: string } }).flash;
 
     useEffect(() => {
@@ -192,6 +194,16 @@ export default function BranchIndex({
                                                         <span className="sr-only">Edit</span>
                                                     </Link>
                                                 </Button>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="size-8 p-0 text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40"
+                                                    onClick={() => setDeleteTarget(b)}
+                                                    title="Hapus Cabang"
+                                                >
+                                                    <Trash2 className="size-3.5" />
+                                                    <span className="sr-only">Hapus</span>
+                                                </Button>
                                             </div>
                                         </td>
                                     </tr>
@@ -234,6 +246,26 @@ export default function BranchIndex({
                         </div>
                     )}
                 </div>
+
+                <ConfirmModal
+                    open={Boolean(deleteTarget)}
+                    onOpenChange={(open) => {
+                        if (!open) setDeleteTarget(null);
+                    }}
+                    title="Hapus Cabang"
+                    description={`Apakah Anda yakin ingin menghapus cabang "${deleteTarget?.name}" (${deleteTarget?.code})? Data yang sudah terpakai dalam transaksi tidak dapat dihapus.`}
+                    variant="destructive"
+                    confirmText="Hapus Cabang"
+                    cancelText="Batal"
+                    onConfirm={() => {
+                        if (deleteTarget) {
+                            router.delete(`/master/branches/${deleteTarget.uuid}`, {
+                                preserveScroll: true,
+                                onFinish: () => setDeleteTarget(null),
+                            });
+                        }
+                    }}
+                />
             </div>
         </>
     );

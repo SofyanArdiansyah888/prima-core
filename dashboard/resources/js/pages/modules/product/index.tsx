@@ -1,8 +1,9 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { Package, Plus, Search, Pencil } from 'lucide-react';
+import { Package, Plus, Search, Pencil, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
+import { ConfirmModal } from '@/components/ui/confirm-modal';
 import { Input } from '@/components/ui/input';
 import { dashboard } from '@/routes';
 
@@ -39,6 +40,7 @@ export default function ProductIndex({
 }) {
     const [search, setSearch] = useState(filters.search ?? '');
     const [category, setCategory] = useState(filters.category ?? '');
+    const [deleteTarget, setDeleteTarget] = useState<ProductRow | null>(null);
     const flash = (usePage().props as { flash?: { success?: string; error?: string } }).flash;
 
     useEffect(() => {
@@ -277,6 +279,16 @@ export default function ProductIndex({
                                                         <span className="sr-only">Edit</span>
                                                     </Link>
                                                 </Button>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="size-8 p-0 text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40"
+                                                    onClick={() => setDeleteTarget(p)}
+                                                    title="Hapus Produk"
+                                                >
+                                                    <Trash2 className="size-3.5" />
+                                                    <span className="sr-only">Hapus</span>
+                                                </Button>
                                             </div>
                                         </td>
                                     </tr>
@@ -316,6 +328,26 @@ export default function ProductIndex({
                         </div>
                     )}
                 </div>
+
+                <ConfirmModal
+                    open={Boolean(deleteTarget)}
+                    onOpenChange={(open) => {
+                        if (!open) setDeleteTarget(null);
+                    }}
+                    title="Hapus Produk"
+                    description={`Apakah Anda yakin ingin menghapus produk "${deleteTarget?.name}" (${deleteTarget?.code})? Data yang sudah terpakai dalam transaksi tidak dapat dihapus.`}
+                    variant="destructive"
+                    confirmText="Hapus Produk"
+                    cancelText="Batal"
+                    onConfirm={() => {
+                        if (deleteTarget) {
+                            router.delete(`/master/products/${deleteTarget.uuid}`, {
+                                preserveScroll: true,
+                                onFinish: () => setDeleteTarget(null),
+                            });
+                        }
+                    }}
+                />
             </div>
         </>
     );

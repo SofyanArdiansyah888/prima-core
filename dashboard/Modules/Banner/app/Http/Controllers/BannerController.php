@@ -115,9 +115,19 @@ class BannerController extends Controller
 
     public function destroy(Banner $banner): RedirectResponse
     {
-        $banner->update(['is_active' => false]);
+        try {
+            $path = $banner->image_path;
+            if ($path && ! str_starts_with($path, 'http://') && ! str_starts_with($path, 'https://')) {
+                Storage::disk('public')->delete($path);
+            }
 
-        return redirect()->route('banners.index')->with('success', 'Banner dinonaktifkan.');
+            $title = $banner->title;
+            $banner->delete();
+
+            return redirect()->route('banners.index')->with('success', "Banner '{$title}' berhasil dihapus.");
+        } catch (\Throwable $e) {
+            return back()->with('error', 'Gagal menghapus banner: data masih memiliki ketergantungan lain.');
+        }
     }
 
     public function catalog(): JsonResponse

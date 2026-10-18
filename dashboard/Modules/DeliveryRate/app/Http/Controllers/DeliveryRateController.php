@@ -87,9 +87,13 @@ class DeliveryRateController extends Controller
 
     public function destroy(PlantDeliveryRate $deliveryRate): RedirectResponse
     {
-        $deliveryRate->delete();
+        try {
+            $deliveryRate->delete();
 
-        return redirect()->route('delivery-rates.index')->with('success', 'Tarif pengantaran dihapus.');
+            return redirect()->route('delivery-rates.index')->with('success', 'Tarif pengantaran berhasil dihapus.');
+        } catch (\Throwable $e) {
+            return back()->with('error', 'Gagal menghapus tarif pengantaran: data masih memiliki ketergantungan lain.');
+        }
     }
 
     /**

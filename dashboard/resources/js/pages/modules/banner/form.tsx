@@ -1,6 +1,9 @@
-import { Head, Link, router, useForm } from '@inertiajs/react';
-import { ArrowLeft, Image } from 'lucide-react';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
+import { ArrowLeft, Image, Trash2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
+import { ConfirmModal } from '@/components/ui/confirm-modal';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -34,6 +37,14 @@ export default function BannerForm({
     categories: { id: number; name: string }[];
 }) {
     const editing = Boolean(banner);
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const flash = (usePage().props as { flash?: { success?: string; error?: string } }).flash;
+
+    useEffect(() => {
+        if (flash?.success) toast.success(flash.success);
+        if (flash?.error) toast.error(flash.error);
+    }, [flash?.success, flash?.error]);
+
     const { data, setData, post, processing, errors, transform } = useForm<{
         badge: string;
         title: string;
@@ -151,18 +162,35 @@ export default function BannerForm({
                             <Button
                                 type="button"
                                 variant="outline"
-                                onClick={() => {
-                                    if (window.confirm('Nonaktifkan banner ini?')) {
-                                        router.delete(`/master/banners/${banner.uuid}`);
-                                    }
-                                }}
+                                className="text-rose-600 hover:text-rose-700 hover:bg-rose-50 border-rose-200 dark:border-rose-900"
+                                onClick={() => setShowDeleteModal(true)}
+                                disabled={processing}
                             >
-                                Nonaktifkan
+                                <Trash2 className="mr-1.5 size-4" />
+                                Hapus Banner
                             </Button>
                         ) : <span />}
                         <Button type="submit" disabled={processing} className="bg-[#0c1d37] text-white hover:bg-[#162e55]">Simpan</Button>
                     </div>
                 </form>
+
+                <ConfirmModal
+                    open={showDeleteModal}
+                    onOpenChange={setShowDeleteModal}
+                    title="Hapus Banner Beranda"
+                    description={`Apakah Anda yakin ingin menghapus banner "${banner?.title}" (${banner?.code})? Tindakan ini akan menghapus banner dan file gambar terkait.`}
+                    variant="destructive"
+                    confirmText="Hapus Banner"
+                    cancelText="Batal"
+                    onConfirm={() => {
+                        if (banner) {
+                            router.delete(`/master/banners/${banner.uuid}`, {
+                                preserveScroll: true,
+                                onFinish: () => setShowDeleteModal(false),
+                            });
+                        }
+                    }}
+                />
             </div>
         </>
     );

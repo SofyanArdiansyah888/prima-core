@@ -1,8 +1,9 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { Factory, Plus, Search, Pencil } from 'lucide-react';
+import { Factory, Plus, Search, Pencil, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
+import { ConfirmModal } from '@/components/ui/confirm-modal';
 import { Input } from '@/components/ui/input';
 import { dashboard } from '@/routes';
 
@@ -35,6 +36,7 @@ export default function PlantIndex({
 }) {
     const [search, setSearch] = useState(filters.search ?? '');
     const [branchId, setBranchId] = useState(filters.branch_id ?? '');
+    const [deleteTarget, setDeleteTarget] = useState<PlantRow | null>(null);
     const flash = (usePage().props as { flash?: { success?: string; error?: string } }).flash;
 
     useEffect(() => {
@@ -239,6 +241,16 @@ export default function PlantIndex({
                                                         <span className="sr-only">Edit</span>
                                                     </Link>
                                                 </Button>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="size-8 p-0 text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40"
+                                                    onClick={() => setDeleteTarget(p)}
+                                                    title="Hapus Batching Plant"
+                                                >
+                                                    <Trash2 className="size-3.5" />
+                                                    <span className="sr-only">Hapus</span>
+                                                </Button>
                                             </div>
                                         </td>
                                     </tr>
@@ -281,6 +293,26 @@ export default function PlantIndex({
                         </div>
                     )}
                 </div>
+
+                <ConfirmModal
+                    open={Boolean(deleteTarget)}
+                    onOpenChange={(open) => {
+                        if (!open) setDeleteTarget(null);
+                    }}
+                    title="Hapus Batching Plant"
+                    description={`Apakah Anda yakin ingin menghapus batching plant "${deleteTarget?.name}" (${deleteTarget?.code})? Data yang sudah terpakai dalam transaksi tidak dapat dihapus.`}
+                    variant="destructive"
+                    confirmText="Hapus Plant"
+                    cancelText="Batal"
+                    onConfirm={() => {
+                        if (deleteTarget) {
+                            router.delete(`/master/batching-plants/${deleteTarget.uuid}`, {
+                                preserveScroll: true,
+                                onFinish: () => setDeleteTarget(null),
+                            });
+                        }
+                    }}
+                />
             </div>
         </>
     );

@@ -1,6 +1,9 @@
-import { Head, Link, router, useForm } from '@inertiajs/react';
-import { ArrowLeft, Tags } from 'lucide-react';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
+import { ArrowLeft, Tags, Trash2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
+import { ConfirmModal } from '@/components/ui/confirm-modal';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { dashboard } from '@/routes';
@@ -20,6 +23,14 @@ type Category = {
 
 export default function ProductCategoryForm({ category }: { category: Category | null }) {
     const editing = Boolean(category);
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const flash = (usePage().props as { flash?: { success?: string; error?: string } }).flash;
+
+    useEffect(() => {
+        if (flash?.success) toast.success(flash.success);
+        if (flash?.error) toast.error(flash.error);
+    }, [flash?.success, flash?.error]);
+
     const { data, setData, post, put, processing, errors } = useForm({
         name: category?.name ?? '',
         slug: category?.slug ?? '',
@@ -38,12 +49,6 @@ export default function ProductCategoryForm({ category }: { category: Category |
             return;
         }
         post('/master/product-categories');
-    };
-
-    const deactivate = () => {
-        if (!category) return;
-        if (!window.confirm('Nonaktifkan kategori ini?')) return;
-        router.delete(`/master/product-categories/${category.uuid}`);
     };
 
     return (
@@ -145,9 +150,16 @@ export default function ProductCategoryForm({ category }: { category: Category |
                         </div>
                     </div>
                     <div className="flex items-center justify-between">
-                        {editing ? (
-                            <Button type="button" variant="outline" onClick={deactivate} disabled={processing}>
-                                Nonaktifkan
+                        {editing && category ? (
+                            <Button
+                                type="button"
+                                variant="outline"
+                                className="text-rose-600 hover:text-rose-700 hover:bg-rose-50 border-rose-200 dark:border-rose-900"
+                                onClick={() => setShowDeleteModal(true)}
+                                disabled={processing}
+                            >
+                                <Trash2 className="mr-1.5 size-4" />
+                                Hapus Kategori
                             </Button>
                         ) : (
                             <span />
@@ -157,6 +169,24 @@ export default function ProductCategoryForm({ category }: { category: Category |
                         </Button>
                     </div>
                 </form>
+
+                <ConfirmModal
+                    open={showDeleteModal}
+                    onOpenChange={setShowDeleteModal}
+                    title="Hapus Kategori Produk"
+                    description={`Apakah Anda yakin ingin menghapus kategori "${category?.name}" (${category?.code})? Data yang sudah terpakai dalam transaksi tidak dapat dihapus.`}
+                    variant="destructive"
+                    confirmText="Hapus Kategori"
+                    cancelText="Batal"
+                    onConfirm={() => {
+                        if (category) {
+                            router.delete(`/master/product-categories/${category.uuid}`, {
+                                preserveScroll: true,
+                                onFinish: () => setShowDeleteModal(false),
+                            });
+                        }
+                    }}
+                />
             </div>
         </>
     );

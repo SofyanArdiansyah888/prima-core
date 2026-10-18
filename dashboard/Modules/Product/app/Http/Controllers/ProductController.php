@@ -12,6 +12,7 @@ use Modules\Product\Http\Requests\UpdateProductRequest;
 use Modules\Product\Models\Product;
 use Modules\ProductCategory\Models\ProductCategory;
 use Modules\Shared\Services\CodeGenerator;
+use Modules\Shared\Services\MasterDeletionGuard;
 
 class ProductController extends Controller
 {
@@ -94,10 +95,20 @@ class ProductController extends Controller
         return redirect()->route('products.index')->with('success', 'Produk berhasil diperbarui.');
     }
 
-    public function destroy(Product $product): RedirectResponse
+    public function destroy(Product $product, MasterDeletionGuard $guard): RedirectResponse
     {
-        $product->update(['is_active' => false]);
+        $error = $guard->checkProduct($product);
+        if ($error !== null) {
+            return back()->with('error', $error);
+        }
 
-        return redirect()->route('products.index')->with('success', 'Produk dinonaktifkan.');
+        try {
+            $name = $product->name;
+            $product->delete();
+
+            return redirect()->route('products.index')->with('success', "Produk '{$name}' berhasil dihapus.");
+        } catch (\Throwable $e) {
+            return back()->with('error', 'Gagal menghapus produk: data masih memiliki ketergantungan lain.');
+        }
     }
 }

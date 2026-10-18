@@ -11,6 +11,7 @@ use Modules\ProductCategory\Http\Requests\StoreProductCategoryRequest;
 use Modules\ProductCategory\Http\Requests\UpdateProductCategoryRequest;
 use Modules\ProductCategory\Models\ProductCategory;
 use Modules\Shared\Services\CodeGenerator;
+use Modules\Shared\Services\MasterDeletionGuard;
 
 class ProductCategoryController extends Controller
 {
@@ -82,10 +83,20 @@ class ProductCategoryController extends Controller
         return redirect()->route('product-categories.index')->with('success', 'Kategori produk berhasil diperbarui.');
     }
 
-    public function destroy(ProductCategory $product_category): RedirectResponse
+    public function destroy(ProductCategory $product_category, MasterDeletionGuard $guard): RedirectResponse
     {
-        $product_category->update(['is_active' => false]);
+        $error = $guard->checkProductCategory($product_category);
+        if ($error !== null) {
+            return back()->with('error', $error);
+        }
 
-        return redirect()->route('product-categories.index')->with('success', 'Kategori produk dinonaktifkan.');
+        try {
+            $name = $product_category->name;
+            $product_category->delete();
+
+            return redirect()->route('product-categories.index')->with('success', "Kategori '{$name}' berhasil dihapus.");
+        } catch (\Throwable $e) {
+            return back()->with('error', 'Gagal menghapus kategori: data masih memiliki ketergantungan lain.');
+        }
     }
 }

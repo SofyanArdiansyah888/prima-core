@@ -1,8 +1,9 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { Image, Pencil, Plus, Search } from 'lucide-react';
+import { Image, Pencil, Plus, Search, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
+import { ConfirmModal } from '@/components/ui/confirm-modal';
 import { Input } from '@/components/ui/input';
 import { dashboard } from '@/routes';
 
@@ -31,6 +32,7 @@ export default function BannerIndex({
     filters: { search?: string };
 }) {
     const [search, setSearch] = useState(filters.search ?? '');
+    const [deleteTarget, setDeleteTarget] = useState<BannerRow | null>(null);
     const flash = (usePage().props as { flash?: { success?: string; error?: string } }).flash;
 
     useEffect(() => {
@@ -107,11 +109,24 @@ export default function BannerIndex({
                                     <td className="px-5 py-3">{row.sort_order}</td>
                                     <td className="px-5 py-3">{row.is_active ? 'Aktif' : 'Nonaktif'}</td>
                                     <td className="px-5 py-3 text-right">
-                                        <Button asChild variant="outline" size="sm" className="h-8">
-                                            <Link href={`/master/banners/${row.uuid}/edit`}>
-                                                <Pencil className="size-3.5" /> Edit
-                                            </Link>
-                                        </Button>
+                                        <div className="flex items-center justify-end gap-1">
+                                            <Button asChild variant="ghost" size="sm" className="size-8 p-0 text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 dark:text-slate-400 dark:hover:text-emerald-400 dark:hover:bg-emerald-950/40" title="Edit Banner">
+                                                <Link href={`/master/banners/${row.uuid}/edit`}>
+                                                    <Pencil className="size-3.5" />
+                                                    <span className="sr-only">Edit</span>
+                                                </Link>
+                                            </Button>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="size-8 p-0 text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40"
+                                                onClick={() => setDeleteTarget(row)}
+                                                title="Hapus Banner"
+                                            >
+                                                <Trash2 className="size-3.5" />
+                                                <span className="sr-only">Hapus</span>
+                                            </Button>
+                                        </div>
                                     </td>
                                 </tr>
                             ))}
@@ -119,6 +134,26 @@ export default function BannerIndex({
                     </table>
                     <p className="px-5 py-3 text-xs text-slate-500">Total {banners.total ?? banners.data.length} banner</p>
                 </div>
+
+                <ConfirmModal
+                    open={Boolean(deleteTarget)}
+                    onOpenChange={(open) => {
+                        if (!open) setDeleteTarget(null);
+                    }}
+                    title="Hapus Banner Beranda"
+                    description={`Apakah Anda yakin ingin menghapus banner "${deleteTarget?.title}" (${deleteTarget?.code})? Tindakan ini akan menghapus banner dan file gambar terkait.`}
+                    variant="destructive"
+                    confirmText="Hapus Banner"
+                    cancelText="Batal"
+                    onConfirm={() => {
+                        if (deleteTarget) {
+                            router.delete(`/master/banners/${deleteTarget.uuid}`, {
+                                preserveScroll: true,
+                                onFinish: () => setDeleteTarget(null),
+                            });
+                        }
+                    }}
+                />
             </div>
         </>
     );

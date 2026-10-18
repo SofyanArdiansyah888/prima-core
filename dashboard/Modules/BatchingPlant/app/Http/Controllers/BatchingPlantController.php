@@ -13,6 +13,7 @@ use Modules\BatchingPlant\Models\BatchingPlant;
 use Modules\Branch\Models\Branch;
 use Modules\Shared\Enums\PlantStatus;
 use Modules\Shared\Services\CodeGenerator;
+use Modules\Shared\Services\MasterDeletionGuard;
 
 class BatchingPlantController extends Controller
 {
@@ -90,13 +91,22 @@ class BatchingPlantController extends Controller
         return redirect()->route('batching-plants.index')->with('success', 'Batching plant berhasil diperbarui.');
     }
 
-    public function destroy(BatchingPlant $batchingPlant): RedirectResponse
+    public function destroy(BatchingPlant $batchingPlant, MasterDeletionGuard $guard): RedirectResponse
     {
-        $batchingPlant->update([
-            'is_active' => false,
-            'status' => PlantStatus::Inactive,
-        ]);
+        $error = $guard->checkBatchingPlant($batchingPlant);
+        if ($error !== null) {
+            return back()->with('error', $error);
+        }
 
-        return redirect()->route('batching-plants.index')->with('success', 'Batching plant dinonaktifkan.');
+        try {
+            $name = $batchingPlant->name;
+            $batchingPlant->deliveryRates()->delete();
+            $batchingPlant->users()->detach();
+            $batchingPlant->delete();
+
+            return redirect()->route('batching-plants.index')->with('success', "Batching Plant '{$name}' berhasil dihapus.");
+        } catch (\Throwable $e) {
+            return back()->with('error', 'Gagal menghapus batching plant: data masih memiliki ketergantungan lain.');
+        }
     }
 }

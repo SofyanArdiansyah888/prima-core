@@ -212,8 +212,10 @@ export default function DeliveryRateIndex({
                     cancelText="Batal"
                     onConfirm={() => {
                         if (deleteTargetUuid) {
-                            router.delete(`/master/delivery-rates/${deleteTargetUuid}`);
-                            setDeleteTargetUuid(null);
+                            router.delete(`/master/delivery-rates/${deleteTargetUuid}`, {
+                                preserveScroll: true,
+                                onFinish: () => setDeleteTargetUuid(null),
+                            });
                         }
                     }}
                 />

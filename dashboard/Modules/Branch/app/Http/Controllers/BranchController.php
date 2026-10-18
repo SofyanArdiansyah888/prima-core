@@ -11,6 +11,7 @@ use Modules\Branch\Http\Requests\StoreBranchRequest;
 use Modules\Branch\Http\Requests\UpdateBranchRequest;
 use Modules\Branch\Models\Branch;
 use Modules\Shared\Services\CodeGenerator;
+use Modules\Shared\Services\MasterDeletionGuard;
 
 class BranchController extends Controller
 {
@@ -79,14 +80,20 @@ class BranchController extends Controller
         return redirect()->route('branches.index')->with('success', 'Cabang berhasil diperbarui.');
     }
 
-    public function destroy(Branch $branch): RedirectResponse
+    public function destroy(Branch $branch, MasterDeletionGuard $guard): RedirectResponse
     {
-        if ($branch->batchingPlants()->exists()) {
-            return back()->with('error', 'Cabang masih memiliki batching plant.');
+        $error = $guard->checkBranch($branch);
+        if ($error !== null) {
+            return back()->with('error', $error);
         }
 
-        $branch->update(['is_active' => false]);
+        try {
+            $name = $branch->name;
+            $branch->delete();
 
-        return redirect()->route('branches.index')->with('success', 'Cabang dinonaktifkan.');
+            return redirect()->route('branches.index')->with('success', "Cabang '{$name}' berhasil dihapus.");
+        } catch (\Throwable $e) {
+            return back()->with('error', 'Gagal menghapus cabang: data masih memiliki ketergantungan lain.');
+        }
     }
 }

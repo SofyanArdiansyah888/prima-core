@@ -12,6 +12,7 @@ use Modules\BatchingPlant\Models\BatchingPlant;
 use Modules\Branch\Models\Branch;
 use Modules\Shared\Enums\UserRole;
 use Modules\Shared\Services\CodeGenerator;
+use Modules\Shared\Services\MasterDeletionGuard;
 use Modules\User\Http\Requests\StoreUserRequest;
 use Modules\User\Http\Requests\UpdateUserRequest;
 
@@ -123,14 +124,21 @@ class UserController extends Controller
         return redirect()->route('users.index')->with('success', 'User berhasil diperbarui.');
     }
 
-    public function destroy(User $user): RedirectResponse
+    public function destroy(User $user, MasterDeletionGuard $guard): RedirectResponse
     {
-        if ($user->id === auth()->id()) {
-            return back()->with('error', 'Tidak dapat menonaktifkan akun sendiri.');
+        $error = $guard->checkUser($user, (int) auth()->id());
+        if ($error !== null) {
+            return back()->with('error', $error);
         }
 
-        $user->update(['is_active' => false]);
+        try {
+            $name = $user->name;
+            $user->batchingPlants()->detach();
+            $user->delete();
 
-        return redirect()->route('users.index')->with('success', 'User dinonaktifkan.');
+            return redirect()->route('users.index')->with('success', "User '{$name}' berhasil dihapus.");
+        } catch (\Throwable $e) {
+            return back()->with('error', 'Gagal menghapus user: data masih memiliki ketergantungan lain.');
+        }
     }
 }

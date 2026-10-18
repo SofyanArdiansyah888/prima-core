@@ -1,8 +1,9 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { Pencil, Plus, Search, Tags } from 'lucide-react';
+import { Pencil, Plus, Search, Tags, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
+import { ConfirmModal } from '@/components/ui/confirm-modal';
 import { Input } from '@/components/ui/input';
 import { dashboard } from '@/routes';
 
@@ -33,6 +34,7 @@ export default function ProductCategoryIndex({
     filters: { search?: string };
 }) {
     const [search, setSearch] = useState(filters.search ?? '');
+    const [deleteTarget, setDeleteTarget] = useState<CategoryRow | null>(null);
     const flash = (usePage().props as { flash?: { success?: string; error?: string } }).flash;
 
     useEffect(() => {
@@ -124,11 +126,24 @@ export default function ProductCategoryIndex({
                                         <td className="px-5 py-3">{row.show_in_catalog ? 'Tampil' : 'Sembunyi'}</td>
                                         <td className="px-5 py-3">{row.is_active ? 'Aktif' : 'Nonaktif'}</td>
                                         <td className="px-5 py-3 text-right">
-                                            <Button asChild variant="outline" size="sm" className="h-8">
-                                                <Link href={`/master/product-categories/${row.uuid}/edit`}>
-                                                    <Pencil className="size-3.5" /> Edit
-                                                </Link>
-                                            </Button>
+                                            <div className="flex items-center justify-end gap-1">
+                                                <Button asChild variant="ghost" size="sm" className="size-8 p-0 text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 dark:text-slate-400 dark:hover:text-emerald-400 dark:hover:bg-emerald-950/40" title="Edit Kategori">
+                                                    <Link href={`/master/product-categories/${row.uuid}/edit`}>
+                                                        <Pencil className="size-3.5" />
+                                                        <span className="sr-only">Edit</span>
+                                                    </Link>
+                                                </Button>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="size-8 p-0 text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40"
+                                                    onClick={() => setDeleteTarget(row)}
+                                                    title="Hapus Kategori"
+                                                >
+                                                    <Trash2 className="size-3.5" />
+                                                    <span className="sr-only">Hapus</span>
+                                                </Button>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))}
@@ -136,6 +151,26 @@ export default function ProductCategoryIndex({
                         </table>
                     </div>
                 </div>
+
+                <ConfirmModal
+                    open={Boolean(deleteTarget)}
+                    onOpenChange={(open) => {
+                        if (!open) setDeleteTarget(null);
+                    }}
+                    title="Hapus Kategori Produk"
+                    description={`Apakah Anda yakin ingin menghapus kategori "${deleteTarget?.name}" (${deleteTarget?.code})? Data yang sudah terpakai dalam transaksi tidak dapat dihapus.`}
+                    variant="destructive"
+                    confirmText="Hapus Kategori"
+                    cancelText="Batal"
+                    onConfirm={() => {
+                        if (deleteTarget) {
+                            router.delete(`/master/product-categories/${deleteTarget.uuid}`, {
+                                preserveScroll: true,
+                                onFinish: () => setDeleteTarget(null),
+                            });
+                        }
+                    }}
+                />
             </div>
         </>
     );
