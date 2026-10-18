@@ -1,5 +1,5 @@
-import { useEffect, useState, useMemo } from 'react';
-import { IonIcon, type RefresherEventDetail } from '@ionic/react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
+import { IonIcon, useIonViewWillEnter, type RefresherEventDetail } from '@ionic/react';
 import { 
   searchOutline, 
   closeOutline, 
@@ -224,6 +224,23 @@ export default function HomePage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [pendingConflictProduct, setPendingConflictProduct] = useState<Product | null>(null);
+  const [activeOrderCount, setActiveOrderCount] = useState(0);
+
+  const refreshActiveOrders = useCallback(async () => {
+    try {
+      const response = await api.orders();
+      const active = (response?.data || []).filter(
+        (o) => o.status !== 'COMPLETED' && o.status !== 'CANCELLED'
+      ).length;
+      setActiveOrderCount(active);
+    } catch {
+      setActiveOrderCount(0);
+    }
+  }, []);
+
+  useIonViewWillEnter(() => {
+    void refreshActiveOrders();
+  });
 
   // Auto-rotate hero slider every 5 seconds
   useEffect(() => {
@@ -251,6 +268,7 @@ export default function HomePage() {
       setProducts(productResponse.data);
       setHeroSlides(bannerResponse.data);
       setCurrentSlide(0);
+      void refreshActiveOrders();
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Gagal memuat produk.');
     } finally {
@@ -273,6 +291,7 @@ export default function HomePage() {
       setProducts(productResponse.data);
       setHeroSlides(bannerResponse.data);
       setError('');
+      void refreshActiveOrders();
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Gagal memperbarui data.');
     } finally {
@@ -373,9 +392,11 @@ export default function HomePage() {
             aria-label="Notifikasi"
           >
             <IonIcon icon={notificationsOutline} className="text-2xl" />
-            <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-[#d91424] text-[9px] font-extrabold text-white shadow-xs">
-              2
-            </span>
+            {activeOrderCount > 0 && (
+              <span className="absolute top-1 right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#d91424] px-1 text-[9px] font-extrabold text-white shadow-xs">
+                {activeOrderCount > 9 ? '9+' : activeOrderCount}
+              </span>
+            )}
           </button>
         </div>
 
