@@ -367,6 +367,19 @@ export default function DispatchForm({
                             </Button>
                         </div>
 
+                        {/* Empty Active Orders Warning */}
+                        {activeOrders.length === 0 && (
+                            <div className="mb-4 flex items-start gap-2.5 rounded-lg border border-amber-300 bg-amber-50 p-3.5 text-xs text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-300">
+                                <AlertTriangle className="size-4 shrink-0 text-amber-600 mt-0.5" />
+                                <div>
+                                    <p className="font-bold">Tidak ada pesanan siap kirim:</p>
+                                    <p>
+                                        Tidak ditemukan pesanan dengan SPK aktif yang membutuhkan pengiriman pada plant ini. Pastikan SPK telah diterbitkan terlebih dahulu sebelum membuat Surat Jalan.
+                                    </p>
+                                </div>
+                            </div>
+                        )}
+
                         {/* Conflict Warning */}
                         {isCombinableConflict && (
                             <div className="mb-4 flex items-start gap-2.5 rounded-lg border border-rose-300 bg-rose-50 p-3.5 text-xs text-rose-800 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-300">

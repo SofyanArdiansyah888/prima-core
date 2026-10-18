@@ -104,6 +104,8 @@ class OrderController extends Controller
             'batchingPlant.branch',
             'items.product',
             'workOrders.assignedUser',
+            'suratJalanItems.suratJalan',
+            'suratJalanItems.product',
         ]);
 
         return Inertia::render('modules/order/show', [
@@ -121,13 +123,46 @@ class OrderController extends Controller
 
     public function update(UpdateOrderRequest $request, Order $order): RedirectResponse
     {
-        $order->update($request->validated());
+        $data = $request->validated();
+        $newStatus = $data['status'] ?? $order->status;
+
+        if (in_array($order->status, ['COMPLETED', 'CANCELLED'], true)) {
+            return back()->with('error', 'Status pesanan sudah final dan tidak dapat diubah lagi.');
+        }
+
+        if ($newStatus === 'COMPLETED') {
+            return back()->with('error', 'Status pesanan tidak dapat diselesaikan secara manual. Status akan otomatis Selesai setelah pengantaran Surat Jalan tuntas.');
+        }
+
+        if ($newStatus === 'CANCELLED') {
+            $hasActiveDeliveries = $order->suratJalanItems()
+                ->whereIn('status', ['ON_TRUCK', 'DELIVERED'])
+                ->exists();
+
+            if ($hasActiveDeliveries) {
+                return back()->with('error', 'Pesanan tidak dapat dibatalkan karena pengiriman sedang berjalan atau telah diserahterimakan.');
+            }
+        }
+
+        $order->update($data);
 
         return redirect()->route('orders.show', $order)->with('success', 'Status pesanan berhasil diperbarui.');
     }
 
     public function destroy(Order $order): RedirectResponse
     {
+        if (in_array($order->status, ['COMPLETED', 'CANCELLED'], true)) {
+            return back()->with('error', 'Pesanan tidak dapat dibatalkan.');
+        }
+
+        $hasActiveDeliveries = $order->suratJalanItems()
+            ->whereIn('status', ['ON_TRUCK', 'DELIVERED'])
+            ->exists();
+
+        if ($hasActiveDeliveries) {
+            return back()->with('error', 'Pesanan tidak dapat dibatalkan karena pengiriman sedang berjalan.');
+        }
+
         $order->update(['status' => 'CANCELLED']);
 
         return redirect()->route('orders.index')->with('success', 'Pesanan dibatalkan.');

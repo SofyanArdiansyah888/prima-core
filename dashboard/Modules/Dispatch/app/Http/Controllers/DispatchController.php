@@ -74,6 +74,7 @@ class DispatchController extends Controller
 
         $activeOrders = Order::query()
             ->whereNotIn('status', ['COMPLETED', 'CANCELLED'])
+            ->whereHas('workOrders', fn ($q) => $q->whereRaw('dispatched_quantity < target_quantity'))
             ->with([
                 'items.product',
                 'workOrders' => fn ($q) => $q->whereRaw('dispatched_quantity < target_quantity'),
@@ -146,11 +147,10 @@ class DispatchController extends Controller
                     $newFulfilled = (float) $orderItem->fulfilled_quantity + (float) $item['quantity_delivered'];
                     $orderItem->update(['fulfilled_quantity' => $newFulfilled]);
 
-                    $order = Order::with('items')->find($item['order_id']);
-                    if ($order) {
-                        $allFulfilled = $order->items->every(fn ($i) => (float) $i->fulfilled_quantity >= (float) $i->quantity);
+                    $order = Order::find($item['order_id']);
+                    if ($order && in_array($order->status, ['CONFIRMED', 'PROCESSING'])) {
                         $order->update([
-                            'status' => $allFulfilled ? 'COMPLETED' : 'ON_DELIVERY',
+                            'status' => 'ON_DELIVERY',
                         ]);
                     }
                 }
@@ -203,21 +203,82 @@ class DispatchController extends Controller
     {
         $data = $request->validated();
         $status = $data['status'];
+        $previousStatus = $suratJalan->status;
 
-        $updateData = ['status' => $status];
-        if ($status === 'COMPLETED' && empty($suratJalan->arrival_time)) {
-            $updateData['arrival_time'] = now();
+        if ($previousStatus === $status) {
+            return redirect()->route('surat-jalan.show', $suratJalan);
         }
 
-        $suratJalan->update($updateData);
+        DB::transaction(function () use ($suratJalan, $status, $data) {
+            $updateData = ['status' => $status];
+            if ($status === 'COMPLETED' && empty($suratJalan->arrival_time)) {
+                $updateData['arrival_time'] = now();
+            }
 
-        if ($status === 'COMPLETED') {
-            $suratJalan->items()->update([
-                'status' => 'DELIVERED',
-                'recipient_name' => $data['recipient_name'] ?? 'Penerima Lapangan',
-                'received_at' => $data['received_at'] ?? now(),
-            ]);
-        }
+            $suratJalan->update($updateData);
+
+            if ($status === 'COMPLETED') {
+                $suratJalan->items()->update([
+                    'status' => 'DELIVERED',
+                    'recipient_name' => $data['recipient_name'] ?? 'Penerima Lapangan',
+                    'received_at' => $data['received_at'] ?? now(),
+                ]);
+
+                // Check and update parent orders if all items are fulfilled and no pending shipments remain
+                $orderIds = $suratJalan->items()->pluck('order_id')->unique()->filter();
+                foreach ($orderIds as $orderId) {
+                    $order = Order::with('items')->find($orderId);
+                    if (! $order) {
+                        continue;
+                    }
+
+                    $allFulfilled = $order->items->every(fn ($i) => (float) $i->fulfilled_quantity >= (float) $i->quantity);
+                    $hasPendingSj = SuratJalanItem::where('order_id', $orderId)
+                        ->whereHas('suratJalan', fn ($q) => $q->where('status', 'ON_THE_WAY'))
+                        ->exists();
+
+                    if ($allFulfilled && ! $hasPendingSj) {
+                        $order->update(['status' => 'COMPLETED']);
+                    }
+                }
+            } elseif ($status === 'CANCELLED') {
+                $suratJalan->items()->update([
+                    'status' => 'REJECTED',
+                ]);
+
+                // Rollback dispatched & fulfilled quantities
+                foreach ($suratJalan->items as $item) {
+                    $orderItem = OrderItem::where('order_id', $item->order_id)
+                        ->where('product_id', $item->product_id)
+                        ->first();
+
+                    if ($orderItem) {
+                        $newFulfilled = max(0, (float) $orderItem->fulfilled_quantity - (float) $item->quantity_delivered);
+                        $orderItem->update(['fulfilled_quantity' => $newFulfilled]);
+                    }
+
+                    if (! empty($item->work_order_id)) {
+                        $wo = WorkOrder::find($item->work_order_id);
+                        if ($wo) {
+                            $newDispatched = max(0, (float) $wo->dispatched_quantity - (float) $item->quantity_delivered);
+                            $wo->update(['dispatched_quantity' => $newDispatched]);
+                        }
+                    }
+
+                    $order = Order::find($item->order_id);
+                    if ($order && $order->status === 'ON_DELIVERY') {
+                        $hasOtherDeliveries = SuratJalanItem::where('order_id', $item->order_id)
+                            ->where('surat_jalan_id', '!=', $suratJalan->id)
+                            ->whereHas('suratJalan', fn ($q) => $q->where('status', 'ON_THE_WAY'))
+                            ->exists();
+
+                        if (! $hasOtherDeliveries) {
+                            $order->update(['status' => 'PROCESSING']);
+                        }
+                    }
+                }
+            }
+        });
 
         return redirect()->route('surat-jalan.show', $suratJalan)->with('success', 'Status Surat Jalan berhasil diperbarui.');
     }

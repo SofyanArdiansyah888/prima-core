@@ -124,7 +124,19 @@ class WorkOrderController extends Controller
 
     public function destroy(WorkOrder $workOrder): RedirectResponse
     {
+        if ((float) $workOrder->dispatched_quantity > 0) {
+            return back()->with('error', 'SPK tidak dapat dihapus karena sudah memiliki ritase pengiriman Surat Jalan.');
+        }
+
+        $orderId = $workOrder->order_id;
         $workOrder->delete();
+
+        if ($orderId) {
+            $order = Order::find($orderId);
+            if ($order && $order->status === 'PROCESSING' && $order->workOrders()->count() === 0) {
+                $order->update(['status' => 'CONFIRMED']);
+            }
+        }
 
         return redirect()->route('work-orders.index')->with('success', 'Work Order berhasil dihapus.');
     }

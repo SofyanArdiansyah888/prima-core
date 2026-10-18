@@ -11,27 +11,28 @@ Pesanan disederhanakan menjadi **5 status utama** yang merefleksikan tahapan rii
 | Kode Status | Label UI | Arti Operasional | Siapa / Apa yang Mengubah |
 |-------------|----------|------------------|---------------------------|
 | `CONFIRMED` | **Dikonfirmasi** | Pesanan baru diterima & terjadwal di plant. | Otomatis saat checkout pesanan via Mobile (`PlaceOrder`) atau dibuat via Sales Order dashboard. |
-| `PROCESSING` | **Diproses** | SPK terbit & proses penimbangan / mixing batching berjalan. | **Otomatis** saat SPK diterbitkan, atau tombol manual admin *"Proses Pesanan"*. |
+| `PROCESSING` | **Diproses** | SPK terbit & proses penimbangan / mixing batching berjalan. | **Otomatis** saat SPK diterbitkan untuk pesanan ini. |
 | `ON_DELIVERY` | **Dalam Pengiriman** | Armada truk mixer / kapsul sedang dalam perjalanan membawa muatan ke lokasi proyek. | **Otomatis** saat Surat Jalan pertama kali diterbitkan untuk pesanan ini. |
-| `COMPLETED` | **Selesai** | Seluruh kuantitas produk pesanan telah terkirim dan diterima di lokasi (`fulfilled_quantity >= quantity`). | **Otomatis** saat total pengiriman Surat Jalan memenuhi 100% volume, atau tombol manual *"Tandai Selesai"*. |
-| `CANCELLED` | **Dibatalkan** | Pesanan dibatalkan pelanggan atau ditolak/dibatalkan oleh staf plant. | Pelanggan via Mobile (hanya jika masih `CONFIRMED`), atau tombol manual *"Batalkan"* di dashboard. |
+| `COMPLETED` | **Selesai** | Seluruh kuantitas produk pesanan telah terkirim dan tervalidasi diterima di lokasi proyek (`fulfilled_quantity >= quantity`). | **Otomatis** saat pengantaran Surat Jalan diselesaikan (`COMPLETED`) dan total volume memenuhi 100%. (Aksi selesai manual ditiadakan untuk menjaga integritas alur fisik). |
+| `CANCELLED` | **Dibatalkan** | Pesanan dibatalkan pelanggan atau staf plant sebelum armada diberangkatkan. | Pelanggan via Mobile (hanya jika masih `CONFIRMED`), atau tombol manual *"Batalkan"* di dashboard (hanya jika belum ada ritase aktif/selesai). |
 
-### Aturan Transisi Pesanan:
+### Aturan Transisi Pesanan (Runut Tanpa Lompatan):
 ```text
 [Checkout / Buat Order]
          │
          ▼
-    CONFIRMED ──────────────► CANCELLED (Batal sebelum diproses)
+    CONFIRMED ──────────────► CANCELLED (Batal sebelum proses/kirim)
          │
-         ▼ (Terbitkan SPK / Tombol "Proses Pesanan")
+         ▼ (Otomatis saat Terbitkan SPK)
     PROCESSING
          │
-         ▼ (Terbitkan Surat Jalan Ritase 1..N)
+         ▼ (Otomatis saat Terbitkan Surat Jalan Ritase 1..N)
     ON_DELIVERY
          │
-         ▼ (Kuantitas Terkirim 100% / Tombol "Tandai Selesai")
+         ▼ (Otomatis saat Pengantaran Surat Jalan Selesai & Volume 100%)
     COMPLETED
 ```
+*(Catatan: Tombol pintas manual "Tandai Selesai" dan "Proses Pesanan" pada Sales Order telah dihilangkan agar seluruh proses operasional batching plant dan logistik armada berjalan runut dan terekam secara valid).*
 
 ### Kompatibilitas Data Lama (Backward Compatibility):
 Untuk record database lama sebelum penyederhanaan status, sistem memetakan secara transparan:

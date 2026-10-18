@@ -75,8 +75,9 @@
 - Controller: `Modules\Order\Http\Controllers\OrderController`
 - Model: `Modules\Order\Models\Order`, `Modules\Order\Models\OrderItem`
 - Pages: `resources/js/pages/modules/order/{index,form,show}.tsx`
-- Fitur: Sales Order pemesanan, auto-select batching plant terdekat, hitung ongkir otomatis, tracking pemenuhan per item.
+- Fitur: Sales Order pemesanan, auto-select batching plant terdekat, hitung ongkir otomatis, tracking pemenuhan per item, process stepper alur 4 tahap, dan riwayat ritase Surat Jalan.
 - Pesanan aplikasi pelanggan masuk ke tabel yang sama (`customer_id`, `customer_type = B2C`) lewat `PlaceOrder`.
+- Alur Status: `CONFIRMED` ➔ `PROCESSING` (saat SPK terbit) ➔ `ON_DELIVERY` (saat SJ terbit) ➔ `COMPLETED` (otomatis saat seluruh ritase SJ tuntas diterima 100%). Aksi selesai manual ditiadakan.
 
 ## WorkOrder
 
@@ -84,7 +85,7 @@
 - Controller: `Modules\WorkOrder\Http\Controllers\WorkOrderController`
 - Model: `Modules\WorkOrder\Models\WorkOrder`
 - Pages: `resources/js/pages/modules/work-order/{index,form,show}.tsx`
-- Fitur: Surat Perintah Kerja (SPK) produksi berbasis Sales Order, penjadwalan batching, formula resep mix design, dan slump target.
+- Fitur: Surat Perintah Kerja (SPK) produksi berbasis Sales Order, penjadwalan batching, formula resep mix design, dan slump target. Memicu status pesanan menjadi `PROCESSING`. Proteksi hapus jika sudah memiliki ritase SJ.
 
 ## Dispatch
 
@@ -92,7 +93,7 @@
 - Controller: `Modules\Dispatch\Http\Controllers\DispatchController`
 - Model: `Modules\Dispatch\Models\SuratJalan`, `Modules\Dispatch\Models\SuratJalanItem`
 - Pages: `resources/js/pages/modules/dispatch/{index,form,show,print}.tsx`
-- Fitur: Ritase armada, jembatan timbang (gross/tare/netto), telematics IoT, partial delivery, multi-drop combined customer, dan cetak Surat Jalan resmi Tonasa.
+- Fitur: Ritase armada, jembatan timbang (gross/tare/netto), telematics IoT, partial delivery, multi-drop combined customer, dan cetak Surat Jalan resmi Tonasa. Penerbitan SJ memicu status order `ON_DELIVERY`; penyelesaian SJ tuntas memicu status order `COMPLETED`.
 
 ## Report
 

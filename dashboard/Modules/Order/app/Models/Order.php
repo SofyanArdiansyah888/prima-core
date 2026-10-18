@@ -85,4 +85,9 @@ class Order extends Model
     {
         return $this->hasMany(WorkOrder::class);
     }
+
+    public function suratJalanItems(): HasMany
+    {
+        return $this->hasMany(\Modules\Dispatch\Models\SuratJalanItem::class);
+    }
 }

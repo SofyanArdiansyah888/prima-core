@@ -1,7 +1,25 @@
-import { Head, Link, router, useForm } from '@inertiajs/react';
+import { useState } from 'react';
+import { Head, Link, router } from '@inertiajs/react';
 import { formatDate, formatDateTime } from '@/lib/utils';
-import { ArrowLeft, Building2, Calendar, FileSpreadsheet, MapPin, Truck, CheckCircle2, Phone, Mail, ShieldCheck, RefreshCw } from 'lucide-react';
+import {
+    ArrowLeft,
+    Building2,
+    Check,
+    CheckCircle2,
+    Clock,
+    Eye,
+    FileSpreadsheet,
+    Mail,
+    MapPin,
+    Phone,
+    Plus,
+    RefreshCw,
+    ShieldCheck,
+    Truck,
+    XCircle,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { ConfirmModal } from '@/components/ui/confirm-modal';
 import { dashboard } from '@/routes';
 
 type OrderDetail = {
@@ -51,16 +69,35 @@ type OrderDetail = {
         scheduled_time_slot: string | null;
         assigned_user?: { name: string };
     }[];
+    surat_jalan_items?: {
+        id: number;
+        quantity_delivered: number;
+        unit: string;
+        delivery_sequence: number;
+        status: string;
+        recipient_name: string | null;
+        received_at: string | null;
+        product?: { name: string; code: string };
+        surat_jalan?: {
+            id: number;
+            uuid: string;
+            code: string;
+            vehicle_number: string;
+            vehicle_type: string;
+            driver_name: string;
+            status: string;
+            departure_time: string | null;
+            arrival_time: string | null;
+            created_at: string;
+        };
+    }[];
 };
-
-import { useState } from 'react';
-import { ConfirmModal } from '@/components/ui/confirm-modal';
 
 const statusLabels: Record<string, string> = {
     CONFIRMED: 'Dikonfirmasi',
-    PROCESSING: 'Diproses',
+    PROCESSING: 'Diproses (SPK Terbit)',
     ON_DELIVERY: 'Dalam Pengiriman',
-    COMPLETED: 'Selesai',
+    COMPLETED: 'Selesai Terpenuhi',
     CANCELLED: 'Dibatalkan',
     // Backward compat
     DRAFT: 'Draf',
@@ -80,7 +117,6 @@ const paymentLabels: Record<string, string> = {
 };
 
 export default function OrderShow({ order }: { order: OrderDetail }) {
-    const { put, processing } = useForm();
     const [confirmDialog, setConfirmDialog] = useState<{
         open: boolean;
         title: string;
@@ -95,20 +131,13 @@ export default function OrderShow({ order }: { order: OrderDetail }) {
         variant: 'emerald',
     });
 
-    const triggerStatusChange = (newStatus: string) => {
-        let variant: 'emerald' | 'purple' | 'amber' | 'destructive' = 'emerald';
-        if (newStatus === 'CANCELLED') variant = 'destructive';
-        if (newStatus === 'PROCESSING') variant = 'amber';
-        if (newStatus === 'COMPLETED') variant = 'emerald';
-
-        const label = statusLabels[newStatus] ?? newStatus;
-
+    const triggerCancelOrder = () => {
         setConfirmDialog({
             open: true,
-            title: 'Konfirmasi Perubahan Status',
-            description: `Apakah Anda yakin ingin memperbarui status pesanan ${order.code} menjadi "${label}"?`,
-            newStatus,
-            variant,
+            title: 'Konfirmasi Pembatalan Pesanan',
+            description: `Apakah Anda yakin ingin membatalkan pesanan ${order.code}? Tindakan ini bersifat permanen.`,
+            newStatus: 'CANCELLED',
+            variant: 'destructive',
         });
     };
 
@@ -118,6 +147,42 @@ export default function OrderShow({ order }: { order: OrderDetail }) {
             payment_status: order.payment_status,
         });
     };
+
+    const getStepIndex = (status: string) => {
+        switch (status) {
+            case 'CONFIRMED':
+            case 'DRAFT':
+                return 0;
+            case 'PROCESSING':
+            case 'WORK_ORDER_CREATED':
+            case 'IN_PRODUCTION':
+                return 1;
+            case 'ON_DELIVERY':
+            case 'PARTIAL_DELIVERY':
+                return 2;
+            case 'COMPLETED':
+                return 3;
+            default:
+                return 0;
+        }
+    };
+
+    const activeStep = getStepIndex(order.status);
+    const isCancelled = order.status === 'CANCELLED';
+
+    const steps = [
+        { id: 'CONFIRMED', number: 1, title: 'Dikonfirmasi', desc: 'Order masuk & jadwal plant' },
+        { id: 'PROCESSING', number: 2, title: 'SPK Produksi', desc: 'Mix design & penimbangan' },
+        { id: 'ON_DELIVERY', number: 3, title: 'Pengiriman Armada', desc: 'Surat Jalan & ritase mixer' },
+        { id: 'COMPLETED', number: 4, title: 'Selesai & Diterima', desc: 'Volume 100% tuntas diterima' },
+    ];
+
+    const totalOrdered = order.items.reduce((sum, item) => sum + Number(item.quantity), 0);
+    const totalFulfilled = order.items.reduce((sum, item) => sum + Number(item.fulfilled_quantity), 0);
+    const hasRemainingVolume = totalFulfilled < totalOrdered;
+    const hasActiveDeliveries = Boolean(
+        order.surat_jalan_items && order.surat_jalan_items.length > 0
+    );
 
     return (
         <>
@@ -134,13 +199,22 @@ export default function OrderShow({ order }: { order: OrderDetail }) {
                         <div>
                             <div className="flex items-center gap-2 flex-wrap">
                                 <span className="font-mono text-sm font-bold text-slate-900 dark:text-white">{order.code}</span>
-                                <span className="inline-flex items-center rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300">
+                                <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                                    order.status === 'COMPLETED'
+                                        ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+                                        : order.status === 'CANCELLED'
+                                        ? 'bg-red-500/10 text-[#d91424] dark:text-red-300'
+                                        : order.status === 'ON_DELIVERY'
+                                        ? 'bg-amber-500/10 text-amber-700 dark:text-amber-300'
+                                        : 'bg-blue-500/10 text-blue-700 dark:text-blue-300'
+                                }`}>
                                     {statusLabels[order.status] ?? order.status}
                                 </span>
-                                <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${order.payment_status === 'PAID'
+                                <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                                    order.payment_status === 'PAID'
                                         ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
                                         : 'bg-amber-500/10 text-amber-700 dark:text-amber-300'
-                                    }`}>
+                                }`}>
                                     {paymentLabels[order.payment_status] ?? order.payment_status}
                                 </span>
                             </div>
@@ -167,45 +241,155 @@ export default function OrderShow({ order }: { order: OrderDetail }) {
                             </Button>
                         )}
 
+                        {/* Tahap 1: CONFIRMED -> Terbitkan SPK */}
                         {order.status === 'CONFIRMED' && (
-                            <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => triggerStatusChange('PROCESSING')}
-                                className="h-8 text-xs font-bold border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100"
-                            >
-                                Proses Pesanan
+                            <>
+                                <Button asChild size="sm" className="bg-purple-700 hover:bg-purple-800 font-bold text-white h-8 shadow-sm">
+                                    <Link href={`/production/work-orders/create?order_id=${order.id}`}>
+                                        <FileSpreadsheet className="size-3.5 mr-1.5" /> Terbitkan SPK Produksi
+                                    </Link>
+                                </Button>
+                                <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={triggerCancelOrder}
+                                    className="h-8 text-xs font-bold border-red-200 bg-red-50 text-[#d91424] hover:bg-red-100"
+                                >
+                                    Batalkan Pesanan
+                                </Button>
+                            </>
+                        )}
+
+                        {/* Tahap 2: PROCESSING -> Terbitkan Surat Jalan */}
+                        {order.status === 'PROCESSING' && (
+                            <>
+                                <Button asChild size="sm" className="bg-[#0c1d37] hover:bg-[#162e55] font-bold text-white h-8 shadow-sm">
+                                    <Link href={`/dispatch/surat-jalan/create?batching_plant_id=${order.batching_plant?.id}`}>
+                                        <Truck className="size-3.5 mr-1.5 text-amber-400" /> Terbitkan Surat Jalan
+                                    </Link>
+                                </Button>
+                                <Button asChild size="sm" variant="outline" className="h-8 text-xs font-semibold">
+                                    <Link href={`/production/work-orders/create?order_id=${order.id}`}>
+                                        <Plus className="size-3.5 mr-1" /> Tambah SPK
+                                    </Link>
+                                </Button>
+                                {!hasActiveDeliveries && (
+                                    <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={triggerCancelOrder}
+                                        className="h-8 text-xs font-bold border-red-200 bg-red-50 text-[#d91424] hover:bg-red-100"
+                                    >
+                                        Batalkan
+                                    </Button>
+                                )}
+                            </>
+                        )}
+
+                        {/* Tahap 3: ON_DELIVERY -> Terbitkan Ritase Tambahan bila ada sisa volume */}
+                        {order.status === 'ON_DELIVERY' && hasRemainingVolume && (
+                            <Button asChild size="sm" className="bg-[#0c1d37] hover:bg-[#162e55] font-bold text-white h-8 shadow-sm">
+                                <Link href={`/dispatch/surat-jalan/create?batching_plant_id=${order.batching_plant?.id}`}>
+                                    <Truck className="size-3.5 mr-1.5 text-amber-400" /> Terbitkan Ritase Berikutnya
+                                </Link>
                             </Button>
                         )}
 
-                        {(order.status === 'PROCESSING' || order.status === 'ON_DELIVERY') && (
-                            <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => triggerStatusChange('COMPLETED')}
-                                className="h-8 text-xs font-bold border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100"
-                            >
-                                Tandai Selesai
-                            </Button>
+                        {/* Tahap 4: COMPLETED */}
+                        {order.status === 'COMPLETED' && (
+                            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-bold text-emerald-700 dark:text-emerald-300">
+                                <CheckCircle2 className="size-4" /> Pesanan Rampung (100% Selesai)
+                            </span>
                         )}
 
-                        {order.status !== 'CANCELLED' && order.status !== 'COMPLETED' && (
-                            <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => triggerStatusChange('CANCELLED')}
-                                className="h-8 text-xs font-bold border-red-200 bg-red-50 text-[#d91424] hover:bg-red-100"
-                            >
-                                Batalkan
-                            </Button>
+                        {/* Batal */}
+                        {order.status === 'CANCELLED' && (
+                            <span className="inline-flex items-center gap-1.5 rounded-full bg-red-500/10 px-3 py-1 text-xs font-bold text-[#d91424]">
+                                <XCircle className="size-4" /> Pesanan Dibatalkan
+                            </span>
                         )}
-
-                        <Button asChild size="sm" className="bg-purple-700 font-medium text-white hover:bg-purple-800 dark:bg-purple-600 h-8">
-                            <Link href={`/production/work-orders/create?order_id=${order.id}`}>
-                                <FileSpreadsheet className="size-4 mr-1.5" /> Terbitkan SPK
-                            </Link>
-                        </Button>
                     </div>
+                </div>
+
+                {/* Sequential Process Stepper */}
+                <div className="rounded-xl border border-slate-200/80 bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)] dark:border-slate-800 dark:bg-slate-900">
+                    <div className="flex items-center justify-between mb-4">
+                        <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                            Alur Tahapan Operasional (Sequential Workflow)
+                        </span>
+                        {isCancelled ? (
+                            <span className="text-xs font-bold text-[#d91424] flex items-center gap-1">
+                                <XCircle className="size-3.5" /> Dibatalkan sebelum selesai
+                            </span>
+                        ) : (
+                            <span className="text-xs text-slate-500">
+                                Tahap {activeStep + 1} dari 4: <span className="font-bold text-slate-900 dark:text-white">{steps[activeStep]?.title}</span>
+                            </span>
+                        )}
+                    </div>
+
+                    {isCancelled ? (
+                        <div className="rounded-lg bg-red-50 border border-red-200 p-3 text-xs text-[#d91424] dark:bg-red-950/20 dark:border-red-900">
+                            Pesanan ini telah dibatalkan. Seluruh aktivitas produksi dan logistik dihentikan.
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                            {steps.map((st, idx) => {
+                                const isDone = idx < activeStep || order.status === 'COMPLETED';
+                                const isCurrent = idx === activeStep && order.status !== 'COMPLETED';
+
+                                return (
+                                    <div
+                                        key={st.id}
+                                        className={`relative flex items-start gap-3 p-3 rounded-lg border transition-all ${
+                                            isDone
+                                                ? 'border-emerald-200 bg-emerald-50/50 dark:border-emerald-900/60 dark:bg-emerald-950/20'
+                                                : isCurrent
+                                                ? 'border-[#0c1d37] bg-slate-50 dark:border-slate-600 dark:bg-slate-800/80 shadow-xs ring-1 ring-[#0c1d37]/10'
+                                                : 'border-slate-200/70 bg-white/40 text-slate-400 dark:border-slate-800 dark:bg-slate-900/40'
+                                        }`}
+                                    >
+                                        <div
+                                            className={`size-7 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${
+                                                isDone
+                                                    ? 'bg-emerald-600 text-white'
+                                                    : isCurrent
+                                                    ? 'bg-[#0c1d37] text-white shadow-xs'
+                                                    : 'bg-slate-100 text-slate-400 dark:bg-slate-800'
+                                            }`}
+                                        >
+                                            {isDone ? <Check className="size-3.5 stroke-[3]" /> : st.number}
+                                        </div>
+                                        <div>
+                                            <p
+                                                className={`text-xs font-bold ${
+                                                    isDone
+                                                        ? 'text-emerald-900 dark:text-emerald-300'
+                                                        : isCurrent
+                                                        ? 'text-[#0c1d37] dark:text-white'
+                                                        : 'text-slate-400'
+                                                }`}
+                                            >
+                                                {st.title}
+                                            </p>
+                                            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-tight">
+                                                {st.desc}
+                                            </p>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
+
+                    {order.status === 'ON_DELIVERY' && (
+                        <div className="mt-4 rounded-lg bg-amber-50/70 border border-amber-200 p-3 text-xs text-amber-900 flex items-start gap-2 dark:bg-amber-950/30 dark:border-amber-900/50 dark:text-amber-200">
+                            <Clock className="size-4 shrink-0 text-amber-600 mt-0.5" />
+                            <div>
+                                <span className="font-bold">Pengiriman Armada Berlangsung:</span> Pesanan tidak dapat diselesaikan manual. Status pesanan akan otomatis berubah menjadi <span className="font-bold text-emerald-700 dark:text-emerald-400">Selesai</span> setelah pengantaran pada Surat Jalan tervalidasi diterima di lokasi proyek.
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 <div className="grid gap-6 lg:grid-cols-3">
@@ -311,10 +495,11 @@ export default function OrderShow({ order }: { order: OrderDetail }) {
                             </div>
                             <div className="flex justify-between items-center text-xs text-slate-600 dark:text-slate-400">
                                 <span>Status Bayar:</span>
-                                <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-bold ${order.payment_status === 'PAID'
+                                <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-bold ${
+                                    order.payment_status === 'PAID'
                                         ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400'
                                         : 'bg-amber-500/15 text-amber-700 dark:text-amber-400'
-                                    }`}>
+                                }`}>
                                     {order.payment_status === 'PAID' ? 'LUNAS' : order.payment_status}
                                 </span>
                             </div>
@@ -336,7 +521,7 @@ export default function OrderShow({ order }: { order: OrderDetail }) {
                         </div>
                     </div>
 
-                    {/* Right Column: Ordered Items & Work Orders */}
+                    {/* Right Column: Ordered Items, Work Orders, & Surat Jalan Dispatches */}
                     <div className="space-y-6 lg:col-span-2">
                         {/* Ordered Items Table */}
                         <div className="rounded-xl border border-slate-200/80 bg-white p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)] dark:border-slate-800 dark:bg-slate-900">
@@ -406,14 +591,21 @@ export default function OrderShow({ order }: { order: OrderDetail }) {
                         {/* Work Orders Associated */}
                         <div className="rounded-xl border border-slate-200/80 bg-white p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)] dark:border-slate-800 dark:bg-slate-900">
                             <div className="flex items-center justify-between border-b border-slate-100 pb-4 mb-4 dark:border-slate-800">
-                                <h2 className="text-base font-semibold text-slate-900 dark:text-white">
-                                    Work Order / Surat Perintah Kerja (SPK) Terbit
-                                </h2>
-                                <Button asChild size="sm" variant="outline" className="h-8 gap-1 text-xs">
-                                    <Link href={`/production/work-orders/create?order_id=${order.id}`}>
-                                        <FileSpreadsheet className="size-3.5" /> Buat SPK Baru
-                                    </Link>
-                                </Button>
+                                <div>
+                                    <h2 className="text-base font-semibold text-slate-900 dark:text-white">
+                                        Work Order / Surat Perintah Kerja (SPK) Terbit
+                                    </h2>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                                        Instruksi penimbangan dan mixing mix design beton batching plant
+                                    </p>
+                                </div>
+                                {order.status !== 'COMPLETED' && order.status !== 'CANCELLED' && (
+                                    <Button asChild size="sm" variant="outline" className="h-8 gap-1 text-xs">
+                                        <Link href={`/production/work-orders/create?order_id=${order.id}`}>
+                                            <FileSpreadsheet className="size-3.5 text-purple-600" /> Buat SPK Baru
+                                        </Link>
+                                    </Button>
+                                )}
                             </div>
 
                             {order.work_orders.length === 0 ? (
@@ -422,52 +614,131 @@ export default function OrderShow({ order }: { order: OrderDetail }) {
                                 </div>
                             ) : (
                                 <div className="space-y-3">
-                                    {order.work_orders.map((wo) => (
-                                        <div
-                                            key={wo.id}
-                                            className="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 gap-3"
-                                        >
-                                            <div>
-                                                <div className="flex items-center gap-2">
-                                                    <span className="font-mono text-xs font-bold text-purple-700 dark:text-purple-300">
-                                                        {wo.code}
-                                                    </span>
-                                                    {(() => {
-                                                        const target = Number(wo.target_quantity) || 0;
-                                                        const dispatched = Number(wo.dispatched_quantity) || 0;
-                                                        const percent = target > 0 ? Math.min(100, Math.round((dispatched / target) * 100)) : 0;
-                                                        const isFulfilled = percent >= 100;
-                                                        return (
-                                                            <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ${
-                                                                isFulfilled
-                                                                    ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
-                                                                    : percent > 0
-                                                                    ? 'bg-blue-500/10 text-blue-700 dark:text-blue-300'
-                                                                    : 'bg-amber-500/10 text-amber-700 dark:text-amber-300'
-                                                            }`}>
-                                                                {isFulfilled ? 'Selesai Terpenuhi (100%)' : percent > 0 ? `Terkirim ${percent}%` : 'Antrean Produksi'}
-                                                            </span>
-                                                        );
-                                                    })()}
-                                                </div>
-                                                <p className="text-xs text-slate-500 mt-1">
-                                                    Jadwal: {formatDate(wo.scheduled_date)} ({wo.scheduled_time_slot || 'Standar'}) · Operator: {wo.assigned_user?.name ?? '—'}
-                                                </p>
-                                            </div>
+                                    {order.work_orders.map((wo) => {
+                                        const target = Number(wo.target_quantity) || 0;
+                                        const dispatched = Number(wo.dispatched_quantity) || 0;
+                                        const percent = target > 0 ? Math.min(100, Math.round((dispatched / target) * 100)) : 0;
+                                        const isFulfilled = percent >= 100;
 
-                                            <div className="flex items-center gap-3">
-                                                <div className="text-right text-xs">
-                                                    <span className="text-slate-400">Target / Produksi / Kirim:</span>
-                                                    <p className="font-semibold text-slate-800 dark:text-slate-200">
-                                                        {Number(wo.target_quantity)} / {Number(wo.produced_quantity)} / {Number(wo.dispatched_quantity)}
+                                        return (
+                                            <div
+                                                key={wo.id}
+                                                className="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 gap-3"
+                                            >
+                                                <div>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="font-mono text-xs font-bold text-purple-700 dark:text-purple-300">
+                                                            {wo.code}
+                                                        </span>
+                                                        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+                                                            isFulfilled
+                                                                ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+                                                                : percent > 0
+                                                                ? 'bg-blue-500/10 text-blue-700 dark:text-blue-300'
+                                                                : 'bg-amber-500/10 text-amber-700 dark:text-amber-300'
+                                                        }`}>
+                                                            {isFulfilled ? 'Selesai Terpenuhi (100%)' : percent > 0 ? `Terkirim ${percent}%` : 'Antrean Produksi'}
+                                                        </span>
+                                                    </div>
+                                                    <p className="text-xs text-slate-500 mt-1">
+                                                        Jadwal: {formatDate(wo.scheduled_date)} ({wo.scheduled_time_slot || 'Standar'}) · Operator: {wo.assigned_user?.name ?? '—'}
                                                     </p>
                                                 </div>
-                                                <Button asChild size="sm" variant="ghost" className="h-8 px-2 text-xs">
-                                                    <Link href={`/production/work-orders/${wo.uuid}`}>Lihat SPK</Link>
-                                                </Button>
+
+                                                <div className="flex items-center gap-3">
+                                                    <div className="text-right text-xs">
+                                                        <span className="text-slate-400">Target / Produksi / Kirim:</span>
+                                                        <p className="font-semibold text-slate-800 dark:text-slate-200">
+                                                            {Number(wo.target_quantity)} / {Number(wo.produced_quantity)} / {Number(wo.dispatched_quantity)}
+                                                        </p>
+                                                    </div>
+                                                    <Button asChild size="sm" variant="ghost" className="h-8 px-2 text-xs">
+                                                        <Link href={`/production/work-orders/${wo.uuid}`}>Lihat SPK</Link>
+                                                    </Button>
+                                                </div>
                                             </div>
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Surat Jalan / Dispatch List */}
+                        <div className="rounded-xl border border-slate-200/80 bg-white p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)] dark:border-slate-800 dark:bg-slate-900">
+                            <div className="flex items-center justify-between border-b border-slate-100 pb-4 mb-4 dark:border-slate-800">
+                                <div>
+                                    <h2 className="text-base font-semibold text-slate-900 dark:text-white">
+                                        Surat Jalan & Realisasi Pengantaran (Ritase Armada)
+                                    </h2>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                                        Riwayat armada truk mixer dan bukti serah terima penerimaan di lokasi proyek
+                                    </p>
+                                </div>
+                                {(order.status === 'PROCESSING' || order.status === 'ON_DELIVERY') && hasRemainingVolume && (
+                                    <Button asChild size="sm" className="h-8 gap-1 text-xs bg-[#0c1d37] hover:bg-[#162e55] text-white">
+                                        <Link href={`/dispatch/surat-jalan/create?batching_plant_id=${order.batching_plant?.id}`}>
+                                            <Truck className="size-3.5 text-amber-400" /> Terbitkan SJ Baru
+                                        </Link>
+                                    </Button>
+                                )}
+                            </div>
+
+                            {(!order.surat_jalan_items || order.surat_jalan_items.length === 0) ? (
+                                <div className="p-6 text-center text-slate-500 text-xs">
+                                    Belum ada Surat Jalan (ritase armada) yang diterbitkan untuk pesanan ini.
+                                </div>
+                            ) : (
+                                <div className="space-y-3">
+                                    {order.surat_jalan_items.map((sji) => {
+                                        const sj = sji.surat_jalan;
+                                        if (!sj) return null;
+                                        const isSjDone = sj.status === 'COMPLETED';
+                                        const isSjCancelled = sj.status === 'CANCELLED';
+
+                                        return (
+                                            <div
+                                                key={sji.id}
+                                                className="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 gap-3"
+                                            >
+                                                <div>
+                                                    <div className="flex items-center gap-2 flex-wrap">
+                                                        <span className="font-mono text-xs font-bold text-blue-700 dark:text-blue-300">
+                                                            {sj.code}
+                                                        </span>
+                                                        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+                                                            isSjDone
+                                                                ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+                                                                : isSjCancelled
+                                                                ? 'bg-red-500/10 text-[#d91424] dark:text-red-300'
+                                                                : 'bg-amber-500/10 text-amber-700 dark:text-amber-300'
+                                                        }`}>
+                                                            {isSjDone ? 'Pengantaran Selesai' : isSjCancelled ? 'Batal / Retur' : 'Dalam Perjalanan'}
+                                                        </span>
+                                                        <span className="font-mono text-xs text-slate-500">
+                                                            Ritase ke-{sji.delivery_sequence} · {Number(sji.quantity_delivered)} {sji.unit}
+                                                        </span>
+                                                    </div>
+                                                    <p className="text-xs text-slate-600 dark:text-slate-300 mt-1">
+                                                        Armada: <span className="font-semibold">{sj.vehicle_number}</span> · Sopir: <span className="font-semibold">{sj.driver_name}</span>
+                                                        {sj.departure_time && ` · Berangkat: ${formatDateTime(sj.departure_time)}`}
+                                                    </p>
+                                                    {isSjDone && sji.recipient_name && (
+                                                        <p className="text-[11px] text-emerald-700 dark:text-emerald-400 mt-0.5 font-medium">
+                                                            ✓ Diterima oleh: {sji.recipient_name} {sji.received_at ? `(${formatDateTime(sji.received_at)})` : ''}
+                                                        </p>
+                                                    )}
+                                                </div>
+
+                                                <div className="flex items-center gap-2 self-end sm:self-center">
+                                                    <Button asChild size="sm" variant="outline" className="h-8 px-2.5 text-xs">
+                                                        <Link href={`/dispatch/surat-jalan/${sj.uuid}`}>
+                                                            <Eye className="size-3.5 mr-1 text-slate-500" /> Detail SJ
+                                                        </Link>
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                             )}
                         </div>
@@ -480,8 +751,8 @@ export default function OrderShow({ order }: { order: OrderDetail }) {
                     title={confirmDialog.title}
                     description={confirmDialog.description}
                     variant={confirmDialog.variant}
-                    confirmText="Ya, Perbarui"
-                    cancelText="Batal"
+                    confirmText="Ya, Batalkan"
+                    cancelText="Kembali"
                     onConfirm={handleConfirmStatus}
                 />
             </div>
