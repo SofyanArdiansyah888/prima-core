@@ -123,19 +123,31 @@ export default function ProductPage() {
 
         {product && (
           <>
-            <div className="relative h-56 w-full overflow-hidden bg-slate-100">
+            <div className="relative aspect-square w-full max-h-[420px] overflow-hidden bg-slate-100 flex items-center justify-center">
               <SafeImage 
                 src={getProductImage(product)} 
                 alt={product.name} 
                 type={product.category}
-                className="h-full w-full object-cover"
+                className="h-full w-full object-cover object-center"
               />
-              <div className="absolute top-3 left-3 flex gap-1.5">
-                <span className="bg-[#0c1d37]/90 backdrop-blur-xs text-white text-[10px] font-extrabold px-2.5 py-1 rounded-lg">
+              <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/40 via-black/10 to-transparent pointer-events-none" />
+              
+              <div className="absolute top-3 left-3 flex flex-wrap gap-1.5 max-w-[75%]">
+                <span className="bg-[#0c1d37]/90 backdrop-blur-xs text-white text-[10px] font-extrabold px-2.5 py-1 rounded-full shadow-xs">
                   {categoryLabel(product.category)}
                 </span>
+                {product.is_featured && (
+                  <span className="bg-[#d91424] text-white text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full shadow-xs flex items-center gap-0.5">
+                    ★ Unggulan
+                  </span>
+                )}
+                {product.is_best_seller && (
+                  <span className="bg-[#ea580c] text-white text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full shadow-xs flex items-center gap-0.5">
+                    🔥 Terlaris
+                  </span>
+                )}
                 {product.tag && (
-                  <span className="bg-[#ea580c] text-white text-[10px] font-extrabold px-2.5 py-1 rounded-lg">
+                  <span className="bg-amber-600 text-white text-[10px] font-extrabold px-2.5 py-1 rounded-full shadow-xs">
                     {product.tag}
                   </span>
                 )}
