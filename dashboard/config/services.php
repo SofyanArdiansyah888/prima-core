@@ -36,8 +36,10 @@ return [
     ],
 
     'fonnte' => [
+        'driver' => env('FONNTE_DRIVER'),
         'token' => env('FONNTE_TOKEN'),
         'admin_phone' => env('FONNTE_ADMIN_PHONE'),
+        'timeout' => (int) env('FONNTE_TIMEOUT', 10),
     ],
 
     'midtrans' => [

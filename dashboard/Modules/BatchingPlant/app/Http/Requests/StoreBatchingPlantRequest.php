@@ -5,6 +5,7 @@ namespace Modules\BatchingPlant\Http\Requests;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Modules\Shared\Enums\PlantStatus;
+use Modules\Shared\Support\PhoneNumber;
 
 class StoreBatchingPlantRequest extends FormRequest
 {
@@ -53,20 +54,8 @@ class StoreBatchingPlantRequest extends FormRequest
 
     private function normalizeWhatsapp(mixed $value): ?string
     {
-        $digits = preg_replace('/\D+/', '', (string) $value) ?? '';
+        $international = PhoneNumber::toInternational((string) $value);
 
-        if ($digits === '') {
-            return null;
-        }
-
-        if (str_starts_with($digits, '0')) {
-            return '62'.substr($digits, 1);
-        }
-
-        if (! str_starts_with($digits, '62')) {
-            return '62'.$digits;
-        }
-
-        return $digits;
+        return $international !== '' ? $international : null;
     }
 }

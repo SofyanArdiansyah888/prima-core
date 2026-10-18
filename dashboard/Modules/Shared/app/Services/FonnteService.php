@@ -2,14 +2,27 @@
 
 namespace Modules\Shared\Services;
 
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Modules\Shared\Contracts\WhatsappGatewayInterface;
 use Modules\Shared\Jobs\SendWhatsappMessage;
-use RuntimeException;
+use Modules\Shared\Services\Whatsapp\FonnteGateway;
+use Modules\Shared\Services\Whatsapp\LogGateway;
+use Modules\Shared\Services\Whatsapp\NullGateway;
+use Modules\Shared\Support\PhoneNumber;
 use Throwable;
 
 class FonnteService
 {
+    private WhatsappGatewayInterface $gateway;
+
+    public function __construct(?WhatsappGatewayInterface $gateway = null)
+    {
+        $this->gateway = $gateway ?? $this->resolveGateway();
+    }
+
+    /**
+     * Mengantrikan pesan WhatsApp untuk dikirim secara asinkron setelah DB commit.
+     */
     public function send(string $phone, string $message): void
     {
         $phone = trim($phone);
@@ -21,54 +34,60 @@ class FonnteService
             SendWhatsappMessage::dispatch($phone, $message)->afterCommit();
         } catch (Throwable $exception) {
             Log::error('Gagal mengantri pesan WhatsApp.', [
+                'recipient' => PhoneNumber::mask($phone),
                 'error' => $exception->getMessage(),
             ]);
         }
     }
 
-    public function deliver(string $phone, string $message): void
+    /**
+     * Pengiriman langsung yang dipanggil oleh Queue Worker (SendWhatsappMessage).
+     * Akan melempar exception bila gagal agar mekanisme retry queue Laravel berjalan.
+     *
+     * @return array{success: bool, id: ?string, detail: ?string, raw?: mixed}
+     */
+    public function deliver(string $phone, string $message): array
     {
-        try {
-            $this->sendNow($phone, $message);
-        } catch (Throwable $exception) {
-            Log::error('Pengiriman Fonnte gagal.', [
-                'error' => $exception->getMessage(),
-            ]);
-        }
+        return $this->sendNow($phone, $message);
     }
 
-    public function sendNow(string $phone, string $message): void
+    /**
+     * Kirim pesan WhatsApp secara sinkron.
+     *
+     * @return array{success: bool, id: ?string, detail: ?string, raw?: mixed}|mixed
+     *
+     * @throws Throwable Jika gateway gagal mengirim pesan
+     */
+    public function sendNow(string $phone, string $message): mixed
     {
-        $token = config('services.fonnte.token');
-        if (! is_string($token) || $token === '') {
-            throw new RuntimeException('Token Fonnte kosong.');
-        }
-
-        $target = $this->target($phone);
-        if ($target === '') {
-            throw new RuntimeException('Nomor WhatsApp kosong.');
-        }
-
-        $response = Http::withHeaders([
-            'Authorization' => $token,
-        ])->timeout(20)->asForm()->post('https://api.fonnte.com/send', [
-            'target' => $target,
-            'message' => $message,
-            'countryCode' => '62',
-        ]);
-
-        if (! $response->successful() || $response->json('status') === false) {
-            throw new RuntimeException('Fonnte menolak pengiriman: '.$response->status().' '.$response->body());
-        }
+        return $this->gateway->sendNow($phone, $message);
     }
 
-    private function target(string $phone): string
+    public function getGateway(): WhatsappGatewayInterface
     {
-        $digits = preg_replace('/\D/', '', $phone) ?? '';
-        if (str_starts_with($digits, '0')) {
-            return '62'.substr($digits, 1);
+        return $this->gateway;
+    }
+
+    public function setGateway(WhatsappGatewayInterface $gateway): self
+    {
+        $this->gateway = $gateway;
+
+        return $this;
+    }
+
+    private function resolveGateway(): WhatsappGatewayInterface
+    {
+        $driver = config('services.fonnte.driver');
+
+        if (! is_string($driver) || $driver === '') {
+            $token = config('services.fonnte.token');
+            $driver = (is_string($token) && trim($token) !== '') ? 'fonnte' : 'log';
         }
 
-        return $digits;
+        return match ($driver) {
+            'log' => new LogGateway,
+            'null' => new NullGateway,
+            default => new FonnteGateway,
+        };
     }
 }

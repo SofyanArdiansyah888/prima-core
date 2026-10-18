@@ -15,8 +15,11 @@ class OrderObserver
         $this->fonnte->send((string) $order->customer_phone, $message);
 
         $admin = config('services.fonnte.admin_phone');
-        if (is_string($admin) && $admin !== '') {
-            $this->fonnte->send($admin, "Pesanan baru {$order->code} dari {$order->customer_name}. Status: {$this->label($order->status)}.");
+        if (is_string($admin) && trim($admin) !== '') {
+            $adminPhones = array_filter(array_map('trim', explode(',', $admin)));
+            foreach ($adminPhones as $adminPhone) {
+                $this->fonnte->send($adminPhone, "Pesanan baru {$order->code} dari {$order->customer_name}. Status: {$this->label($order->status)}.");
+            }
         }
     }
 

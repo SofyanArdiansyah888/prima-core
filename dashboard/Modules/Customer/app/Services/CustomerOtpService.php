@@ -72,6 +72,7 @@ class CustomerOtpService
         } catch (Throwable $exception) {
             $otp->delete();
             Log::error('OTP WhatsApp gagal dikirim.', [
+                'recipient' => PhoneNumber::mask($phone),
                 'purpose' => $purpose,
                 'error' => $exception->getMessage(),
             ]);
