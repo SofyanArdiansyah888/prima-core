@@ -39,17 +39,17 @@ type User = {
 
 export default function WorkOrderForm({
     selectedOrder,
-    orders,
-    plants,
-    users,
+    orders = [],
+    plants = [],
+    users = [],
 }: {
     selectedOrder: Order | null;
-    orders: Order[];
-    plants: Plant[];
-    users: User[];
+    orders?: Order[];
+    plants?: Plant[];
+    users?: User[];
 }) {
     const defaultOrder = selectedOrder ?? orders[0];
-    const defaultProduct = defaultOrder?.items[0];
+    const defaultProduct = defaultOrder?.items?.[0];
 
     const { data, setData, post, processing, errors } = useForm({
         order_id: selectedOrder?.id ?? '',
@@ -123,7 +123,7 @@ export default function WorkOrderForm({
                                     onChange={(e) => handleOrderChange(Number(e.target.value))}
                                     className="mt-1.5 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 dark:border-slate-800 dark:bg-slate-900 dark:text-white"
                                 >
-                                    {orders.map((o) => (
+                                    {(orders ?? []).map((o) => (
                                         <option key={o.id} value={o.id}>
                                             {o.code} — {o.customer_name} ({o.project_title})
                                         </option>
@@ -140,7 +140,7 @@ export default function WorkOrderForm({
                                     onChange={(e) => setData('batching_plant_id', Number(e.target.value))}
                                     className="mt-1.5 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 dark:border-slate-800 dark:bg-slate-900 dark:text-white"
                                 >
-                                    {plants.map((p) => (
+                                    {(plants ?? []).map((p) => (
                                         <option key={p.id} value={p.id}>
                                             {p.name} ({p.code})
                                         </option>
@@ -157,7 +157,7 @@ export default function WorkOrderForm({
                                     onChange={(e) => setData('assigned_user_id', Number(e.target.value))}
                                     className="mt-1.5 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 dark:border-slate-800 dark:bg-slate-900 dark:text-white"
                                 >
-                                    {users.map((u) => (
+                                    {(users ?? []).map((u) => (
                                         <option key={u.id} value={u.id}>
                                             {u.name} ({u.code})
                                         </option>

@@ -66,15 +66,18 @@ type Paginated<T> = {
 
 export default function WorkOrderIndex({
     workOrders,
-    plants,
-    filters,
+    plants = [],
+    statuses = [],
+    filters = {},
 }: {
     workOrders: Paginated<WorkOrderRow>;
-    plants: { id: number; code: string; name: string }[];
-    filters: { search?: string; batching_plant_id?: string };
+    plants?: { id: number; code: string; name: string }[];
+    statuses?: { value: string; label: string }[];
+    filters?: { search?: string; batching_plant_id?: string; status?: string };
 }) {
-    const [search, setSearch] = useState(filters.search ?? '');
-    const [plantId, setPlantId] = useState(filters.batching_plant_id ?? '');
+    const [search, setSearch] = useState(filters?.search ?? '');
+    const [status, setStatus] = useState(filters?.status ?? '');
+    const [plantId, setPlantId] = useState(filters?.batching_plant_id ?? '');
     const [copiedCode, setCopiedCode] = useState<string | null>(null);
     const flash = (usePage().props as { flash?: { success?: string; error?: string } }).flash;
 
@@ -85,7 +88,7 @@ export default function WorkOrderIndex({
 
     const submitSearch = (e: React.FormEvent) => {
         e.preventDefault();
-        router.get('/production/work-orders', { search, batching_plant_id: plantId }, { preserveState: true });
+        router.get('/production/work-orders', { search, status, batching_plant_id: plantId }, { preserveState: true });
     };
 
     const copyToClipboard = (e: React.MouseEvent, code: string) => {
@@ -98,12 +101,13 @@ export default function WorkOrderIndex({
 
     // Calculate Quick KPI Stats based on volume fulfillment
     const stats = useMemo(() => {
-        const total = workOrders.total ?? workOrders.data.length;
-        const queued = workOrders.data.filter((w) => Number(w.dispatched_quantity) === 0).length;
-        const inProgress = workOrders.data.filter(
+        const list = workOrders?.data ?? [];
+        const total = workOrders?.total ?? list.length;
+        const queued = list.filter((w) => Number(w.dispatched_quantity) === 0).length;
+        const inProgress = list.filter(
             (w) => Number(w.dispatched_quantity) > 0 && Number(w.dispatched_quantity) < Number(w.target_quantity)
         ).length;
-        const fulfilled = workOrders.data.filter((w) => Number(w.dispatched_quantity) >= Number(w.target_quantity)).length;
+        const fulfilled = list.filter((w) => Number(w.dispatched_quantity) >= Number(w.target_quantity)).length;
         return { total, queued, inProgress, fulfilled };
     }, [workOrders]);
 
@@ -166,16 +170,34 @@ export default function WorkOrderIndex({
                             />
                         </div>
 
+                        {statuses && statuses.length > 0 && (
+                            <select
+                                value={status}
+                                onChange={(e) => {
+                                    setStatus(e.target.value);
+                                    router.get('/production/work-orders', { search, status: e.target.value, batching_plant_id: plantId }, { preserveState: true });
+                                }}
+                                className="h-9.5 rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-xs font-semibold text-slate-700 outline-none focus:border-[#0c1d37] dark:border-slate-800 dark:bg-slate-800 dark:text-slate-200"
+                            >
+                                <option value="">Semua Status Produksi</option>
+                                {(statuses ?? []).map((s) => (
+                                    <option key={s.value} value={s.value}>
+                                        {s.label}
+                                    </option>
+                                ))}
+                            </select>
+                        )}
+
                         <select
                             value={plantId}
                             onChange={(e) => {
                                 setPlantId(e.target.value);
-                                router.get('/production/work-orders', { search, batching_plant_id: e.target.value }, { preserveState: true });
+                                router.get('/production/work-orders', { search, status, batching_plant_id: e.target.value }, { preserveState: true });
                             }}
                             className="h-9.5 rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-xs font-semibold text-slate-700 outline-none focus:border-[#0c1d37] dark:border-slate-800 dark:bg-slate-800 dark:text-slate-200"
                         >
                             <option value="">Semua Batching Plant</option>
-                            {plants.map((p) => (
+                            {(plants ?? []).map((p) => (
                                 <option key={p.id} value={p.id}>
                                     {p.name}
                                 </option>
@@ -188,7 +210,7 @@ export default function WorkOrderIndex({
                     </form>
 
                     <div className="text-xs text-slate-400 font-medium">
-                        Menampilkan <span className="font-bold text-slate-900 dark:text-white">{workOrders.data.length}</span> dari {workOrders.total ?? workOrders.data.length} SPK
+                        Menampilkan <span className="font-bold text-slate-900 dark:text-white">{(workOrders?.data ?? []).length}</span> dari {workOrders?.total ?? (workOrders?.data ?? []).length} SPK
                     </div>
                 </div>
 
@@ -207,7 +229,7 @@ export default function WorkOrderIndex({
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                                {workOrders.data.length === 0 ? (
+                                {(workOrders?.data ?? []).length === 0 ? (
                                     <tr>
                                         <td colSpan={6} className="px-6 py-12 text-center">
                                             <div className="mx-auto flex max-w-xs flex-col items-center justify-center text-center">
@@ -225,7 +247,7 @@ export default function WorkOrderIndex({
                                         </td>
                                     </tr>
                                 ) : (
-                                    workOrders.data.map((wo) => {
+                                    (workOrders?.data ?? []).map((wo) => {
                                         const target = Number(wo.target_quantity) || 0;
                                         const dispatched = Number(wo.dispatched_quantity) || 0;
                                         const percent = target > 0 ? Math.min(100, Math.round((dispatched / target) * 100)) : 0;
@@ -340,13 +362,13 @@ export default function WorkOrderIndex({
                     </div>
 
                     {/* Pagination */}
-                    {workOrders.links && workOrders.links.length > 3 && (
+                    {workOrders?.links && workOrders.links.length > 3 && (
                         <div className="flex items-center justify-between border-t border-slate-100 px-4 py-3 dark:border-slate-800">
                             <span className="text-xs text-slate-400 font-medium">
                                 Navigasi halaman
                             </span>
                             <div className="flex gap-1">
-                                {workOrders.links.map((link, idx) => (
+                                {(workOrders.links ?? []).map((link, idx) => (
                                     <Button
                                         key={idx}
                                         asChild={Boolean(link.url)}

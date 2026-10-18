@@ -21,6 +21,7 @@ class WorkOrderController extends Controller
     public function index(Request $request): Response
     {
         $search = $request->string('search')->trim()->toString();
+        $status = $request->string('status')->trim()->toString();
         $plantId = $request->input('batching_plant_id');
 
         $workOrders = WorkOrder::query()
@@ -40,6 +41,7 @@ class WorkOrderController extends Controller
                         });
                 });
             })
+            ->when($status !== '', fn ($q) => $q->where('status', $status))
             ->when($plantId, fn ($q) => $q->where('batching_plant_id', $plantId))
             ->orderByDesc('scheduled_date')
             ->orderByDesc('id')
@@ -49,8 +51,16 @@ class WorkOrderController extends Controller
         return Inertia::render('modules/work-order/index', [
             'workOrders' => $workOrders,
             'plants' => BatchingPlant::query()->where('is_active', true)->orderBy('code')->get(['id', 'uuid', 'code', 'name']),
+            'statuses' => [
+                ['value' => 'SCHEDULED', 'label' => 'Terjadwal'],
+                ['value' => 'IN_PRODUCTION', 'label' => 'Sedang Produksi / Batching'],
+                ['value' => 'READY_FOR_DISPATCH', 'label' => 'Siap Kirim'],
+                ['value' => 'COMPLETED', 'label' => 'Selesai'],
+                ['value' => 'CANCELLED', 'label' => 'Dibatalkan'],
+            ],
             'filters' => [
                 'search' => $search,
+                'status' => $status,
                 'batching_plant_id' => $plantId,
             ],
         ]);
