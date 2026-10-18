@@ -128,28 +128,46 @@ function ShowcaseCard({
   return (
     <div
       onClick={onOpen}
-      className={`flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-xs transition-all hover:border-[#d91424]/40 ${
-        layout === 'grid' ? 'w-full' : 'w-[155px] shrink-0'
+      className={`group flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-xs transition-all hover:border-[#d91424]/40 hover:shadow-md ${
+        layout === 'grid' ? 'w-full' : 'w-[162px] shrink-0'
       }`}
     >
-      <div className={`w-full overflow-hidden bg-slate-100 ${layout === 'grid' ? 'aspect-square' : 'h-28'}`}>
+      <div className="relative aspect-square w-full overflow-hidden bg-slate-100">
         <SafeImage
           src={getProductImage(product)}
           alt={product.name}
           type={product.category}
-          className="h-full w-full object-cover"
+          className="h-full w-full object-cover object-center transition-transform duration-300 group-hover:scale-105"
         />
+
+        {/* Overlay Badges */}
+        <div className="absolute top-2 left-2 right-2 flex items-center justify-between pointer-events-none">
+          {product.is_featured ? (
+            <span className="inline-flex items-center gap-0.5 rounded-md bg-[#d91424] px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-white shadow-xs">
+              ★ Unggulan
+            </span>
+          ) : product.is_best_seller ? (
+            <span className="inline-flex items-center gap-0.5 rounded-md bg-[#ea580c] px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-white shadow-xs">
+              🔥 Terlaris
+            </span>
+          ) : <span />}
+
+          <span className="rounded-md bg-black/45 backdrop-blur-xs px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider text-white shadow-xs">
+            {product.category === 'readymix' ? 'Beton' : 'Semen'}
+          </span>
+        </div>
       </div>
-      <div className="flex flex-1 flex-col justify-between px-3 pb-3 pt-2.5">
+
+      <div className="flex flex-1 flex-col justify-between p-3">
         <div>
-          <h3 className="line-clamp-2 min-h-[32px] text-xs font-bold leading-snug text-slate-900">
+          <h3 className="line-clamp-2 min-h-[34px] text-xs font-bold leading-snug text-slate-900 group-hover:text-[#d91424] transition-colors">
             {product.name}
           </h3>
-          <p className="mt-0.5 text-[10px] text-slate-400">
-            {formatQty(product.min_order)} {product.unit}
+          <p className="mt-1 text-[10px] font-medium text-slate-400">
+            Min. {formatQty(product.min_order)} {product.unit}
           </p>
         </div>
-        <div className="mt-2 border-t border-slate-100 pt-2">
+        <div className="mt-2.5 border-t border-slate-100 pt-2">
           <div className="mb-2 flex items-baseline gap-0.5">
             <span className="text-xs font-black text-[#d91424]">{formatRupiah(product.base_price)}</span>
             <span className="text-[9px] font-medium text-slate-400">/{product.unit}</span>
@@ -641,7 +659,7 @@ export default function HomePage() {
               </div>
 
               {/* Horizontal Scroll Product List */}
-              <div className="flex gap-3 overflow-x-auto px-4 pb-2 no-scrollbar">
+              <div className="flex gap-3 overflow-x-auto px-4 pt-1 pb-3 no-scrollbar scroll-smooth">
                 {featuredProducts.map((p) => (
                   <ShowcaseCard
                     key={p.uuid}
@@ -677,7 +695,7 @@ export default function HomePage() {
               </div>
 
               {/* Horizontal Scroll Product List */}
-              <div className="flex gap-3 overflow-x-auto px-4 pb-2 no-scrollbar">
+              <div className="flex gap-3 overflow-x-auto px-4 pt-1 pb-3 no-scrollbar scroll-smooth">
                 {bestSellerProducts.map((p) => (
                   <ShowcaseCard
                     key={p.uuid}
