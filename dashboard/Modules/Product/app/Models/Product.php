@@ -58,7 +58,20 @@ class Product extends Model
             return $this->image_path;
         }
 
-        return Storage::disk('public')->url($this->image_path);
+        $url = Storage::disk('public')->url($this->image_path);
+
+        if (! app()->runningInConsole() && request()->hasHeader('Host')) {
+            $parsed = parse_url($url);
+            $host = $parsed['host'] ?? '';
+            if ($host === 'localhost' || $host === '127.0.0.1') {
+                $base = rtrim(request()->getSchemeAndHttpHost(), '/');
+                $path = $parsed['path'] ?? ('/storage/'.ltrim($this->image_path, '/'));
+
+                return $base.$path;
+            }
+        }
+
+        return $url;
     }
 
     protected static function booted(): void

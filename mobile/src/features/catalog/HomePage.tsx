@@ -28,7 +28,7 @@ import {
 } from '../../shared/ui';
 import PkmLogo from '../../shared/ui/PkmLogo';
 
-import { getProductImage } from '../../domain/product';
+import { getProductImage, resolveStorageUrl } from '../../domain/product';
 
 type CatalogChip = { id: string; label: string };
 
@@ -498,7 +498,7 @@ export default function HomePage() {
                   >
                     <div className="absolute inset-0 z-0 opacity-25">
                       <img 
-                        src={activeHero.image_url} 
+                        src={resolveStorageUrl(activeHero.image_url) || activeHero.image_url} 
                         alt="" 
                         className="w-full h-full object-cover"
                       />
