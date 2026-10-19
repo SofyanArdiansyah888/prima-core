@@ -2,6 +2,7 @@ import { Head, Link, router, usePage } from '@inertiajs/react';
 import { formatDateTime } from '@/lib/utils';
 import {
     ShoppingCart,
+    Smartphone,
     Plus,
     Search,
     MapPin,
@@ -148,11 +149,10 @@ export default function OrderIndex({
                         </p>
                     </div>
 
-                    <Button asChild className="h-10 rounded-xl bg-[#0c1d37] hover:bg-[#162e55] px-4 font-bold text-white shadow-md shadow-[#0c1d37]/15 transition-all">
-                        <Link href="/sales/orders/create">
-                            <Plus className="size-4 mr-1.5" /> Buat Pesanan Baru
-                        </Link>
-                    </Button>
+                    <div className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50/80 px-3.5 py-2 text-xs font-semibold text-slate-600 shadow-2xs dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-400">
+                        <Smartphone className="size-4 text-emerald-600 dark:text-emerald-400" />
+                        <span>Input pesanan via Mobile App</span>
+                    </div>
                 </div>
 
                 {/* KPI Statistics Ribbon */}
@@ -257,9 +257,10 @@ export default function OrderIndex({
                                                 <p className="mt-1 text-xs text-slate-500">
                                                     Belum ada pesanan yang sesuai dengan parameter filter.
                                                 </p>
-                                                <Button asChild size="sm" className="mt-4 rounded-xl bg-[#0c1d37] text-white">
-                                                    <Link href="/sales/orders/create">Input Pesanan Baru</Link>
-                                                </Button>
+                                                <div className="mt-4 flex items-center gap-2 rounded-xl bg-slate-50 border border-slate-200/80 px-3 py-1.5 text-xs text-slate-500 dark:bg-slate-800/60 dark:border-slate-700 dark:text-slate-400">
+                                                    <Smartphone className="size-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                                                    <span>Pesanan baru masuk otomatis via aplikasi mobile</span>
+                                                </div>
                                             </div>
                                         </td>
                                     </tr>

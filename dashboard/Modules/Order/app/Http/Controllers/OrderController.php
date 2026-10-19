@@ -68,30 +68,16 @@ class OrderController extends Controller
         ]);
     }
 
-    public function create(): Response
+    public function create(): RedirectResponse
     {
-        return Inertia::render('modules/order/form', [
-            'plants' => BatchingPlant::query()->where('is_active', true)->orderBy('code')->get(['id', 'uuid', 'code', 'name', 'lat', 'lng']),
-            'products' => Product::query()->where('is_active', true)->orderBy('category')->orderBy('name')->get(),
-            'customerTypes' => [
-                ['value' => 'B2C', 'label' => 'Pelanggan Umum (B2C)'],
-                ['value' => 'B2B_PARTNER', 'label' => 'B2B Partner (Kontraktor)'],
-            ],
-            'paymentMethods' => [
-                ['value' => 'MIDTRANS', 'label' => 'Midtrans Payment Gateway'],
-                ['value' => 'VA_MANDIRI', 'label' => 'Virtual Account Bank Mandiri'],
-                ['value' => 'VA_BRI', 'label' => 'Virtual Account Bank BRI'],
-                ['value' => 'CREDIT_B2B', 'label' => 'Kredit B2B (TOP 30 Hari PKM)'],
-                ['value' => 'CASH', 'label' => 'Tunai / Transfer Langsung'],
-            ],
-        ]);
+        return redirect()->route('orders.index')
+            ->with('info', 'Pembuatan pesanan baru saat ini hanya dapat dilakukan melalui aplikasi mobile pelanggan.');
     }
 
-    public function store(StoreOrderRequest $request, PlaceOrder $orders): RedirectResponse
+    public function store(Request $request): RedirectResponse
     {
-        $order = $orders->place($request->validated());
-
-        return redirect()->route('orders.index')->with('success', "Pesanan {$order->code} berhasil dibuat.");
+        return redirect()->route('orders.index')
+            ->with('error', 'Pembuatan pesanan langsung dari dashboard saat ini dinonaktifkan.');
     }
 
     public function show(Order $order, MidtransPaymentService $midtrans): Response

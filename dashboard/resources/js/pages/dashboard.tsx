@@ -206,11 +206,6 @@ export default function Dashboard({
                         </p>
                     </div>
                     <div className="flex items-center gap-2">
-                        <Button asChild size="sm" variant="outline" className="h-9 rounded-xl border-slate-200 text-xs font-bold shadow-2xs">
-                            <Link href="/sales/orders/create">
-                                <Plus className="size-3.5 mr-1" /> Buat SO
-                            </Link>
-                        </Button>
                         <Button asChild size="sm" className="h-9 rounded-xl bg-[#0c1d37] hover:bg-[#162e55] font-bold text-white shadow-md text-xs shadow-[#0c1d37]/15">
                             <Link href="/production/work-orders/create">
                                 <Plus className="size-3.5 mr-1 text-amber-400" /> Terbitkan SPK

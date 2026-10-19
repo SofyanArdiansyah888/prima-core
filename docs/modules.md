@@ -76,7 +76,7 @@
 - Model: `Modules\Order\Models\Order`, `Modules\Order\Models\OrderItem`
 - Pages: `resources/js/pages/modules/order/{index,form,show}.tsx`
 - Fitur: Sales Order pemesanan, auto-select batching plant terdekat, hitung ongkir otomatis, tracking pemenuhan per item, process stepper alur 4 tahap, dan riwayat ritase Surat Jalan.
-- Pesanan aplikasi pelanggan masuk ke tabel yang sama (`customer_id`, `customer_type = B2C`) lewat `PlaceOrder`.
+- Pembuatan SO dari dashboard saat ini di-hide/dinonaktifkan; seluruh pesanan baru masuk secara otomatis dari aplikasi mobile pelanggan (`customer_id`, `customer_type = B2C`) lewat `CustomerOrderService` / `PlaceOrder`.
 - Alur Status: `CONFIRMED` ➔ `PROCESSING` (saat SPK terbit) ➔ `ON_DELIVERY` (saat SJ terbit) ➔ `COMPLETED` (otomatis saat seluruh ritase SJ tuntas diterima 100%). Aksi selesai manual ditiadakan.
 
 ## WorkOrder

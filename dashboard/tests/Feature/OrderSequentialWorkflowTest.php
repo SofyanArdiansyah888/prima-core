@@ -253,4 +253,28 @@ class OrderSequentialWorkflowTest extends TestCase
         $response->assertSessionHas('error');
         $this->assertDatabaseHas('work_orders', ['id' => $workOrder->id]);
     }
+
+    public function test_order_creation_from_dashboard_is_disabled_and_redirects(): void
+    {
+        $createResponse = $this->actingAs($this->admin)->get('/sales/orders/create');
+        $createResponse->assertRedirect('/sales/orders');
+        $createResponse->assertSessionHas('info');
+
+        $storeResponse = $this->actingAs($this->admin)->post('/sales/orders', [
+            'batching_plant_id' => $this->plant->id,
+            'customer_name' => 'Test Customer',
+            'customer_phone' => '08123456789',
+            'delivery_address' => 'Jl. Test',
+            'delivery_lat' => -5.1,
+            'delivery_lng' => 119.4,
+            'items' => [
+                [
+                    'product_id' => $this->product->id,
+                    'quantity' => 10,
+                ],
+            ],
+        ]);
+        $storeResponse->assertRedirect('/sales/orders');
+        $storeResponse->assertSessionHas('error');
+    }
 }
