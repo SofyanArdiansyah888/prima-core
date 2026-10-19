@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Exports\TabularExport;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Carbon\Carbon;
 use Carbon\CarbonInterface;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -70,9 +71,11 @@ class ReportController extends Controller
         return Inertia::render('modules/report/index', [
             'kind' => $kind,
             'title' => $payload['title'],
+            'periodLabel' => $payload['periodLabel'],
             'filters' => $payload['filters'],
             'plants' => $payload['plants'],
             'metrics' => $payload['metrics'],
+            'records' => $payload['records'],
             'headings' => $payload['headings'],
             'rows' => $payload['rows'],
         ]);
@@ -93,28 +96,19 @@ class ReportController extends Controller
         $payload = $this->build($request, $kind);
         $pdf = Pdf::loadView('reports.summary', [
             'title' => $payload['title'],
-            'period' => $payload['filters']['from'].' s/d '.$payload['filters']['to'],
-            'metrics' => array_slice($payload['metrics'], 0, 3),
+            'period' => $payload['periodLabel'],
+            'metrics' => array_slice($payload['metrics'], 0, 4),
             'headings' => $payload['headings'],
-            'rows' => array_slice($payload['rows'], 0, 25),
+            'rows' => array_slice($payload['rows'], 0, 50),
         ]);
 
         return $pdf->download($payload['filename'].'.pdf');
     }
 
-    /**
-     * @return array{
-     *     title: string,
-     *     filename: string,
-     *     filters: array{from: string, to: string, batching_plant_id: string},
-     *     plants: list<array{id: int, code: string, name: string}>,
-     *     metrics: list<array{label: string, value: string}>,
-     *     headings: list<string>,
-     *     rows: list<list<string|int|float>>
-     * }
-     */
     private function build(Request $request, string $kind): array
     {
+        Carbon::setLocale('id');
+
         $from = $request->date('from') ?? now()->startOfMonth();
         $to = $request->date('to') ?? now();
         if ($from->greaterThan($to)) {
@@ -138,8 +132,11 @@ class ReportController extends Controller
             default => $this->salesData($from, $to, $plantId),
         };
 
+        $periodLabel = $this->formatIndonesianDate($from).' s/d '.$this->formatIndonesianDate($to);
+
         return [
             ...$built,
+            'periodLabel' => $periodLabel,
             'filters' => [
                 'from' => $from->toDateString(),
                 'to' => $to->toDateString(),
@@ -149,111 +146,290 @@ class ReportController extends Controller
         ];
     }
 
-    /**
-     * @return array{title: string, filename: string, metrics: list<array{label: string, value: string}>, headings: list<string>, rows: list<list<string|int|float>>}
-     */
     private function salesData(CarbonInterface $from, CarbonInterface $to, ?int $plantId): array
     {
         $orders = Order::query()
-            ->with('batchingPlant:id,code,name')
+            ->with([
+                'batchingPlant:id,code,name',
+                'items.product:id,code,name,unit',
+            ])
             ->whereDate('created_at', '>=', $from->toDateString())
             ->whereDate('created_at', '<=', $to->toDateString())
             ->when($plantId, fn ($query) => $query->where('batching_plant_id', $plantId))
             ->orderByDesc('created_at')
-            ->limit(300)
+            ->limit(500)
             ->get();
 
-        $rows = $orders->map(fn (Order $order) => [
-            $order->code,
-            $order->customer_name,
-            $order->batchingPlant?->code ?? '',
-            $order->status,
-            (float) $order->total_price,
-            $order->created_at?->format('Y-m-d') ?? '',
+        $completedCount = $orders->where('status', 'COMPLETED')->count();
+        $totalOrders = $orders->count();
+        $completionRate = $totalOrders > 0 ? round(($completedCount / $totalOrders) * 100) : 0;
+        $totalRevenue = (float) $orders->sum('total_price');
+        $paidRevenue = (float) $orders->where('payment_status', 'PAID')->sum('total_price');
+
+        $records = $orders->map(fn (Order $o) => [
+            'id' => $o->id,
+            'uuid' => $o->uuid,
+            'code' => $o->code,
+            'customer_name' => $o->customer_name,
+            'project_title' => $o->project_title ?? '—',
+            'plant_code' => $o->batchingPlant?->code ?? '—',
+            'plant_name' => $o->batchingPlant?->name ?? '—',
+            'status' => $o->status,
+            'status_label' => $this->orderStatusLabel($o->status),
+            'payment_status' => $o->payment_status,
+            'payment_status_label' => $this->paymentStatusLabel($o->payment_status),
+            'total_price' => (float) $o->total_price,
+            'created_at' => $o->created_at?->toISOString(),
+            'formatted_date' => $this->formatIndonesianDate($o->created_at),
+            'formatted_time' => $o->created_at?->format('H:i').' WITA',
+            'item_names' => $o->items->map(fn ($i) => $i->product?->name)->filter()->join(', '),
+        ])->all();
+
+        $rows = $orders->map(fn (Order $o) => [
+            $o->code,
+            $this->formatIndonesianDate($o->created_at).' '.$o->created_at?->format('H:i'),
+            $o->customer_name,
+            $o->project_title ?? '—',
+            $o->batchingPlant?->name ?? '—',
+            $this->orderStatusLabel($o->status),
+            $this->paymentStatusLabel($o->payment_status),
+            (float) $o->total_price,
         ])->all();
 
         return [
-            'title' => 'Laporan Penjualan',
+            'title' => 'Laporan Pesanan & Penjualan',
             'filename' => 'laporan-penjualan-'.$from->format('Ymd').'-'.$to->format('Ymd'),
             'metrics' => [
-                ['label' => 'Jumlah pesanan', 'value' => (string) $orders->count()],
-                ['label' => 'Nilai pesanan', 'value' => 'Rp '.number_format((float) $orders->sum('total_price'), 0, ',', '.')],
-                ['label' => 'Selesai', 'value' => (string) $orders->where('status', 'COMPLETED')->count()],
+                ['label' => 'Total Pesanan', 'value' => (string) $totalOrders, 'desc' => 'Transaksi masuk'],
+                ['label' => 'Total Nilai Penjualan', 'value' => 'Rp '.number_format($totalRevenue, 0, ',', '.'), 'desc' => 'Gross tagihan pesanan'],
+                ['label' => 'Selesai Terpenuhi', 'value' => "{$completedCount} ({$completionRate}%)", 'desc' => 'Tuntas terkirim 100%'],
+                ['label' => 'Pembayaran Lunas', 'value' => 'Rp '.number_format($paidRevenue, 0, ',', '.'), 'desc' => 'Terverifikasi Midtrans/Kredit'],
             ],
-            'headings' => ['Kode', 'Pelanggan', 'Plant', 'Status', 'Nilai', 'Tanggal'],
+            'records' => $records,
+            'headings' => ['Kode Pesanan', 'Tanggal Pesanan', 'Pelanggan', 'Proyek', 'Plant', 'Status Pesanan', 'Status Bayar', 'Nilai Total (Rp)'],
             'rows' => $rows,
         ];
     }
 
-    /**
-     * @return array{title: string, filename: string, metrics: list<array{label: string, value: string}>, headings: list<string>, rows: list<list<string|int|float>>}
-     */
     private function productionData(CarbonInterface $from, CarbonInterface $to, ?int $plantId): array
     {
         $workOrders = WorkOrder::query()
-            ->with('batchingPlant:id,code,name')
+            ->with([
+                'batchingPlant:id,code,name',
+                'product:id,code,name,unit',
+                'order:id,uuid,code,customer_name,project_title',
+                'assignedUser:id,name',
+            ])
             ->whereDate('scheduled_date', '>=', $from->toDateString())
             ->whereDate('scheduled_date', '<=', $to->toDateString())
             ->when($plantId, fn ($query) => $query->where('batching_plant_id', $plantId))
             ->orderByDesc('scheduled_date')
-            ->limit(300)
+            ->limit(500)
             ->get();
 
-        $rows = $workOrders->map(fn (WorkOrder $workOrder) => [
-            $workOrder->code,
-            $workOrder->batchingPlant?->code ?? '',
-            $workOrder->scheduled_date?->format('Y-m-d') ?? (string) $workOrder->scheduled_date,
-            (float) $workOrder->target_quantity,
-            (float) $workOrder->produced_quantity,
-            $workOrder->unit,
-            $workOrder->status,
-        ])->all();
+        $totalWos = $workOrders->count();
+        $totalTarget = (float) $workOrders->sum('target_quantity');
+        $totalDispatched = (float) $workOrders->sum('dispatched_quantity');
+        $fulfilledWos = $workOrders->filter(fn ($w) => (float) $w->dispatched_quantity >= (float) $w->target_quantity && (float) $w->target_quantity > 0)->count();
+        $dispatchedPercent = $totalTarget > 0 ? min(100, round(($totalDispatched / $totalTarget) * 100)) : 0;
+
+        $records = $workOrders->map(function (WorkOrder $wo) {
+            $target = (float) $wo->target_quantity;
+            $dispatched = (float) $wo->dispatched_quantity;
+            $percent = $target > 0 ? min(100, round(($dispatched / $target) * 100)) : 0;
+            $statusLabel = $percent >= 100 ? 'Tuntas Terpenuhi' : ($dispatched > 0 ? "Dikirim {$percent}%" : 'Antrean Batching');
+
+            return [
+                'id' => $wo->id,
+                'uuid' => $wo->uuid,
+                'code' => $wo->code,
+                'order_code' => $wo->order?->code,
+                'order_uuid' => $wo->order?->uuid,
+                'customer_name' => $wo->order?->customer_name ?? '—',
+                'project_title' => $wo->order?->project_title ?? '—',
+                'plant_code' => $wo->batchingPlant?->code ?? '—',
+                'plant_name' => $wo->batchingPlant?->name ?? '—',
+                'product_name' => $wo->product?->name ?? '—',
+                'product_code' => $wo->product?->code ?? '—',
+                'recipe_code' => $wo->batch_recipe_code ?? 'STANDAR-TONASA',
+                'scheduled_date' => $wo->scheduled_date?->toDateString(),
+                'formatted_date' => $this->formatIndonesianDate($wo->scheduled_date),
+                'time_slot' => $wo->scheduled_time_slot ?? 'Slot Reguler',
+                'target_quantity' => $target,
+                'produced_quantity' => (float) $wo->produced_quantity,
+                'dispatched_quantity' => $dispatched,
+                'unit' => $wo->unit ?: 'm³',
+                'progress_percent' => $percent,
+                'status_label' => $statusLabel,
+                'assigned_user_name' => $wo->assignedUser?->name ?? '—',
+            ];
+        })->all();
+
+        $rows = $workOrders->map(function (WorkOrder $wo) {
+            $target = (float) $wo->target_quantity;
+            $dispatched = (float) $wo->dispatched_quantity;
+            $percent = $target > 0 ? min(100, round(($dispatched / $target) * 100)) : 0;
+            $statusLabel = $percent >= 100 ? 'Tuntas Terpenuhi' : ($dispatched > 0 ? "Dikirim {$percent}%" : 'Antrean Batching');
+
+            return [
+                $wo->code,
+                $this->formatIndonesianDate($wo->scheduled_date),
+                $wo->scheduled_time_slot ?? 'Slot Reguler',
+                ($wo->order?->customer_name ?? '—').($wo->order?->project_title ? " · {$wo->order->project_title}" : ''),
+                $wo->batchingPlant?->name ?? '—',
+                $wo->product?->name ?? '—',
+                $target,
+                $dispatched,
+                $wo->unit ?: 'm³',
+                $statusLabel,
+            ];
+        })->all();
 
         return [
-            'title' => 'Laporan Produksi',
+            'title' => 'Laporan Produksi Batching (SPK)',
             'filename' => 'laporan-produksi-'.$from->format('Ymd').'-'.$to->format('Ymd'),
             'metrics' => [
-                ['label' => 'Jumlah SPK', 'value' => (string) $workOrders->count()],
-                ['label' => 'Target', 'value' => number_format((float) $workOrders->sum('target_quantity'), 2, ',', '.')],
-                ['label' => 'Hasil', 'value' => number_format((float) $workOrders->sum('produced_quantity'), 2, ',', '.')],
+                ['label' => 'Total SPK Terbit', 'value' => (string) $totalWos, 'desc' => 'Tiket produksi aktif'],
+                ['label' => 'Target Volume', 'value' => number_format($totalTarget, 2, ',', '.').' m³', 'desc' => 'Target mix design'],
+                ['label' => 'Volume Terkirim', 'value' => number_format($totalDispatched, 2, ',', '.')." m³ ({$dispatchedPercent}%)", 'desc' => 'Realisasi armada'],
+                ['label' => 'SPK Tuntas (100%)', 'value' => (string) $fulfilledWos, 'desc' => 'Target terpenuhi penuh'],
             ],
-            'headings' => ['Kode', 'Plant', 'Tanggal', 'Target', 'Hasil', 'Satuan', 'Status'],
+            'records' => $records,
+            'headings' => ['Kode SPK', 'Tanggal Jadwal', 'Slot Waktu', 'Pelanggan / Proyek', 'Plant', 'Mutu Beton', 'Target', 'Terkirim', 'Satuan', 'Progres Pemenuhan'],
             'rows' => $rows,
         ];
     }
 
-    /**
-     * @return array{title: string, filename: string, metrics: list<array{label: string, value: string}>, headings: list<string>, rows: list<list<string|int|float>>}
-     */
     private function dispatchData(CarbonInterface $from, CarbonInterface $to, ?int $plantId): array
     {
         $letters = SuratJalan::query()
-            ->with('batchingPlant:id,code,name')
+            ->with([
+                'batchingPlant:id,code,name',
+                'items.product:id,code,name,unit',
+                'items.order:id,uuid,code,customer_name,project_title',
+            ])
             ->whereDate('created_at', '>=', $from->toDateString())
             ->whereDate('created_at', '<=', $to->toDateString())
             ->when($plantId, fn ($query) => $query->where('batching_plant_id', $plantId))
             ->orderByDesc('created_at')
-            ->limit(300)
+            ->limit(500)
             ->get();
 
-        $rows = $letters->map(fn (SuratJalan $letter) => [
-            $letter->code,
-            $letter->batchingPlant?->code ?? '',
-            $letter->vehicle_number,
-            $letter->status,
-            $letter->created_at?->format('Y-m-d') ?? '',
-        ])->all();
+        $totalSj = $letters->count();
+        $inTransit = $letters->where('status', 'ON_THE_WAY')->count();
+        $deliveredSj = $letters->where('status', 'COMPLETED')->count();
+        $totalVolume = (float) $letters->flatMap->items->sum('quantity_delivered');
+
+        $records = $letters->map(function (SuratJalan $sj) {
+            $firstItem = $sj->items->first();
+            $totalDelivered = (float) $sj->items->sum('quantity_delivered');
+            $unit = $firstItem?->unit ?: 'm³';
+
+            return [
+                'id' => $sj->id,
+                'uuid' => $sj->uuid,
+                'code' => $sj->code,
+                'vehicle_number' => $sj->vehicle_number,
+                'vehicle_type' => $sj->vehicle_type,
+                'driver_name' => $sj->driver_name,
+                'driver_phone' => $sj->driver_phone,
+                'plant_code' => $sj->batchingPlant?->code ?? '—',
+                'plant_name' => $sj->batchingPlant?->name ?? '—',
+                'customer_name' => $firstItem?->destination_customer_name ?? $firstItem?->order?->customer_name ?? '—',
+                'project_title' => $firstItem?->destination_project_title ?? $firstItem?->order?->project_title ?? '—',
+                'product_name' => $firstItem?->product?->name ?? '—',
+                'quantity_delivered' => $totalDelivered,
+                'unit' => $unit,
+                'status' => $sj->status,
+                'status_label' => $this->dispatchStatusLabel($sj->status),
+                'created_at' => $sj->created_at?->toISOString(),
+                'formatted_date' => $this->formatIndonesianDate($sj->created_at),
+                'formatted_time' => $sj->departure_time ? $sj->departure_time->format('H:i').' WITA' : ($sj->created_at?->format('H:i').' WITA'),
+                'recipient_name' => $firstItem?->recipient_name,
+                'received_at' => $firstItem?->received_at ? $this->formatIndonesianDate($firstItem->received_at).' '.$firstItem->received_at->format('H:i') : null,
+            ];
+        })->all();
+
+        $rows = $letters->map(function (SuratJalan $sj) {
+            $firstItem = $sj->items->first();
+            $totalDelivered = (float) $sj->items->sum('quantity_delivered');
+            $unit = $firstItem?->unit ?: 'm³';
+            $timeText = $sj->departure_time
+                ? $this->formatIndonesianDate($sj->departure_time).' '.$sj->departure_time->format('H:i')
+                : ($sj->created_at ? $this->formatIndonesianDate($sj->created_at).' '.$sj->created_at->format('H:i') : '');
+
+            return [
+                $sj->code,
+                $timeText,
+                $sj->vehicle_number,
+                $sj->driver_name,
+                $sj->batchingPlant?->name ?? '—',
+                ($firstItem?->destination_customer_name ?? '').($firstItem?->destination_project_title ? " · {$firstItem->destination_project_title}" : ''),
+                "{$totalDelivered} {$unit}",
+                $this->dispatchStatusLabel($sj->status),
+                $firstItem?->recipient_name ?? '—',
+            ];
+        })->all();
 
         return [
-            'title' => 'Laporan Distribusi',
+            'title' => 'Laporan Distribusi & Logistik Armada',
             'filename' => 'laporan-distribusi-'.$from->format('Ymd').'-'.$to->format('Ymd'),
             'metrics' => [
-                ['label' => 'Surat jalan', 'value' => (string) $letters->count()],
-                ['label' => 'Dalam perjalanan', 'value' => (string) $letters->whereIn('status', ['DEPARTED', 'ON_THE_WAY'])->count()],
-                ['label' => 'Selesai', 'value' => (string) $letters->where('status', 'COMPLETED')->count()],
+                ['label' => 'Total Surat Jalan', 'value' => (string) $totalSj, 'desc' => 'Total ritase diterbitkan'],
+                ['label' => 'Dalam Perjalanan', 'value' => (string) $inTransit, 'desc' => 'Armada menuju proyek'],
+                ['label' => 'Pengantaran Selesai', 'value' => (string) $deliveredSj, 'desc' => 'e-POD tervalidasi'],
+                ['label' => 'Volume Terdistribusi', 'value' => number_format($totalVolume, 2, ',', '.').' m³', 'desc' => 'Muatan tuntas diantar'],
             ],
-            'headings' => ['Kode', 'Plant', 'Kendaraan', 'Status', 'Tanggal'],
+            'records' => $records,
+            'headings' => ['Kode Surat Jalan', 'Waktu Berangkat', 'Kendaraan', 'Sopir', 'Plant', 'Pelanggan / Proyek', 'Volume Dikirim', 'Status Pengantaran', 'Penerima'],
             'rows' => $rows,
         ];
+    }
+
+    private function orderStatusLabel(?string $status): string
+    {
+        return match ($status) {
+            'CONFIRMED', 'DRAFT' => 'Dikonfirmasi',
+            'PROCESSING', 'WORK_ORDER_CREATED', 'IN_PRODUCTION' => 'Diproses (SPK Terbit)',
+            'ON_DELIVERY', 'PARTIAL_DELIVERY' => 'Dalam Pengiriman',
+            'COMPLETED' => 'Selesai Terpenuhi',
+            'CANCELLED' => 'Dibatalkan',
+            default => $status ?? '—',
+        };
+    }
+
+    private function paymentStatusLabel(?string $status): string
+    {
+        return match ($status) {
+            'PAID', 'APPROVED_CREDIT' => 'Lunas',
+            'PENDING', 'CHALLENGE' => 'Menunggu Pembayaran',
+            'FAILED', 'REFUNDED' => 'Gagal / Dibatalkan',
+            default => $status ?? '—',
+        };
+    }
+
+    private function dispatchStatusLabel(?string $status): string
+    {
+        return match ($status) {
+            'ON_THE_WAY', 'DEPARTED' => 'Dalam Perjalanan',
+            'COMPLETED' => 'Pengantaran Selesai',
+            'CANCELLED' => 'Batal / Retur',
+            default => $status ?? '—',
+        };
+    }
+
+    private function formatIndonesianDate(?CarbonInterface $date): string
+    {
+        if (! $date) {
+            return '—';
+        }
+
+        $months = [
+            1 => 'Jan', 2 => 'Feb', 3 => 'Mar', 4 => 'Apr',
+            5 => 'Mei', 6 => 'Jun', 7 => 'Jul', 8 => 'Agu',
+            9 => 'Sep', 10 => 'Okt', 11 => 'Nov', 12 => 'Des',
+        ];
+
+        return $date->day.' '.$months[$date->month].' '.$date->year;
     }
 }

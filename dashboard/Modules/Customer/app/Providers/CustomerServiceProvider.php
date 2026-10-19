@@ -16,4 +16,16 @@ class CustomerServiceProvider extends ModuleServiceProvider
     protected array $providers = [
         RouteServiceProvider::class,
     ];
+
+    /**
+     * Register views only if directory exists.
+     */
+    protected function registerViews(): void
+    {
+        $sourcePath = module_path($this->name, config('modules.paths.generator.views.path'));
+
+        if (is_dir($sourcePath)) {
+            parent::registerViews();
+        }
+    }
 }
