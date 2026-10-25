@@ -8,12 +8,11 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 use Modules\BatchingPlant\Models\BatchingPlant;
-use Modules\Order\Http\Requests\StoreOrderRequest;
+use Modules\DeliveryRate\Services\PlantDistanceService;
 use Modules\Order\Http\Requests\UpdateOrderRequest;
 use Modules\Order\Models\Order;
-use Modules\Order\Services\PlaceOrder;
 use Modules\Order\Services\MidtransPaymentService;
-use Modules\Product\Models\Product;
+use Modules\Order\Services\OrderTotals;
 
 class OrderController extends Controller
 {
@@ -54,7 +53,8 @@ class OrderController extends Controller
             'orders' => $orders,
             'plants' => BatchingPlant::query()->where('is_active', true)->orderBy('code')->get(['id', 'uuid', 'code', 'name']),
             'statuses' => [
-                ['value' => 'CONFIRMED', 'label' => 'Dikonfirmasi'],
+                ['value' => 'PENDING_APPROVAL', 'label' => 'Menunggu Verifikasi Tempat'],
+                ['value' => 'CONFIRMED', 'label' => 'Dikonfirmasi / Siap Bayar'],
                 ['value' => 'PROCESSING', 'label' => 'Diproses'],
                 ['value' => 'ON_DELIVERY', 'label' => 'Dalam Pengiriman'],
                 ['value' => 'COMPLETED', 'label' => 'Selesai'],
@@ -88,6 +88,7 @@ class OrderController extends Controller
 
         $order->load([
             'batchingPlant.branch',
+            'approver:id,name,code',
             'items.product',
             'workOrders.assignedUser',
             'suratJalanItems.suratJalan',
@@ -97,6 +98,86 @@ class OrderController extends Controller
         return Inertia::render('modules/order/show', [
             'order' => $order,
         ]);
+    }
+
+    public function approve(Request $request, Order $order, PlantDistanceService $distanceService): RedirectResponse
+    {
+        if ($order->status !== 'PENDING_APPROVAL') {
+            return back()->with('error', 'Hanya pesanan berstatus Menunggu Verifikasi Tempat yang dapat disetujui.');
+        }
+
+        $validated = $request->validate([
+            'delivery_lat' => ['nullable', 'numeric'],
+            'delivery_lng' => ['nullable', 'numeric'],
+            'delivery_address' => ['nullable', 'string', 'max:500'],
+            'survey_notes' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $updates = [
+            'status' => 'CONFIRMED',
+            'approved_at' => now(),
+            'approved_by_id' => auth()->id(),
+            'survey_notes' => $validated['survey_notes'] ?? $order->survey_notes,
+        ];
+
+        if (!empty($validated['delivery_address'])) {
+            $updates['delivery_address'] = $validated['delivery_address'];
+        }
+
+        // If coordinates were adjusted by sales/approver for big truck accessibility
+        if (
+            isset($validated['delivery_lat'], $validated['delivery_lng']) &&
+            ($validated['delivery_lat'] != $order->delivery_lat || $validated['delivery_lng'] != $order->delivery_lng)
+        ) {
+            $newLat = (float) $validated['delivery_lat'];
+            $newLng = (float) $validated['delivery_lng'];
+            $updates['delivery_lat'] = $newLat;
+            $updates['delivery_lng'] = $newLng;
+
+            $plant = $order->batchingPlant;
+            if ($plant && $plant->lat && $plant->lng) {
+                $newDistance = $distanceService->calculateDistanceKm($newLat, $newLng, (float) $plant->lat, (float) $plant->lng);
+                $updates['distance_km'] = $newDistance;
+
+                $firstItem = $order->items()->with('product')->first();
+                $category = $firstItem?->product?->category ?? 'readymix';
+                $totalQty = (float) $order->items()->sum('quantity');
+
+                $feeResult = $distanceService->calculateDeliveryFee($plant->id, $newDistance, $category, $totalQty);
+                $newDeliveryFee = (float) $feeResult['delivery_fee'];
+                $updates['delivery_fee'] = $newDeliveryFee;
+
+                $adminFee = (float) $order->admin_fee;
+                $lineAmounts = $order->items->map(fn ($item) => (float) $item->subtotal)->all();
+                $totals = OrderTotals::fromLineAmounts($lineAmounts, $newDeliveryFee, $adminFee);
+
+                $updates['subtotal'] = $totals['subtotal'];
+                $updates['ppn'] = $totals['ppn'];
+                $updates['total_price'] = $totals['total_price'];
+            }
+        }
+
+        $order->update($updates);
+
+        return back()->with('success', "Pesanan {$order->code} berhasil diverifikasi dan disetujui (ACC). Titik lokasi akses armada telah diperbarui dan pelanggan kini dapat melakukan pembayaran.");
+    }
+
+    public function reject(Request $request, Order $order): RedirectResponse
+    {
+        if ($order->status !== 'PENDING_APPROVAL') {
+            return back()->with('error', 'Hanya pesanan berstatus Menunggu Verifikasi Tempat yang dapat ditolak.');
+        }
+
+        $validated = $request->validate([
+            'rejection_reason' => ['required', 'string', 'max:500'],
+        ]);
+
+        $order->update([
+            'status' => 'CANCELLED',
+            'rejection_reason' => $validated['rejection_reason'],
+        ]);
+
+        return back()->with('success', "Pesanan {$order->code} telah ditolak.");
     }
 
     public function syncPayment(Order $order, MidtransPaymentService $midtrans): RedirectResponse

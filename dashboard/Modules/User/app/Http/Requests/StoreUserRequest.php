@@ -20,10 +20,11 @@ class StoreUserRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')],
+            'phone' => ['nullable', 'string', 'max:32', Rule::unique('users', 'phone')],
             'password' => ['required', 'confirmed', Password::defaults()],
             'role' => ['required', Rule::enum(UserRole::class)],
             'branch_id' => [
-                Rule::requiredIf(fn () => $this->input('role') === UserRole::User->value),
+                Rule::requiredIf(fn () => in_array($this->input('role'), [UserRole::User->value, UserRole::Sales->value, UserRole::Driver->value], true)),
                 'nullable',
                 'exists:branches,id',
             ],

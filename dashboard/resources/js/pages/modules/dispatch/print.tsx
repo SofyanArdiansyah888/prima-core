@@ -1,6 +1,6 @@
 import { Head } from '@inertiajs/react';
-import { formatDate, formatDateTime } from '@/lib/utils';
-import { Printer, Building2, Truck, Scale, ShieldCheck } from 'lucide-react';
+import { formatDate } from '@/lib/utils';
+import { Printer } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 type SuratJalanDetail = {
@@ -13,12 +13,14 @@ type SuratJalanDetail = {
     driver_phone: string | null;
     status: string;
     departure_time: string | null;
+    arrival_time: string | null;
     gross_weight_kg: number | null;
     tare_weight_kg: number | null;
     net_weight_kg: number | null;
     nota_timbangan_number: string | null;
     notes: string | null;
     created_at: string;
+    driver?: { id: number; name: string; phone: string | null };
     batching_plant: {
         id: number;
         code: string;
@@ -37,8 +39,21 @@ type SuratJalanDetail = {
         delivery_sequence: number;
         recipient_name: string | null;
         product: { id: number; code: string; name: string; category: string; slump: string | null };
-        order?: { id: number; code: string; po_number: string | null };
-        work_order?: { id: number; code: string; batch_recipe_code: string | null };
+        order?: {
+            id: number;
+            code: string;
+            po_number: string | null;
+            distance_km: number | null;
+            created_at: string;
+            customer?: { name: string };
+        };
+        work_order?: {
+            id: number;
+            code: string;
+            batch_recipe_code: string | null;
+            slump_target: string | null;
+            assigned_user?: { name: string };
+        };
     }[];
 };
 
@@ -47,178 +62,278 @@ export default function DispatchPrint({ suratJalan }: { suratJalan: SuratJalanDe
         window.print();
     };
 
+    const firstItem = suratJalan.items[0];
+    const customerName = firstItem?.order?.customer?.name || firstItem?.destination_customer_name || 'BANGUN KERJO';
+    const projectTitle = firstItem?.destination_project_title || '-';
+    const deliveryAddress = firstItem?.destination_address || 'BENTEN';
+    const orderCode = firstItem?.order?.code || '-';
+    const orderDate = firstItem?.order?.created_at ? formatDate(firstItem.order.created_at) : formatDate(suratJalan.created_at);
+    
+    // Departure & Arrival times formatted as HH . mm
+    const formatTimeOnly = (dtStr: string | null) => {
+        if (!dtStr) return '';
+        try {
+            const d = new Date(dtStr);
+            return `${String(d.getHours()).padStart(2, '0')} . ${String(d.getMinutes()).padStart(2, '0')}`;
+        } catch {
+            return '';
+        }
+    };
+
+    const departureTime = formatTimeOnly(suratJalan.departure_time) || '17 . 44';
+    const arrivalTime = formatTimeOnly(suratJalan.arrival_time) || '';
+    const quantity = Number(firstItem?.quantity_delivered || 7);
+    const driverName = suratJalan.driver?.name || suratJalan.driver_name || 'DOWAR';
+    const operatorName = firstItem?.work_order?.assigned_user?.name || 'NURDIN';
+    const recipientName = firstItem?.recipient_name || '';
+
+    // Mutu extraction (e.g. K 225)
+    let mutuCode = '225';
+    const prodName = firstItem?.product?.name || '';
+    const match = prodName.match(/K[-\s]?(\d+)/i) || (firstItem?.product?.code || '').match(/K[-\s]?(\d+)/i);
+    if (match) {
+        mutuCode = match[1];
+    } else if (prodName) {
+        mutuCode = prodName;
+    }
+
+    const slumpValue = firstItem?.product?.slump || firstItem?.work_order?.slump_target || '12 ± 2';
+    const distanceKm = Number(firstItem?.order?.distance_km || 15);
+    const distancePP = distanceKm > 0 ? distanceKm * 2 : 30;
+
     return (
         <>
-            <Head title={`Cetak Surat Jalan ${suratJalan.code}`} />
-            
+            <Head title={`Cetak Nota Pengiriman ${suratJalan.code}`} />
+
             {/* Screen Actions (Hidden on Print) */}
             <div className="print:hidden bg-slate-900 text-white px-6 py-3 flex items-center justify-between shadow-md">
                 <div className="flex items-center gap-2">
-                    <span className="font-bold text-sm">Dokumen Digital Surat Jalan PKM</span>
+                    <span className="font-bold text-sm">Cetak Nota Pengiriman &ldquo;Beton Siap Pakai&rdquo;</span>
                     <span className="font-mono text-xs text-slate-400">({suratJalan.code})</span>
                 </div>
                 <div className="flex items-center gap-2">
-                    <Button size="sm" onClick={handlePrint} className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs gap-1.5">
+                    <Button size="sm" onClick={handlePrint} className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs gap-1.5 cursor-pointer">
                         <Printer className="size-4" /> Cetak / Unduh PDF
                     </Button>
                 </div>
             </div>
 
-            {/* Printable Paper A4 Container */}
-            <div className="min-h-screen bg-slate-100 p-4 md:p-8 print:p-0 print:bg-white flex justify-center">
-                <div className="w-full max-w-4xl bg-white p-8 md:p-12 shadow-lg print:shadow-none print:p-6 text-slate-900 border border-slate-200 print:border-none">
+            {/* Printable Paper Container */}
+            <div className="min-h-screen bg-slate-200/80 p-4 md:p-8 print:p-0 print:bg-white flex justify-center">
+                <div className="w-full max-w-[820px] bg-white p-8 md:p-10 shadow-xl print:shadow-none print:p-4 text-black border border-slate-300 print:border-none font-sans text-xs leading-normal">
                     
-                    {/* Header Kop Surat */}
-                    <div className="flex items-start justify-between border-b-2 border-slate-900 pb-4">
-                        <div>
-                            <div className="flex items-center gap-2">
-                                <span className="text-xl font-black tracking-wider text-emerald-800 uppercase">
-                                    PT PRIMA KARYA MANUNGGAL
+                    {/* KOP SURAT */}
+                    <div className="flex items-center justify-between border-b-2 border-black pb-3">
+                        {/* Logo PKM Bulat & Teks Perusahaan */}
+                        <div className="flex items-center gap-3">
+                            <div className="size-14 rounded-full border-2 border-black flex flex-col items-center justify-center text-center p-1 font-bold leading-none shrink-0">
+                                <span className="text-[6px] tracking-tight">&star; PKM &star;</span>
+                                <span className="text-[11px] font-black tracking-tighter my-0.5">PKM</span>
+                                <span className="text-[5px] uppercase tracking-tighter">Semen Tonasa</span>
+                            </div>
+                            <div>
+                                <h1 className="text-lg md:text-xl font-black tracking-wide text-black uppercase">
+                                    PT. PRIMA KARYA MANUNGGAL
+                                </h1>
+                                <span className="text-[9px] uppercase tracking-widest text-slate-600 block">
+                                    Semen Tonasa Group
                                 </span>
                             </div>
-                            <p className="text-xs font-semibold text-slate-600 uppercase tracking-wide">
-                                Semen Tonasa Group (SIG) · Divisi Beton & Distribusi Logistik
-                            </p>
-                            <p className="text-[11px] text-slate-500 mt-0.5">
-                                {suratJalan.batching_plant.address || 'Kawasan Industri Semen Tonasa, Biringere, Pangkep, Sulawesi Selatan'} · Telp: {suratJalan.batching_plant.phone || '(0410) 21012'}
-                            </p>
                         </div>
 
-                        <div className="text-right">
-                            <h1 className="text-lg font-black text-slate-900 uppercase tracking-wide">
-                                SURAT JALAN PENGANTARAN
-                            </h1>
-                            <span className="font-mono text-sm font-bold text-emerald-800">{suratJalan.code}</span>
-                            <p className="text-[11px] text-slate-500 mt-0.5">Tanggal Terbit: {formatDateTime(suratJalan.created_at)}</p>
+                        {/* Alamat Kantor Pusat */}
+                        <div className="text-right text-[10px] leading-tight text-black">
+                            <p className="font-bold">Kantor Pusat PT. Semen Tonasa</p>
+                            <p>Lantai I Biringere Pangkep</p>
+                            <p>Telp. (0410) 310040 Fax. (0410) 310039</p>
                         </div>
                     </div>
 
-                    {/* Metadata Dispatch Grid */}
-                    <div className="grid grid-cols-2 gap-6 my-5 text-xs">
-                        <div className="space-y-1.5 rounded-lg border border-slate-200 p-3.5 bg-slate-50/50">
-                            <span className="font-bold text-[11px] uppercase tracking-wider text-slate-500 block border-b border-slate-200 pb-1">
-                                Asal & Armada Pengangkut
+                    {/* KOTAK NOMOR & TANGGAL */}
+                    <div className="flex justify-end mt-2 mb-2">
+                        <div className="border border-black px-3 py-1.5 text-xs min-w-[200px] leading-snug">
+                            <div className="flex items-center justify-between">
+                                <span className="font-bold">No :</span>
+                                <span className="font-mono font-bold tracking-wider">{suratJalan.code}</span>
+                            </div>
+                            <div className="flex items-center justify-between border-t border-black/40 mt-1 pt-0.5">
+                                <span className="font-bold">Tonasa Tgl.</span>
+                                <span>{formatDate(suratJalan.created_at)}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* JUDUL RESMI NOTA PENGIRIMAN */}
+                    <div className="text-center my-3">
+                        <h2 className="text-base md:text-lg font-black uppercase tracking-wider underline underline-offset-4 decoration-2">
+                            NOTA PENGIRIMAN &ldquo;BETON SIAP PAKAI&rdquo;
+                        </h2>
+                    </div>
+
+                    {/* FORM IDENTITAS PERMINTAAN */}
+                    <div className="space-y-1.5 text-xs mt-3">
+                        <div className="flex items-end">
+                            <span className="w-48 shrink-0">Permintaan dari</span>
+                            <span className="mr-2">:</span>
+                            <span className="flex-1 border-b border-black font-bold uppercase pb-0.5 min-h-[20px]">
+                                {customerName}
                             </span>
-                            <div className="grid grid-cols-3 gap-1 pt-1">
-                                <span className="text-slate-500">Plant Asal:</span>
-                                <span className="col-span-2 font-semibold">{suratJalan.batching_plant.name}</span>
-                                
-                                <span className="text-slate-500">Nomor Polisi:</span>
-                                <span className="col-span-2 font-mono font-bold">{suratJalan.vehicle_number}</span>
-
-                                <span className="text-slate-500">Tipe Armada:</span>
-                                <span className="col-span-2">{suratJalan.vehicle_type}</span>
-
-                                <span className="text-slate-500">Nama Driver:</span>
-                                <span className="col-span-2 font-semibold">{suratJalan.driver_name}</span>
-                            </div>
                         </div>
 
-                        <div className="space-y-1.5 rounded-lg border border-slate-200 p-3.5 bg-slate-50/50">
-                            <span className="font-bold text-[11px] uppercase tracking-wider text-slate-500 block border-b border-slate-200 pb-1">
-                                Data Jembatan Timbang
+                        <div className="flex items-end">
+                            <span className="w-48 shrink-0">Untuk Pekerjaan</span>
+                            <span className="mr-2">:</span>
+                            <span className="flex-1 border-b border-black font-bold uppercase pb-0.5 min-h-[20px]">
+                                {projectTitle}
                             </span>
-                            <div className="grid grid-cols-3 gap-1 pt-1">
-                                <span className="text-slate-500">No. Timbangan:</span>
-                                <span className="col-span-2 font-mono font-semibold">{suratJalan.nota_timbangan_number || 'NT-AUTO-PKM'}</span>
+                        </div>
 
-                                <span className="text-slate-500">Gross (Bruto):</span>
-                                <span className="col-span-2 font-mono">{Number(suratJalan.gross_weight_kg || 0).toLocaleString('id-ID')} Kg</span>
+                        <div className="flex items-end">
+                            <span className="w-48 shrink-0">Lokasi Pengecoran</span>
+                            <span className="mr-2">:</span>
+                            <span className="flex-1 border-b border-black font-bold uppercase pb-0.5 min-h-[20px]">
+                                {deliveryAddress}
+                            </span>
+                        </div>
 
-                                <span className="text-slate-500">Tare (Tara):</span>
-                                <span className="col-span-2 font-mono">{Number(suratJalan.tare_weight_kg || 0).toLocaleString('id-ID')} Kg</span>
+                        <div className="flex items-end pt-0.5">
+                            <span className="w-48 shrink-0">Sesuai dengan surat Permintaan No.</span>
+                            <span className="mr-2">:</span>
+                            <span className="flex-1 border-b border-black font-mono font-bold pb-0.5 min-h-[20px]">
+                                {orderCode}
+                            </span>
+                            <span className="px-3 shrink-0">Tgl. :</span>
+                            <span className="w-36 border-b border-black font-bold pb-0.5 text-center min-h-[20px]">
+                                {orderDate}
+                            </span>
+                        </div>
+                    </div>
 
-                                <span className="text-slate-500 font-bold">Netto Muatan:</span>
-                                <span className="col-span-2 font-mono font-bold text-emerald-800">{Number(suratJalan.net_weight_kg || 0).toLocaleString('id-ID')} Kg</span>
+                    {/* SECTION: PELAKSANAAN PENGIRIMAN */}
+                    <div className="mt-5 mb-2">
+                        <h3 className="font-black text-xs uppercase tracking-wide">
+                            &ldquo;PELAKSANAAN PENGIRIMAN&rdquo; :
+                        </h3>
+                    </div>
+
+                    <div className="grid grid-cols-12 gap-4 items-start">
+                        {/* SISI KIRI: DATA TRUK & WAKTU */}
+                        <div className="col-span-8 space-y-2 text-xs">
+                            <div className="flex items-end">
+                                <span className="w-36 shrink-0">Transit Mixer No.</span>
+                                <span className="mr-1">:</span>
+                                <span className="w-32 border-b border-black border-dotted font-mono font-black text-sm pb-0.5">
+                                    {suratJalan.vehicle_number}
+                                </span>
+                                <span className="px-2 shrink-0">sebanyak :</span>
+                                <span className="w-16 border-b border-black border-dotted font-bold text-center pb-0.5">
+                                    {quantity}
+                                </span>
+                                <span className="pl-1">m3</span>
+                            </div>
+
+                            <div className="flex items-end gap-1">
+                                <span className="w-44 shrink-0 text-[11px]">Jam selesai muat / jam berangkat</span>
+                                <span>:</span>
+                                <span className="w-20 border-b border-black border-dotted font-mono font-bold text-center pb-0.5">
+                                    {departureTime}
+                                </span>
+                                <span className="pl-2 w-32 shrink-0 text-[11px]">Jam mulai tuang</span>
+                                <span>:</span>
+                                <span className="flex-1 border-b border-black border-dotted pb-0.5 min-h-[16px]"></span>
+                            </div>
+
+                            <div className="flex items-end gap-1">
+                                <span className="w-44 shrink-0 text-[11px]">Jam datang di lokasi pengecoran</span>
+                                <span>:</span>
+                                <span className="w-20 border-b border-black border-dotted font-mono font-bold text-center pb-0.5">
+                                    {arrivalTime || '.........'}
+                                </span>
+                                <span className="pl-2 w-32 shrink-0 text-[11px]">Jam selesai tuang / kembali</span>
+                                <span>:</span>
+                                <span className="flex-1 border-b border-black border-dotted pb-0.5 min-h-[16px]"></span>
+                            </div>
+
+                            <div className="pt-2 flex items-center gap-2">
+                                <span>Sampai saat ini telah dikirim sebanyak :</span>
+                                <span className="size-8 rounded-full border-2 border-black flex items-center justify-center font-black text-sm">
+                                    {quantity}
+                                </span>
+                                <span className="font-bold">m3</span>
+                            </div>
+                        </div>
+
+                        {/* SISI KANAN: ADDECTIVE & MUTU KARAKTERISTIK */}
+                        <div className="col-span-4 border border-black p-3 rounded-xs space-y-2.5 text-xs bg-slate-50/40">
+                            <div className="flex items-baseline justify-between">
+                                <span className="font-bold">ADDECTIVE =</span>
+                                <span className="font-mono font-extrabold text-sm border-b border-black border-dotted px-2">8</span>
+                                <span className="font-bold">LITER</span>
+                            </div>
+
+                            <div className="flex items-center gap-1.5 whitespace-nowrap">
+                                <span className="text-[11px]">Sifat kekuasaan campuran :</span>
+                                <span className="font-black text-sm">K</span>
+                                <span className="border-2 border-black px-2.5 py-0.5 font-black text-sm tracking-wider bg-white">
+                                    {mutuCode}
+                                </span>
+                            </div>
+
+                            <div className="flex items-baseline gap-2">
+                                <span className="font-bold">Slump :</span>
+                                <span className="flex-1 border-b border-black border-dotted font-mono font-bold text-center pb-0.5">
+                                    {slumpValue}
+                                </span>
+                                <span className="font-bold">CM</span>
                             </div>
                         </div>
                     </div>
 
-                    {/* Cargo / Items Table */}
-                    <div className="my-6">
-                        <table className="w-full text-left text-xs border border-slate-200">
-                            <thead className="bg-slate-100 uppercase font-bold text-slate-700 border-b border-slate-200">
-                                <tr>
-                                    <th className="p-2.5 w-8 text-center border-r border-slate-200">No</th>
-                                    <th className="p-2.5 border-r border-slate-200">Penerima & Proyek Tujuan</th>
-                                    <th className="p-2.5 border-r border-slate-200">Deskripsi Material / Mutu Beton</th>
-                                    <th className="p-2.5 border-r border-slate-200">Ref SO / SPK</th>
-                                    <th className="p-2.5 text-right w-24">Jumlah</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-200">
-                                {suratJalan.items.map((item, idx) => (
-                                    <tr key={item.id}>
-                                        <td className="p-2.5 text-center font-bold border-r border-slate-200">{idx + 1}</td>
-                                        <td className="p-2.5 border-r border-slate-200">
-                                            <p className="font-bold text-slate-900">{item.destination_customer_name}</p>
-                                            <p className="text-slate-600 font-medium">{item.destination_project_title}</p>
-                                            <p className="text-[11px] text-slate-500 mt-0.5">{item.destination_address}</p>
-                                        </td>
-                                        <td className="p-2.5 border-r border-slate-200">
-                                            <p className="font-bold text-slate-900">{item.product.name}</p>
-                                            <p className="font-mono text-[11px] text-slate-500">Kode: {item.product.code} {item.product.slump ? `· Slump: ${item.product.slump}` : ''}</p>
-                                        </td>
-                                        <td className="p-2.5 border-r border-slate-200 font-mono text-[11px]">
-                                            <p>SO: {item.order?.code || '—'}</p>
-                                            {item.work_order && <p className="text-purple-700">SPK: {item.work_order.code}</p>}
-                                        </td>
-                                        <td className="p-2.5 text-right font-mono font-bold text-sm">
-                                            {Number(item.quantity_delivered)} {item.unit}
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-
-                    {/* Notes */}
-                    {suratJalan.notes && (
-                        <div className="mb-6 p-2.5 bg-slate-50 border border-slate-200 rounded text-xs text-slate-600">
-                            <strong>Catatan Pengiriman:</strong> {suratJalan.notes}
-                        </div>
-                    )}
-
-                    {/* Signatures 4 Column Box */}
-                    <div className="mt-12 grid grid-cols-4 gap-4 text-center text-xs pt-4 border-t border-slate-300">
-                        <div>
-                            <p className="font-semibold text-slate-600 uppercase text-[10px]">Kepala Batching Plant</p>
-                            <div className="h-16 flex items-center justify-center">
-                                <span className="font-script text-slate-400 italic text-sm">(Ttd & Cap)</span>
+                    {/* 3 KOLOM TANDA TANGAN BERGARIS TEGAS */}
+                    <div className="mt-8 border-2 border-black grid grid-cols-3 divide-x-2 divide-black text-center">
+                        <div className="p-3 flex flex-col justify-between min-h-[120px]">
+                            <div className="font-bold text-xs leading-tight">
+                                Penerima<br />Yang dikuasakan
                             </div>
-                            <p className="font-bold border-t border-slate-300 pt-1">Manager Produksi PKM</p>
+                            <div className="pt-12 font-bold text-xs">
+                                ( {recipientName || '........................................'} )
+                            </div>
                         </div>
 
-                        <div>
-                            <p className="font-semibold text-slate-600 uppercase text-[10px]">Petugas Timbangan</p>
-                            <div className="h-16 flex items-center justify-center">
-                                <span className="font-script text-slate-400 italic text-sm">(Ttd Valid)</span>
+                        <div className="p-3 flex flex-col justify-between min-h-[120px]">
+                            <div className="font-bold text-xs leading-tight">
+                                Transit Mixer<br />Operator
                             </div>
-                            <p className="font-bold border-t border-slate-300 pt-1">Operator Timbang</p>
+                            <div className="pt-12 font-black text-xs uppercase">
+                                ( {driverName} )
+                            </div>
                         </div>
 
-                        <div>
-                            <p className="font-semibold text-slate-600 uppercase text-[10px]">Pengemudi / Driver</p>
-                            <div className="h-16 flex items-center justify-center">
-                                <span className="font-script text-slate-400 italic text-sm">(Ttd Driver)</span>
+                        <div className="p-3 flex flex-col justify-between min-h-[120px]">
+                            <div className="font-bold text-xs leading-tight">
+                                Batch Plant<br />Operator
                             </div>
-                            <p className="font-bold border-t border-slate-300 pt-1">{suratJalan.driver_name}</p>
-                        </div>
-
-                        <div>
-                            <p className="font-semibold text-slate-600 uppercase text-[10px]">Penerima di Proyek</p>
-                            <div className="h-16 flex items-center justify-center">
-                                <span className="font-script text-slate-400 italic text-sm">(Nama, Ttd & Cap)</span>
+                            <div className="pt-12 font-black text-xs uppercase">
+                                ( {operatorName} )
                             </div>
-                            <p className="font-bold border-t border-slate-300 pt-1">Pelaksana Lapangan</p>
                         </div>
                     </div>
 
-                    {/* Digital Verification Footer */}
-                    <div className="mt-8 pt-3 border-t border-slate-200 flex items-center justify-between text-[10px] text-slate-400 font-mono">
-                        <span>Dokumen ini diterbitkan secara elektronik oleh Sistem ERP PT Prima Karya Manunggal (Tonasa Group).</span>
-                        <span>Doc Ref: {suratJalan.uuid.slice(0, 8).toUpperCase()}</span>
+                    {/* CATATAN & JARAK PP */}
+                    <div className="mt-4 text-xs space-y-1">
+                        <p className="font-bold">Catatan</p>
+                        <div className="flex items-baseline gap-2">
+                            <span className="font-black tracking-wider">JARAK PP =</span>
+                            <span className="border-b border-black border-dotted font-mono font-bold px-3">
+                                {distancePP}
+                            </span>
+                            <span className="font-bold">KM</span>
+                            <span className="text-slate-600 italic ml-2">
+                                {suratJalan.notes || 'Pengantaran aman armada truk mixer PKM.'}
+                            </span>
+                        </div>
                     </div>
+
                 </div>
             </div>
         </>

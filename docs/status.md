@@ -6,33 +6,42 @@ Dokumen ini mendefinisikan seluruh status sistem yang tersimpan di database, lab
 
 ## 1. Pesanan (`orders.status`)
 
-Pesanan disederhanakan menjadi **5 status utama** yang merefleksikan tahapan riil dari penerimaan pesanan hingga selesai.
+Pesanan disederhanakan menjadi **6 status utama** yang merefleksikan tahapan riil dari pemesanan, verifikasi lapangan, produksi, hingga konfirmasi penerimaan.
 
 | Kode Status | Label UI | Arti Operasional | Siapa / Apa yang Mengubah |
 |-------------|----------|------------------|---------------------------|
-| `CONFIRMED` | **Dikonfirmasi** | Pesanan baru diterima & terjadwal di plant. | Otomatis saat checkout pesanan via Mobile (`PlaceOrder`) atau dibuat via Sales Order dashboard. |
-| `PROCESSING` | **Diproses** | SPK terbit & proses penimbangan / mixing batching berjalan. | **Otomatis** saat SPK diterbitkan untuk pesanan ini. |
+| `PENDING_APPROVAL` | **Menunggu Verifikasi** | Pesanan baru masuk via Mobile B2C; menunggu pengecekan akses jalan armada truk besar oleh tim sales. | Otomatis saat checkout pesanan via Mobile (`PlaceOrder`). |
+| `CONFIRMED` | **Dikonfirmasi** | Pesanan disetujui (ACC) oleh Sales; titik bongkar tervalidasi dan pembayaran Midtrans aktif. | Petugas **Sales via Mobile** setelah survei akses armada & input catatan survei (`survey_notes`). |
+| `PROCESSING` | **Diproses** | SPK terbit & proses penimbangan / mixing batching berjalan di plant. | **Otomatis** saat SPK diterbitkan untuk pesanan ini. |
 | `ON_DELIVERY` | **Dalam Pengiriman** | Armada truk mixer / kapsul sedang dalam perjalanan membawa muatan ke lokasi proyek. | **Otomatis** saat Surat Jalan pertama kali diterbitkan untuk pesanan ini. |
-| `COMPLETED` | **Selesai** | Seluruh kuantitas produk pesanan telah terkirim dan tervalidasi diterima di lokasi proyek (`fulfilled_quantity >= quantity`). | **Otomatis** saat pengantaran Surat Jalan diselesaikan (`COMPLETED`) dan total volume memenuhi 100%. (Aksi selesai manual ditiadakan untuk menjaga integritas alur fisik). |
-| `CANCELLED` | **Dibatalkan** | Pesanan dibatalkan pelanggan atau staf plant sebelum armada diberangkatkan. | Pelanggan via Mobile (hanya jika masih `CONFIRMED`), atau tombol manual *"Batalkan"* di dashboard (hanya jika belum ada ritase aktif/selesai). |
+| `COMPLETED` | **Selesai** | Seluruh kuantitas produk pesanan telah terkirim dan telah dikonfirmasi tuntas. | **Dikonfirmasi oleh Pelanggan (User)** di Mobile setelah semua Surat Jalan tiba, atau **Otomatis Selesai (Auto-Finish)** oleh sistem jika tidak dikonfirmasi dalam waktu **2 x 24 jam (48 jam)**. *(Supir hanya menyelesaikan Surat Jalan fisik e-POD, tidak otomatis menyelesaikan pesanan).* |
+| `CANCELLED` | **Dibatalkan** | Pesanan ditolak sales karena akses tidak memadai, atau dibatalkan sebelum diproses. | Ditolak oleh Sales via Mobile (`rejection_reason`), atau Pelanggan via Mobile saat masih `PENDING_APPROVAL`/`CONFIRMED`, atau pembatalan di dashboard jika belum ada ritase aktif. |
 
-### Aturan Transisi Pesanan (Runut Tanpa Lompatan):
+### Aturan Transisi Pesanan:
 ```text
-[Checkout / Buat Order]
+[Checkout Order di Mobile]
          │
          ▼
-    CONFIRMED ──────────────► CANCELLED (Batal sebelum proses/kirim)
+  PENDING_APPROVAL ─────────────► CANCELLED (Ditolak Sales / Akses Tidak Layak)
          │
-         ▼ (Otomatis saat Terbitkan SPK)
+         ▼ (Disetujui / ACC oleh Sales Lapangan via Mobile)
+     CONFIRMED ─────────────────► CANCELLED (Batal sebelum proses produksi)
+         │
+         ▼ (Otomatis saat Terbitkan SPK di Batching Plant)
     PROCESSING
          │
          ▼ (Otomatis saat Terbitkan Surat Jalan Ritase 1..N)
     ON_DELIVERY
          │
-         ▼ (Otomatis saat Pengantaran Surat Jalan Selesai & Volume 100%)
+         ├─► Supir menyelesaikan Surat Jalan (e-POD) ➔ SJ COMPLETED
+         │   (Status Order tetap ON_DELIVERY)
+         │
+         ▼
     COMPLETED
+         ├── Jalur Utama: Pelanggan klik "Konfirmasi Pesanan Selesai" di Mobile
+         └── Jalur Otomatis: Auto-finish sistem jika 2 x 24 jam tidak dikonfirmasi pelanggan
 ```
-*(Catatan: Tombol pintas manual "Tandai Selesai" dan "Proses Pesanan" pada Sales Order telah dihilangkan agar seluruh proses operasional batching plant dan logistik armada berjalan runut dan terekam secara valid).*
+*(Catatan: Tombol pintas manual "Tandai Selesai" dan "Proses Pesanan" pada Sales Order di dashboard telah dihilangkan agar seluruh proses operasional batching plant dan logistik armada berjalan runut dan terekam secara valid).*
 
 ### Kompatibilitas Data Lama (Backward Compatibility):
 Untuk record database lama sebelum penyederhanaan status, sistem memetakan secara transparan:
@@ -41,11 +50,12 @@ Untuk record database lama sebelum penyederhanaan status, sistem memetakan secar
 - `PARTIAL_DELIVERY` dinormalisasi ke `ON_DELIVERY`.
 
 ### Tampilan di Aplikasi Pelanggan (Mobile):
-Tahapan pelacakan pada stepper detail pesanan mobile menampilkan 4 langkah berurutan:
-1. **Dikonfirmasi** (Order diverifikasi & dialokasikan ke jadwal plant)
-2. **Diproses** (Batching plant memproses produksi beton sesuai formula)
-3. **Dalam Pengiriman** (Truk mixer dalam perjalanan mengantarkan beton ke proyek)
-4. **Selesai** (Pengecoran selesai, e-POD & Surat Jalan tervalidasi)
+Tahapan pelacakan pada stepper detail pesanan mobile menampilkan 5 langkah berurutan:
+1. **Menunggu Verifikasi** (Sales lapangan mengecek kelayakan akses jalan proyek untuk truk mixer)
+2. **Dikonfirmasi** (Order di-ACC sales, siap dibayar via Midtrans & dialokasikan ke jadwal plant)
+3. **Diproses** (Batching plant memproses produksi beton sesuai formula & SPK)
+4. **Dalam Pengiriman** (Truk mixer dalam perjalanan mengantarkan beton ke proyek)
+5. **Selesai** (Pengecoran selesai, seluruh muatan diterima, dan dikonfirmasi pelanggan / auto-finish)
 
 ---
 

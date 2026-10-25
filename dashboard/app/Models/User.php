@@ -12,8 +12,10 @@ use Illuminate\Support\Carbon;
 use Laravel\Fortify\Contracts\PasskeyUser;
 use Laravel\Fortify\PasskeyAuthenticatable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
+use Laravel\Sanctum\HasApiTokens;
 use Modules\BatchingPlant\Models\BatchingPlant;
 use Modules\Branch\Models\Branch;
+use Modules\Dispatch\Models\SuratJalan;
 use Modules\Shared\Concerns\HasUuid;
 use Modules\Shared\Enums\UserRole;
 
@@ -23,6 +25,7 @@ use Modules\Shared\Enums\UserRole;
  * @property string|null $code
  * @property string $name
  * @property string $email
+ * @property string|null $phone
  * @property Carbon|null $email_verified_at
  * @property string $password
  * @property UserRole $role
@@ -32,13 +35,14 @@ use Modules\Shared\Enums\UserRole;
 class User extends Authenticatable implements PasskeyUser
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, HasUuid, Notifiable, PasskeyAuthenticatable, TwoFactorAuthenticatable;
+    use HasApiTokens, HasFactory, HasUuid, Notifiable, PasskeyAuthenticatable, TwoFactorAuthenticatable;
 
     protected $fillable = [
         'uuid',
         'code',
         'name',
         'email',
+        'phone',
         'password',
         'role',
         'is_active',
@@ -69,6 +73,16 @@ class User extends Authenticatable implements PasskeyUser
         return $this->role === UserRole::Admin;
     }
 
+    public function isSales(): bool
+    {
+        return $this->role === UserRole::Sales;
+    }
+
+    public function isDriver(): bool
+    {
+        return $this->role === UserRole::Driver;
+    }
+
     public function branch(): BelongsTo
     {
         return $this->belongsTo(Branch::class);
@@ -77,5 +91,10 @@ class User extends Authenticatable implements PasskeyUser
     public function batchingPlants(): BelongsToMany
     {
         return $this->belongsToMany(BatchingPlant::class)->withTimestamps();
+    }
+
+    public function suratJalans(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(SuratJalan::class, 'driver_id');
     }
 }

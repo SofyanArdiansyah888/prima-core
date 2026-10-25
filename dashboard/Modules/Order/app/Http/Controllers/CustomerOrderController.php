@@ -3,8 +3,10 @@
 namespace Modules\Order\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Validation\ValidationException;
 use Modules\Customer\Models\Customer;
 use Modules\Order\Http\Requests\QuoteDeliveryRequest;
@@ -31,6 +33,10 @@ class CustomerOrderController extends Controller
             ->with([
                 'batchingPlant:id,code,name,phone,whatsapp',
                 'items.product:id,uuid,code,name,unit,category',
+                'workOrders.product',
+                'workOrders.assignedUser',
+                'suratJalanItems.suratJalan.batchingPlant',
+                'suratJalanItems.product',
             ])
             ->orderByDesc('id')
             ->paginate(20);
@@ -70,6 +76,10 @@ class CustomerOrderController extends Controller
         $order->load([
             'batchingPlant:id,code,name,phone,whatsapp',
             'items.product:id,uuid,code,name,unit,category',
+            'workOrders.product',
+            'workOrders.assignedUser',
+            'suratJalanItems.suratJalan.batchingPlant',
+            'suratJalanItems.product',
         ]);
 
         return response()->json([
@@ -85,6 +95,10 @@ class CustomerOrderController extends Controller
         $order->load([
             'batchingPlant:id,code,name,phone,whatsapp',
             'items.product:id,uuid,code,name,unit,category',
+            'workOrders.product',
+            'workOrders.assignedUser',
+            'suratJalanItems.suratJalan.batchingPlant',
+            'suratJalanItems.product',
         ]);
 
         return response()->json([
@@ -96,9 +110,19 @@ class CustomerOrderController extends Controller
     {
         $this->owned($request, $order);
 
+        if ($order->status === 'PENDING_APPROVAL') {
+            throw ValidationException::withMessages([
+                'order' => 'Pesanan masih dalam proses verifikasi tempat oleh tim sales batching plant. Pembayaran dapat dilakukan setelah disetujui (ACC).',
+            ]);
+        }
+
         $order->load([
             'batchingPlant:id,code,name,phone,whatsapp',
             'items.product:id,uuid,code,name,unit,category',
+            'workOrders.product',
+            'workOrders.assignedUser',
+            'suratJalanItems.suratJalan.batchingPlant',
+            'suratJalanItems.product',
         ]);
 
         $forceRefresh = $request->boolean('refresh', false);
@@ -135,7 +159,7 @@ class CustomerOrderController extends Controller
     {
         $this->owned($request, $order);
 
-        if ($order->status !== 'CONFIRMED') {
+        if (!in_array($order->status, ['PENDING_APPROVAL', 'CONFIRMED'], true)) {
             throw ValidationException::withMessages([
                 'status' => 'Pesanan tidak dapat dibatalkan.',
             ]);
@@ -145,11 +169,99 @@ class CustomerOrderController extends Controller
         $order->load([
             'batchingPlant:id,code,name,phone,whatsapp',
             'items.product:id,uuid,code,name,unit,category',
+            'workOrders.product',
+            'workOrders.assignedUser',
+            'suratJalanItems.suratJalan.batchingPlant',
+            'suratJalanItems.product',
         ]);
 
         return response()->json([
             'data' => $this->transform($order),
         ]);
+    }
+
+    public function confirmComplete(Request $request, Order $order): JsonResponse
+    {
+        $this->owned($request, $order);
+
+        if ($order->status === 'COMPLETED') {
+            return response()->json([
+                'message' => 'Pesanan ini sudah berstatus selesai.',
+                'data' => $this->transform($order),
+            ]);
+        }
+
+        if ($order->status !== 'ON_DELIVERY') {
+            throw ValidationException::withMessages([
+                'status' => ['Pesanan belum dalam status pengantaran.'],
+            ]);
+        }
+
+        $order->load('items');
+        $allFulfilled = $order->items->every(fn ($i) => (float) $i->fulfilled_quantity >= (float) $i->quantity);
+        if (! $allFulfilled) {
+            throw ValidationException::withMessages([
+                'status' => ['Pengantaran seluruh ritase pesanan belum tuntas 100%.'],
+            ]);
+        }
+
+        $order->update([
+            'status' => 'COMPLETED',
+            'customer_confirmed_at' => now(),
+            'completed_by' => 'CUSTOMER',
+        ]);
+
+        $order->load([
+            'batchingPlant:id,code,name,phone,whatsapp',
+            'items.product:id,uuid,code,name,unit,category',
+            'workOrders.product',
+            'workOrders.assignedUser',
+            'suratJalanItems.suratJalan.batchingPlant',
+            'suratJalanItems.product',
+        ]);
+
+        return response()->json([
+            'message' => 'Pesanan berhasil dikonfirmasi selesai.',
+            'data' => $this->transform($order),
+        ]);
+    }
+
+    public function downloadDocument(Request $request, Order $order, string $type): Response
+    {
+        $this->owned($request, $order);
+
+        $type = strtolower($type);
+
+        if ($type === 'spk') {
+            $workOrder = $order->workOrders()->with(['product', 'assignedUser', 'batchingPlant'])->first();
+            if (!$workOrder) {
+                abort(404, 'Dokumen SPK belum diterbitkan oleh bagian produksi batching plant.');
+            }
+            $pdf = Pdf::loadView('order::pdf.spk', compact('order', 'workOrder'));
+
+            return $pdf->download("SPK-{$workOrder->code}.pdf");
+        }
+
+        if ($type === 'surat-jalan' || $type === 'suratjalan') {
+            $suratJalanItem = $order->suratJalanItems()->with(['suratJalan.batchingPlant', 'suratJalan.driver', 'product', 'workOrder.assignedUser'])->first();
+            if (!$suratJalanItem || !$suratJalanItem->suratJalan) {
+                abort(404, 'Dokumen Surat Jalan belum diterbitkan oleh bagian logistik.');
+            }
+            $suratJalan = $suratJalanItem->suratJalan;
+            $order->load(['customer', 'batchingPlant']);
+            $pdf = Pdf::loadView('order::pdf.surat-jalan', compact('order', 'suratJalan', 'suratJalanItem'));
+
+            return $pdf->download("SuratJalan-{$suratJalan->code}.pdf");
+        }
+
+        if ($type === 'faktur' || $type === 'efaktur') {
+            $order->load(['items.product', 'batchingPlant']);
+            $pdf = Pdf::loadView('order::pdf.faktur', compact('order'));
+
+            return $pdf->download("Faktur-{$order->code}.pdf");
+        }
+
+        abort(400, 'Tipe dokumen tidak valid.');
     }
 
     private function customer(Request $request): Customer
@@ -172,6 +284,21 @@ class CustomerOrderController extends Controller
      */
     private function transform(Order $order): array
     {
+        $workOrders = $order->relationLoaded('workOrders') ? $order->workOrders : collect();
+        $suratJalans = $order->relationLoaded('suratJalanItems')
+            ? $order->suratJalanItems->map(fn ($sji) => $sji->suratJalan)->filter()->unique('id')->values()
+            : collect();
+
+        $hasSpk = $workOrders->isNotEmpty();
+        $hasSuratJalan = $suratJalans->isNotEmpty();
+        $hasFaktur = in_array($order->payment_status, ['PAID'], true) || in_array($order->status, ['CONFIRMED', 'PROCESSING', 'ON_DELIVERY', 'COMPLETED'], true);
+        $canPay = $order->status === 'CONFIRMED' && $order->payment_status === 'PENDING';
+        $canCancel = in_array($order->status, ['PENDING_APPROVAL', 'CONFIRMED'], true);
+        $items = $order->relationLoaded('items') ? $order->items : collect();
+        $allFulfilled = $items->isNotEmpty() && $items->every(fn ($i) => (float) $i->fulfilled_quantity >= (float) $i->quantity);
+        $canConfirmComplete = $order->status === 'ON_DELIVERY' && $allFulfilled;
+        $autoCompleteAt = $order->delivered_at ? $order->delivered_at->copy()->addHours(48)->toIso8601String() : null;
+
         return [
             'uuid' => $order->uuid,
             'code' => $order->code,
@@ -194,7 +321,18 @@ class CustomerOrderController extends Controller
             'paid_at' => $order->paid_at?->toIso8601String(),
             'status' => $order->status,
             'status_label' => $this->statusLabel($order->status),
-            'can_cancel' => $order->status === 'CONFIRMED',
+            'approved_at' => $order->approved_at?->toIso8601String(),
+            'survey_notes' => $order->survey_notes,
+            'delivered_at' => $order->delivered_at?->toIso8601String(),
+            'customer_confirmed_at' => $order->customer_confirmed_at?->toIso8601String(),
+            'completed_by' => $order->completed_by,
+            'can_pay' => $canPay,
+            'can_cancel' => $canCancel,
+            'can_confirm_complete' => $canConfirmComplete,
+            'auto_complete_at' => $autoCompleteAt,
+            'has_spk' => $hasSpk,
+            'has_surat_jalan' => $hasSuratJalan,
+            'has_faktur' => $hasFaktur,
             'notes' => $order->notes,
             'plant' => $order->batchingPlant ? [
                 'code' => $order->batchingPlant->code,
@@ -213,6 +351,46 @@ class CustomerOrderController extends Controller
                 'subtotal' => (float) $item->subtotal,
                 'notes' => $item->notes,
             ])->values(),
+            'work_orders' => $workOrders->map(fn ($wo) => [
+                'uuid' => $wo->uuid,
+                'code' => $wo->code,
+                'status' => $wo->status,
+                'product_name' => $wo->product?->name,
+                'product_code' => $wo->product?->code,
+                'target_quantity' => (float) $wo->target_quantity,
+                'produced_quantity' => (float) $wo->produced_quantity,
+                'dispatched_quantity' => (float) $wo->dispatched_quantity,
+                'unit' => $wo->unit,
+                'batch_recipe_code' => $wo->batch_recipe_code,
+                'slump_target' => $wo->slump_target,
+                'scheduled_date' => $wo->scheduled_date ? $wo->scheduled_date->format('Y-m-d') : null,
+                'scheduled_time_slot' => $wo->scheduled_time_slot,
+                'assigned_user_name' => $wo->assignedUser?->name,
+                'created_at' => $wo->created_at?->toIso8601String(),
+            ])->values(),
+            'surat_jalans' => $suratJalans->map(fn ($sj) => [
+                'uuid' => $sj->uuid,
+                'code' => $sj->code,
+                'status' => $sj->status,
+                'vehicle_number' => $sj->vehicle_number,
+                'vehicle_type' => $sj->vehicle_type,
+                'driver_name' => $sj->driver_name,
+                'driver_phone' => $sj->driver_phone,
+                'departure_time' => $sj->departure_time?->toIso8601String(),
+                'arrival_time' => $sj->arrival_time?->toIso8601String(),
+                'created_at' => $sj->created_at?->toIso8601String(),
+                'items' => $sj->items->where('order_id', $order->id)->map(fn ($item) => [
+                    'product_name' => $item->product?->name,
+                    'product_code' => $item->product?->code,
+                    'slump' => $item->product?->slump ?? $item->workOrder?->slump_target ?? '12 ± 2 cm',
+                    'quantity' => (float) $item->quantity_delivered,
+                    'unit' => $item->unit,
+                    'recipient_name' => $item->recipient_name,
+                    'received_at' => $item->received_at?->toIso8601String(),
+                    'batch_plant_operator' => $item->workOrder?->assignedUser?->name ?? 'Nurdin',
+                    'batch_recipe_code' => $item->workOrder?->batch_recipe_code,
+                ])->values(),
+            ])->values(),
             'created_at' => $order->created_at?->toIso8601String(),
         ];
     }
@@ -220,6 +398,7 @@ class CustomerOrderController extends Controller
     private function statusLabel(?string $status): string
     {
         return match ($status) {
+            'PENDING_APPROVAL' => 'Verifikasi Tempat',
             'CONFIRMED' => 'Dikonfirmasi',
             'PROCESSING', 'WORK_ORDER_CREATED', 'IN_PRODUCTION' => 'Diproses',
             'ON_DELIVERY', 'PARTIAL_DELIVERY' => 'Dalam Pengiriman',

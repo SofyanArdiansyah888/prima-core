@@ -46,6 +46,13 @@ class Order extends Model
         'payment_payload',
         'paid_at',
         'status',
+        'approved_at',
+        'approved_by_id',
+        'survey_notes',
+        'rejection_reason',
+        'delivered_at',
+        'customer_confirmed_at',
+        'completed_by',
         'po_number',
         'notes',
     ];
@@ -63,12 +70,20 @@ class Order extends Model
             'total_price' => 'decimal:2',
             'payment_payload' => 'array',
             'paid_at' => 'datetime',
+            'approved_at' => 'datetime',
+            'delivered_at' => 'datetime',
+            'customer_confirmed_at' => 'datetime',
         ];
     }
 
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);
+    }
+
+    public function approver(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\User::class, 'approved_by_id');
     }
 
     public function items(): HasMany

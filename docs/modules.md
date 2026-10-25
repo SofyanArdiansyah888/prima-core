@@ -77,7 +77,7 @@
 - Pages: `resources/js/pages/modules/order/{index,form,show}.tsx`
 - Fitur: Sales Order pemesanan, auto-select batching plant terdekat, hitung ongkir otomatis, tracking pemenuhan per item, process stepper alur 4 tahap, dan riwayat ritase Surat Jalan.
 - Pembuatan SO dari dashboard saat ini di-hide/dinonaktifkan; seluruh pesanan baru masuk secara otomatis dari aplikasi mobile pelanggan (`customer_id`, `customer_type = B2C`) lewat `CustomerOrderService` / `PlaceOrder`.
-- Alur Status: `CONFIRMED` ➔ `PROCESSING` (saat SPK terbit) ➔ `ON_DELIVERY` (saat SJ terbit) ➔ `COMPLETED` (otomatis saat seluruh ritase SJ tuntas diterima 100%). Aksi selesai manual ditiadakan.
+- Alur Status: `PENDING_APPROVAL` (menunggu verifikasi sales lapangan via mobile) ➔ `CONFIRMED` (disetujui sales & pembayaran aktif) ➔ `PROCESSING` (saat SPK terbit) ➔ `ON_DELIVERY` (saat SJ terbit) ➔ `COMPLETED` (dikonfirmasi selesai oleh pelanggan di mobile, atau otomatis selesai setelah 2x24 jam / 48 jam). Supir hanya menyelesaikan ritase Surat Jalan (e-POD), tidak otomatis menyelesaikan pesanan.
 
 ## WorkOrder
 

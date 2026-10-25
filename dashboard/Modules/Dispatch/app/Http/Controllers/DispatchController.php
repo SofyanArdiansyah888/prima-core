@@ -175,9 +175,10 @@ class DispatchController extends Controller
     {
         $suratJalan->load([
             'batchingPlant.branch',
+            'driver',
             'items.product',
-            'items.order',
-            'items.workOrder',
+            'items.order.customer',
+            'items.workOrder.assignedUser',
         ]);
 
         return Inertia::render('modules/dispatch/show', [
@@ -189,9 +190,10 @@ class DispatchController extends Controller
     {
         $suratJalan->load([
             'batchingPlant.branch',
+            'driver',
             'items.product',
-            'items.order',
-            'items.workOrder',
+            'items.order.customer',
+            'items.workOrder.assignedUser',
         ]);
 
         return Inertia::render('modules/dispatch/print', [
@@ -238,7 +240,7 @@ class DispatchController extends Controller
                         ->exists();
 
                     if ($allFulfilled && ! $hasPendingSj) {
-                        $order->update(['status' => 'COMPLETED']);
+                        $order->update(['delivered_at' => now()]);
                     }
                 }
             } elseif ($status === 'CANCELLED') {

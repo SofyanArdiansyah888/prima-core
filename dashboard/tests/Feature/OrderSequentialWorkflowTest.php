@@ -226,9 +226,10 @@ class OrderSequentialWorkflowTest extends TestCase
         $sj->refresh();
         $this->assertEquals('COMPLETED', $sj->status);
 
-        // Order must now automatically be COMPLETED
+        // Order remains ON_DELIVERY with delivered_at marked until customer finishes or 48h timeout
         $order->refresh();
-        $this->assertEquals('COMPLETED', $order->status);
+        $this->assertEquals('ON_DELIVERY', $order->status);
+        $this->assertNotNull($order->delivered_at);
     }
 
     public function test_work_order_cannot_be_deleted_if_already_dispatched(): void

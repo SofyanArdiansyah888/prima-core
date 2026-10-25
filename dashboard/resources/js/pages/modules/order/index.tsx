@@ -97,6 +97,7 @@ export default function OrderIndex({
     }, [orders]);
 
     const statusLabels: Record<string, string> = {
+        PENDING_APPROVAL: 'Verifikasi Tempat',
         CONFIRMED: 'Dikonfirmasi',
         PROCESSING: 'Diproses',
         ON_DELIVERY: 'Dalam Pengiriman',
@@ -111,6 +112,8 @@ export default function OrderIndex({
 
     const getStatusBadge = (st: string) => {
         switch (st) {
+            case 'PENDING_APPROVAL':
+                return 'bg-amber-100 text-amber-800 border-amber-300 font-black dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-700';
             case 'CONFIRMED':
                 return 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800';
             case 'PROCESSING':

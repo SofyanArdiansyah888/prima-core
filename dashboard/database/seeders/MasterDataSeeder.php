@@ -131,6 +131,40 @@ class MasterDataSeeder extends Seeder
 
         $operator->batchingPlants()->sync([$plantModels[0]->id, $plantModels[1]->id]);
 
+        $salesCode = sprintf('EMP-SULSEL-%d00002', $year);
+        $sales = User::query()->updateOrCreate(
+            ['email' => 'sales@pkm.test'],
+            [
+                'uuid' => (string) Str::uuid(),
+                'code' => $salesCode,
+                'name' => 'Budi Hartono (Sales Lapangan)',
+                'phone' => '081241129902',
+                'password' => Hash::make('password'),
+                'role' => UserRole::Sales,
+                'branch_id' => $branch->id,
+                'is_active' => true,
+                'email_verified_at' => now(),
+            ],
+        );
+        $sales->batchingPlants()->sync([$plantModels[0]->id, $plantModels[1]->id, $plantModels[2]->id]);
+
+        $driverCode = sprintf('EMP-SULSEL-%d00003', $year);
+        $driver = User::query()->updateOrCreate(
+            ['email' => 'sopir@pkm.test'],
+            [
+                'uuid' => (string) Str::uuid(),
+                'code' => $driverCode,
+                'name' => 'Pak Syamsuddin (Sopir)',
+                'phone' => '081241129901',
+                'password' => Hash::make('password'),
+                'role' => UserRole::Driver,
+                'branch_id' => $branch->id,
+                'is_active' => true,
+                'email_verified_at' => now(),
+            ],
+        );
+        $driver->batchingPlants()->sync([$plantModels[0]->id, $plantModels[1]->id]);
+
         unset($codes, $admin);
     }
 }

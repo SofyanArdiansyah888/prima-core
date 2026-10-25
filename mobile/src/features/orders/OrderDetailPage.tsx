@@ -43,6 +43,7 @@ export default function OrderDetailPage() {
   const [loading, setLoading] = useState(true);
   const [copiedCode, setCopiedCode] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [completing, setCompleting] = useState(false);
 
   const [toast, setToast] = useState<ToastState>({
     show: false,
@@ -166,8 +167,23 @@ export default function OrderDetailPage() {
     }
   };
 
+  const handleConfirmComplete = async () => {
+    if (!uuid) return;
+    setCompleting(true);
+    try {
+      const res = await api.confirmComplete(uuid);
+      setOrder(res.data);
+      triggerToast(res.message || 'Pesanan berhasil dikonfirmasi selesai!', 'success');
+    } catch (err) {
+      triggerToast(err instanceof Error ? err.message : 'Gagal mengonfirmasi penyelesaian pesanan.', 'error');
+    } finally {
+      setCompleting(false);
+    }
+  };
+
   const normalizeStatus = (status?: string): (typeof STATUS_STEPS)[number] | 'CANCELLED' | 'UNKNOWN' => {
     if (!status) return 'UNKNOWN';
+    if (status === 'PENDING_APPROVAL') return 'PENDING_APPROVAL';
     if (status === 'DRAFT' || status === 'CONFIRMED') return 'CONFIRMED';
     if (status === 'WORK_ORDER_CREATED' || status === 'IN_PRODUCTION' || status === 'PROCESSING') return 'PROCESSING';
     if (status === 'PARTIAL_DELIVERY' || status === 'ON_DELIVERY') return 'ON_DELIVERY';
@@ -181,8 +197,10 @@ export default function OrderDetailPage() {
     : -1;
   const isCompleted = order?.status === 'COMPLETED';
   const isCancelled = order?.status === 'CANCELLED';
+  const isPendingApproval = order?.status === 'PENDING_APPROVAL';
   const isActive = order && !isCompleted && !isCancelled;
   const isPendingPayment = order?.payment_status === 'PENDING' && !isCancelled;
+  const canPay = Boolean(order?.can_pay ?? (isPendingPayment && !isPendingApproval));
 
   return (
     <Screen
@@ -218,19 +236,42 @@ export default function OrderDetailPage() {
           }
         />
       )}
-      footer={order && isPendingPayment ? (
-        <StickyBar>
-          <button
-            type="button"
-            disabled={paying}
-            onClick={() => void handlePay()}
-            className="w-full rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 py-3 text-xs font-black text-white shadow-md transition-all cursor-pointer flex items-center justify-center gap-2"
-          >
-            <IonIcon icon={walletOutline} className="text-base" />
-            <span>{paying ? 'Menghubungkan Midtrans…' : `Bayar Sekarang (${formatRupiah(order.total_price)})`}</span>
-          </button>
-        </StickyBar>
-      ) : null}
+      footer={
+        order?.can_confirm_complete ? (
+          <StickyBar>
+            <button
+              type="button"
+              disabled={completing}
+              onClick={() => void handleConfirmComplete()}
+              className="w-full rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 py-3 text-xs font-black text-white shadow-md transition-all cursor-pointer flex items-center justify-center gap-2"
+            >
+              <IonIcon icon={shieldCheckmarkOutline} className="text-base" />
+              <span>{completing ? 'Menyimpan Konfirmasi…' : 'Konfirmasi Pesanan Diterima & Selesai'}</span>
+            </button>
+          </StickyBar>
+        ) : order && isPendingPayment ? (
+          <StickyBar>
+            {isPendingApproval ? (
+              <div className="flex items-center gap-2 rounded-xl bg-amber-50 border border-amber-200 px-3 py-2.5 text-xs text-amber-800">
+                <IonIcon icon={alertCircleOutline} className="text-base shrink-0 text-amber-600" />
+                <span className="leading-tight font-medium">
+                  Menunggu verifikasi tempat oleh sales batching plant. Tombol bayar akan aktif setelah lokasi di-ACC.
+                </span>
+              </div>
+            ) : (
+              <button
+                type="button"
+                disabled={paying}
+                onClick={() => void handlePay()}
+                className="w-full rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 py-3 text-xs font-black text-white shadow-md transition-all cursor-pointer flex items-center justify-center gap-2"
+              >
+                <IonIcon icon={walletOutline} className="text-base" />
+                <span>{paying ? 'Menghubungkan Midtrans…' : `Bayar Sekarang (${formatRupiah(order.total_price)})`}</span>
+              </button>
+            )}
+          </StickyBar>
+        ) : null
+      }
     >
       {/* Toast Notification */}
       <div
@@ -279,6 +320,12 @@ export default function OrderDetailPage() {
                     <IonIcon icon={locationOutline} className="text-amber-400 shrink-0 text-xs" />
                     <span>{order.delivery_address}</span>
                   </p>
+                  {order.approved_at && (
+                    <p className="mt-1 flex items-center gap-1 text-[10px] text-emerald-300 font-medium">
+                      <IonIcon icon={checkmarkCircleOutline} className="text-emerald-400 text-xs shrink-0" />
+                      <span>Lokasi Terverifikasi & Disetujui ({formatDate(order.approved_at)})</span>
+                    </p>
+                  )}
                 </div>
 
                 <span
@@ -312,6 +359,19 @@ export default function OrderDetailPage() {
                 </div>
               </div>
 
+              {/* Survey notes callout if present */}
+              {order.survey_notes && (
+                <div className="mt-3 rounded-xl border border-white/20 bg-white/10 p-2.5 text-xs text-slate-200">
+                  <div className="flex items-center gap-1.5 font-bold text-amber-300 text-[11px]">
+                    <IonIcon icon={shieldCheckmarkOutline} className="text-amber-400 shrink-0" />
+                    <span>Catatan Verifikasi Lokasi Sales:</span>
+                  </div>
+                  <p className="mt-1 text-[11px] text-white leading-relaxed italic">
+                    "{order.survey_notes}"
+                  </p>
+                </div>
+              )}
+
               {/* Quick Action Button inside Hero */}
               <div className="mt-4 pt-1">
                 <button
@@ -325,6 +385,58 @@ export default function OrderDetailPage() {
               </div>
             </div>
 
+            {/* DELIVERY COMPLETED BY DRIVER - AWAITING CUSTOMER CONFIRMATION BANNER */}
+            {order.can_confirm_complete && (
+              <Card className="p-4 border-2 border-emerald-400 bg-emerald-50/80 shadow-sm space-y-3">
+                <div className="flex items-start gap-2.5">
+                  <div className="size-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                    <IonIcon icon={checkmarkCircleOutline} className="text-xl" />
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-black text-emerald-950 uppercase tracking-wide">
+                      Pengantaran Tiba • Konfirmasi Penerimaan
+                    </h3>
+                    <p className="text-[11px] text-emerald-800 leading-relaxed mt-0.5">
+                      Seluruh pengiriman beton telah selesai diserahterimakan di lokasi proyek Anda. Mohon periksa volume dan konfirmasi penyelesaian.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="rounded-xl bg-white/90 p-2.5 text-[11px] text-slate-600 border border-emerald-200/80 leading-relaxed">
+                  ⏱ <strong>Tenggat Otomatis:</strong> Pesanan akan otomatis ditutup dalam waktu <strong>2x24 jam</strong> jika tidak dikonfirmasi manual.
+                </div>
+
+                <button
+                  type="button"
+                  disabled={completing}
+                  onClick={() => void handleConfirmComplete()}
+                  className="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 py-3 text-xs font-black text-white shadow-md transition-all active:scale-[0.98] cursor-pointer disabled:opacity-60"
+                >
+                  <IonIcon icon={shieldCheckmarkOutline} className="text-base" />
+                  <span>{completing ? 'Menyimpan Konfirmasi…' : 'Konfirmasi Pesanan Diterima & Selesai'}</span>
+                </button>
+              </Card>
+            )}
+
+            {/* PENDING APPROVAL - FORMAL APPRECIATION & STATUS CALLOUT */}
+            {order.status === 'PENDING_APPROVAL' && (
+              <Card className="p-3.5 border border-slate-200/90 bg-white shadow-xs space-y-2.5">
+                <div className="flex items-start gap-2.5">
+                  <div className="size-8 rounded-xl bg-orange-50 border border-orange-200/80 text-[#ea580c] flex items-center justify-center shrink-0">
+                    <IonIcon icon={shieldCheckmarkOutline} className="text-lg" />
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-black text-[#0c1d37]">
+                      Terima Kasih atas Pesanan Anda
+                    </h3>
+                    <p className="text-[11px] text-slate-600 leading-relaxed mt-0.5">
+                      Terima kasih telah mempercayakan kebutuhan beton siap pakai Anda kepada <strong className="text-[#0c1d37]">PT Prima Karya Manunggal (Semen Tonasa Group)</strong>. Pesanan Anda telah resmi tercatat. Saat ini Tim Sales Lapangan kami sedang meninjau kelayakan akses jalan dan manuver armada truk mixer menuju lokasi proyek sebelum pembayaran dibuka.
+                    </p>
+                  </div>
+                </div>
+              </Card>
+            )}
+
             {/* ORDER STATUS TIMELINE STEPPER */}
             <Card className="p-4 border border-slate-200/90 shadow-xs">
               <div className="mb-3.5 flex items-center justify-between border-b border-slate-100 pb-2.5">
@@ -335,8 +447,8 @@ export default function OrderDetailPage() {
                   {isCancelled
                     ? 'Dibatalkan'
                     : isCompleted
-                    ? 'Semua Tahap Selesai (4/4)'
-                    : `Langkah ${Math.max(1, currentIndex + 1)} dari 4`}
+                    ? `Semua Tahap Selesai (${STATUS_STEPS.length}/${STATUS_STEPS.length})`
+                    : `Langkah ${Math.max(1, currentIndex + 1)} dari ${STATUS_STEPS.length}`}
                 </span>
               </div>
 
@@ -355,8 +467,9 @@ export default function OrderDetailPage() {
                     const isCurrent = isCompleted ? false : currentIndex === index;
 
                     const stepSubtext: Record<(typeof STATUS_STEPS)[number], string> = {
-                      CONFIRMED: 'Order diverifikasi & dialokasikan ke jadwal plant',
-                      PROCESSING: 'Batching plant memproses produksi beton sesuai formula',
+                      PENDING_APPROVAL: 'Tim sales plant memverifikasi akses jalan proyek untuk armada mixer',
+                      CONFIRMED: 'Order disetujui (ACC). Menunggu pembayaran atau antrean produksi',
+                      PROCESSING: 'Batching plant memproses produksi beton sesuai formula & SPK',
                       ON_DELIVERY: 'Truk mixer dalam perjalanan mengantarkan beton ke proyek',
                       COMPLETED: 'Pengecoran selesai, e-POD & Surat Jalan tervalidasi',
                     };
@@ -499,7 +612,19 @@ export default function OrderDetailPage() {
                 </div>
               </div>
 
-              {isPendingPayment && (
+              {isPendingApproval ? (
+                <div className="pt-2">
+                  <div className="rounded-xl border border-amber-200 bg-amber-50/90 p-3 text-xs text-amber-900 space-y-1">
+                    <div className="flex items-center gap-1.5 font-bold text-amber-800">
+                      <IonIcon icon={alertCircleOutline} className="text-base shrink-0 text-amber-600" />
+                      <span>Menunggu Verifikasi Lokasi Sales</span>
+                    </div>
+                    <p className="text-[11px] leading-relaxed text-amber-700">
+                      Petugas sales plant sedang memastikan akses jalan proyek Anda aman untuk dilalui armada truk besar. Pembayaran Midtrans dapat dilakukan setelah pesanan disetujui.
+                    </p>
+                  </div>
+                </div>
+              ) : isPendingPayment ? (
                 <div className="pt-2 space-y-2">
                   <button
                     type="button"
@@ -521,7 +646,7 @@ export default function OrderDetailPage() {
                     <span>{refreshing ? 'Memeriksa Midtrans…' : 'Sudah Bayar? Cek Status Pembayaran'}</span>
                   </button>
                 </div>
-              )}
+              ) : null}
             </Card>
 
             {/* LOGISTICS & DISPATCH CONTACT CARD */}

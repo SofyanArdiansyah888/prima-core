@@ -12,6 +12,9 @@ import CheckoutPage from '../features/checkout/CheckoutPage';
 import SelectAddressPage from '../features/checkout/SelectAddressPage';
 import SuccessPage from '../features/checkout/SuccessPage';
 import OrderDetailPage from '../features/orders/OrderDetailPage';
+import SalesOrdersPage from '../features/sales/SalesOrdersPage';
+import SalesOrderDetailPage from '../features/sales/SalesOrderDetailPage';
+import DriverDeliveriesPage from '../features/driver/DriverDeliveriesPage';
 import RequireAuth from './RequireAuth';
 import TabsPage from './TabsPage';
 
@@ -47,6 +50,9 @@ export default function App() {
               <Route path="/select-address" element={<RequireAuth><SelectAddressPage /></RequireAuth>} />
               <Route path="/orders/:uuid" element={<RequireAuth><OrderDetailPage /></RequireAuth>} />
               <Route path="/success/:code" element={<RequireAuth><SuccessPage /></RequireAuth>} />
+              <Route path="/sales/orders" element={<SalesOrdersPage />} />
+              <Route path="/sales/orders/:uuid" element={<SalesOrderDetailPage />} />
+              <Route path="/driver/deliveries" element={<DriverDeliveriesPage />} />
               <Route path="/" element={<Navigate to="/tabs/home" replace />} />
             </IonRouterOutlet>
           </IonReactRouter>

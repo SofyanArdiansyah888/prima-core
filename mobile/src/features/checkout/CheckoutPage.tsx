@@ -122,39 +122,15 @@ export default function CheckoutPage() {
       const orderData = response.data;
       clear();
 
-      // Open Midtrans Snap popup directly
-      if (orderData.snap_token) {
-        void openSnapPayment(
-          orderData.snap_token,
-          {
-            onSuccess: async () => {
-              try {
-                await api.syncPayment(orderData.uuid);
-              } catch {}
-              navigate(`/orders/${orderData.uuid}`);
-            },
-            onPending: async () => {
-              try {
-                await api.syncPayment(orderData.uuid);
-              } catch {}
-              navigate(`/orders/${orderData.uuid}`);
-            },
-            onError: () => {
-              navigate(`/orders/${orderData.uuid}`);
-            },
-            onClose: () => {
-              navigate(`/success/${encodeURIComponent(orderData.code)}`, {
-                state: { uuid: orderData.uuid, snap_token: orderData.snap_token },
-              });
-            },
-          },
-          orderData.midtrans_client_key || undefined
-        );
-      } else {
-        navigate(`/success/${encodeURIComponent(orderData.code)}`, {
-          state: { uuid: orderData.uuid },
-        });
-      }
+      // Alur baru: Pesanan berstatus PENDING_APPROVAL menunggu verifikasi tempat oleh tim sales
+      navigate(`/success/${encodeURIComponent(orderData.code)}`, {
+        state: { 
+          uuid: orderData.uuid,
+          snap_token: orderData.snap_token,
+          project_title: projectTitle,
+          customer_name: customer?.name,
+        },
+      });
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Gagal membuat pesanan.');
     } finally {

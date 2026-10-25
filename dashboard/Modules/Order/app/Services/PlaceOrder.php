@@ -59,7 +59,7 @@ class PlaceOrder
                 'total_price' => $totals['total_price'],
                 'payment_method' => $data['payment_method'],
                 'payment_status' => $data['payment_status'],
-                'status' => 'CONFIRMED',
+                'status' => $data['status'] ?? 'CONFIRMED',
                 'po_number' => $data['po_number'] ?? null,
                 'notes' => $data['notes'] ?? null,
             ]);

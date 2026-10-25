@@ -65,14 +65,11 @@ class CustomerOrderService
             'admin_fee' => $built['admin_fee'],
             'payment_method' => $input['payment_method'],
             'payment_status' => 'PENDING',
+            'status' => 'PENDING_APPROVAL',
             'po_number' => null,
             'notes' => $input['notes'] ?? null,
             'items' => $built['lines'],
         ]);
-
-        if ($order->payment_method === 'MIDTRANS') {
-            $this->midtrans->createSnapTransaction($order);
-        }
 
         return $order;
     }

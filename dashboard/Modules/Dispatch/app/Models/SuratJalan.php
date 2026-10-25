@@ -16,6 +16,7 @@ class SuratJalan extends Model
         'uuid',
         'code',
         'batching_plant_id',
+        'driver_id',
         'vehicle_number',
         'vehicle_type',
         'driver_name',
@@ -46,6 +47,11 @@ class SuratJalan extends Model
     public function batchingPlant(): BelongsTo
     {
         return $this->belongsTo(BatchingPlant::class);
+    }
+
+    public function driver(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\User::class, 'driver_id');
     }
 
     public function items(): HasMany

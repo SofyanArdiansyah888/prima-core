@@ -176,7 +176,7 @@ class CustomerOrderApiTest extends TestCase
         ]);
 
         $response->assertCreated();
-        $response->assertJsonPath('data.status', 'CONFIRMED');
+        $response->assertJsonPath('data.status', 'PENDING_APPROVAL');
         $response->assertJsonPath('data.payment_status', 'PENDING');
         $code = $response->json('data.code');
         $uuid = $response->json('data.uuid');
@@ -238,15 +238,56 @@ class CustomerOrderApiTest extends TestCase
 
         $orderRes->assertCreated();
         $this->assertEquals(4500, $orderRes->json('data.admin_fee'));
-        $this->assertNotEmpty($orderRes->json('data.snap_token'));
+        $this->assertSame('PENDING_APPROVAL', $orderRes->json('data.status'));
+        $this->assertNull($orderRes->json('data.snap_token'));
 
         $uuid = $orderRes->json('data.uuid');
         $code = $orderRes->json('data.code');
 
-        // Test pay endpoint
+        // Cannot pay while PENDING_APPROVAL
+        $this->withToken($token)
+            ->postJson('/api/customer/v1/orders/'.$uuid.'/pay')
+            ->assertStatus(422);
+
+        // Sales approves order (status -> CONFIRMED)
+        $order = Order::query()->where('uuid', $uuid)->firstOrFail();
+        $order->update(['status' => 'CONFIRMED', 'approved_at' => now()]);
+
+        // Test pay endpoint after approval
         $payRes = $this->withToken($token)->postJson('/api/customer/v1/orders/'.$uuid.'/pay');
         $payRes->assertOk();
         $this->assertNotEmpty($payRes->json('data.snap_token'));
+
+        // Test document download: SPK returns 404 if not created yet
+        $this->withToken($token)
+            ->get('/api/customer/v1/orders/'.$uuid.'/documents/spk/download')
+            ->assertNotFound();
+
+        // Faktur is accessible for valid confirmed order
+        $this->withToken($token)
+            ->get('/api/customer/v1/orders/'.$uuid.'/documents/faktur/download')
+            ->assertOk()
+            ->assertHeader('content-type', 'application/pdf');
+
+        // Create WorkOrder to verify SPK download
+        \Modules\WorkOrder\Models\WorkOrder::query()->create([
+            'order_id' => $order->id,
+            'code' => 'WO-TEST-001',
+            'product_id' => $cement->id,
+            'batching_plant_id' => $order->batching_plant_id,
+            'scheduled_date' => now()->toDateString(),
+            'scheduled_time_slot' => 'Pagi',
+            'target_quantity' => 20,
+            'produced_quantity' => 20,
+            'dispatched_quantity' => 0,
+            'unit' => 'SAK',
+            'status' => 'PENDING',
+        ]);
+
+        $this->withToken($token)
+            ->get('/api/customer/v1/orders/'.$uuid.'/documents/spk/download')
+            ->assertOk()
+            ->assertHeader('content-type', 'application/pdf');
 
         // Test webhook
         $orderId = $code.'-sample';

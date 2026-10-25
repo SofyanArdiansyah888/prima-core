@@ -21,6 +21,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { ConfirmModal } from '@/components/ui/confirm-modal';
 import { dashboard } from '@/routes';
+import { LocationVerificationCard } from './location-verification-card';
 
 type OrderDetail = {
     id: number;
@@ -42,10 +43,14 @@ type OrderDetail = {
     payment_method: string | null;
     payment_status: string;
     status: string;
+    approved_at?: string | null;
+    survey_notes?: string | null;
+    rejection_reason?: string | null;
+    approver?: { id: number; name: string; code: string } | null;
     po_number: string | null;
     notes: string | null;
     created_at: string;
-    batching_plant?: { id: number; uuid: string; code: string; name: string; branch?: { name: string } };
+    batching_plant?: { id: number; uuid: string; code: string; name: string; lat?: number | null; lng?: number | null; branch?: { name: string } };
     items: {
         id: number;
         product_id: number;
@@ -94,6 +99,7 @@ type OrderDetail = {
 };
 
 const statusLabels: Record<string, string> = {
+    PENDING_APPROVAL: 'Verifikasi Tempat',
     CONFIRMED: 'Dikonfirmasi',
     PROCESSING: 'Diproses (SPK Terbit)',
     ON_DELIVERY: 'Dalam Pengiriman',
@@ -150,18 +156,20 @@ export default function OrderShow({ order }: { order: OrderDetail }) {
 
     const getStepIndex = (status: string) => {
         switch (status) {
+            case 'PENDING_APPROVAL':
+                return 0;
             case 'CONFIRMED':
             case 'DRAFT':
-                return 0;
+                return 1;
             case 'PROCESSING':
             case 'WORK_ORDER_CREATED':
             case 'IN_PRODUCTION':
-                return 1;
+                return 2;
             case 'ON_DELIVERY':
             case 'PARTIAL_DELIVERY':
-                return 2;
-            case 'COMPLETED':
                 return 3;
+            case 'COMPLETED':
+                return 4;
             default:
                 return 0;
         }
@@ -171,10 +179,11 @@ export default function OrderShow({ order }: { order: OrderDetail }) {
     const isCancelled = order.status === 'CANCELLED';
 
     const steps = [
-        { id: 'CONFIRMED', number: 1, title: 'Dikonfirmasi', desc: 'Order masuk & jadwal plant' },
-        { id: 'PROCESSING', number: 2, title: 'SPK Produksi', desc: 'Mix design & penimbangan' },
-        { id: 'ON_DELIVERY', number: 3, title: 'Pengiriman Armada', desc: 'Surat Jalan & ritase mixer' },
-        { id: 'COMPLETED', number: 4, title: 'Selesai & Diterima', desc: 'Volume 100% tuntas diterima' },
+        { id: 'PENDING_APPROVAL', number: 1, title: 'Verifikasi Tempat', desc: 'Akses armada mixer / mobil besar' },
+        { id: 'CONFIRMED', number: 2, title: 'Dikonfirmasi', desc: 'Lokasi disetujui & siap pembayaran' },
+        { id: 'PROCESSING', number: 3, title: 'SPK Produksi', desc: 'Mix design & penimbangan' },
+        { id: 'ON_DELIVERY', number: 4, title: 'Pengiriman Armada', desc: 'Surat Jalan & ritase mixer' },
+        { id: 'COMPLETED', number: 5, title: 'Selesai & Diterima', desc: 'Volume 100% tuntas diterima' },
     ];
 
     const totalOrdered = order.items.reduce((sum, item) => sum + Number(item.quantity), 0);
@@ -239,6 +248,13 @@ export default function OrderShow({ order }: { order: OrderDetail }) {
                                 <RefreshCw className="size-3.5 text-blue-600" />
                                 <span>Cek Midtrans</span>
                             </Button>
+                        )}
+
+                        {/* Tahap 0: PENDING_APPROVAL -> Menunggu Verifikasi */}
+                        {order.status === 'PENDING_APPROVAL' && (
+                            <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/15 border border-amber-300 px-3 py-1 text-xs font-black text-amber-800 dark:border-amber-700 dark:text-amber-300">
+                                <Clock className="size-3.5 text-amber-600 animate-pulse" /> Menunggu Verifikasi &amp; ACC Lokasi
+                            </span>
                         )}
 
                         {/* Tahap 1: CONFIRMED -> Terbitkan SPK */}
@@ -311,6 +327,11 @@ export default function OrderShow({ order }: { order: OrderDetail }) {
                     </div>
                 </div>
 
+                {/* Location Verification & Adjustment Map for PENDING_APPROVAL */}
+                {order.status === 'PENDING_APPROVAL' && (
+                    <LocationVerificationCard order={order} />
+                )}
+
                 {/* Sequential Process Stepper */}
                 <div className="rounded-xl border border-slate-200/80 bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)] dark:border-slate-800 dark:bg-slate-900">
                     <div className="flex items-center justify-between mb-4">
@@ -323,17 +344,20 @@ export default function OrderShow({ order }: { order: OrderDetail }) {
                             </span>
                         ) : (
                             <span className="text-xs text-slate-500">
-                                Tahap {activeStep + 1} dari 4: <span className="font-bold text-slate-900 dark:text-white">{steps[activeStep]?.title}</span>
+                                Tahap {activeStep + 1} dari 5: <span className="font-bold text-slate-900 dark:text-white">{steps[activeStep]?.title}</span>
                             </span>
                         )}
                     </div>
 
                     {isCancelled ? (
                         <div className="rounded-lg bg-red-50 border border-red-200 p-3 text-xs text-[#d91424] dark:bg-red-950/20 dark:border-red-900">
-                            Pesanan ini telah dibatalkan. Seluruh aktivitas produksi dan logistik dihentikan.
+                            Pesanan ini telah dibatalkan.
+                            {order.rejection_reason && (
+                                <p className="mt-1 font-semibold text-xs">Alasan: {order.rejection_reason}</p>
+                            )}
                         </div>
                     ) : (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
                             {steps.map((st, idx) => {
                                 const isDone = idx < activeStep || order.status === 'COMPLETED';
                                 const isCurrent = idx === activeStep && order.status !== 'COMPLETED';
@@ -451,6 +475,19 @@ export default function OrderShow({ order }: { order: OrderDetail }) {
                                             <span className="font-mono text-[11px] text-slate-400 mt-0.5 block">
                                                 Koordinat: {order.delivery_lat}, {order.delivery_lng}
                                             </span>
+                                        )}
+                                        {order.survey_notes && (
+                                            <div className="mt-2 rounded-lg bg-amber-50 p-2.5 border border-amber-200 text-xs dark:bg-amber-950/20 dark:border-amber-900">
+                                                <span className="font-bold text-amber-800 dark:text-amber-300 block text-[10px] uppercase tracking-wide">
+                                                    Catatan Akses Armada Truk Besar:
+                                                </span>
+                                                <p className="text-slate-700 dark:text-slate-300 mt-0.5">{order.survey_notes}</p>
+                                                {order.approver && (
+                                                    <span className="text-[10px] text-slate-400 mt-1 block">
+                                                        Diverifikasi oleh: {order.approver.name}
+                                                    </span>
+                                                )}
+                                            </div>
                                         )}
                                     </div>
                                 </div>

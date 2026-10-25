@@ -158,4 +158,43 @@ export const api = {
   cancelOrder(uuid: string) {
     return request<{ data: CustomerOrder }>(`/orders/${uuid}/cancel`, { method: 'POST' });
   },
+  confirmComplete(uuid: string) {
+    return request<{ data: CustomerOrder; message: string }>(`/orders/${uuid}/confirm-complete`, { method: 'POST' });
+  },
+  async downloadDocument(uuid: string, type: 'spk' | 'suratJalan' | 'eFaktur', customFilename?: string): Promise<void> {
+    const typeMap: Record<string, string> = {
+      spk: 'spk',
+      suratJalan: 'surat-jalan',
+      eFaktur: 'faktur',
+      'surat-jalan': 'surat-jalan',
+      faktur: 'faktur',
+    };
+    const mappedType = typeMap[type] || type;
+    const token = getToken();
+    const headers: Record<string, string> = {
+      Accept: 'application/pdf',
+    };
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const res = await fetch(`${API_URL}/api/customer/v1/orders/${uuid}/documents/${mappedType}/download`, {
+      headers,
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new ApiError(err.message || 'Gagal mengunduh dokumen.');
+    }
+
+    const blob = await res.blob();
+    const blobUrl = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = blobUrl;
+    link.download = customFilename || `${mappedType}-${uuid.substring(0, 8)}.pdf`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(blobUrl);
+  },
 };
