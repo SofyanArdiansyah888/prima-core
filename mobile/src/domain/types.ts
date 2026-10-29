@@ -145,6 +145,9 @@ export type CustomerOrder = {
   completed_by?: string | null;
   can_pay: boolean;
   can_cancel: boolean;
+  cancellation_reason?: string | null;
+  refund_amount?: number | null;
+  refunded_at?: string | null;
   can_confirm_complete?: boolean;
   auto_complete_at?: string | null;
   has_spk: boolean;
@@ -180,6 +183,9 @@ export type SalesOrderSummary = {
   delivery_lat: number | null;
   delivery_lng: number | null;
   distance_km: number;
+  subtotal?: number;
+  delivery_fee?: number;
+  ppn?: number;
   total_price: number;
   status: string;
   approved_at?: string | null;

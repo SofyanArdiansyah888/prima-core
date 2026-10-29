@@ -10,9 +10,6 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 use Modules\Dispatch\Models\SuratJalan;
-use Modules\Dispatch\Models\SuratJalanItem;
-use Modules\Order\Models\Order;
-use Modules\Order\Models\OrderItem;
 use Modules\Shared\Enums\UserRole;
 
 class DriverDeliveryApiController extends Controller
@@ -122,9 +119,9 @@ class DriverDeliveryApiController extends Controller
             });
 
         if ($tab === 'active') {
-            $query->whereIn('status', ['PREPARED', 'DEPARTED', 'ON_THE_WAY', 'ARRIVED', 'UNLOADING']);
+            $query->whereIn('status', SuratJalan::ACTIVE_STATUSES);
         } else {
-            $query->whereIn('status', ['COMPLETED', 'CANCELLED', 'RETURNED']);
+            $query->whereIn('status', SuratJalan::FINAL_STATUSES);
         }
 
         $deliveries = $query->orderByDesc('id')->paginate(15);
@@ -157,6 +154,12 @@ class DriverDeliveryApiController extends Controller
             ]);
         }
 
+        if (! $suratJalan->isActive()) {
+            throw ValidationException::withMessages([
+                'status' => ['Surat jalan ini sudah dibatalkan / dikembalikan dan tidak dapat diselesaikan.'],
+            ]);
+        }
+
         $validated = $request->validate([
             'recipient_name' => ['required', 'string', 'max:128'],
             'notes' => ['nullable', 'string', 'max:500'],
@@ -175,27 +178,7 @@ class DriverDeliveryApiController extends Controller
                 'received_at' => now(),
             ]);
 
-            // Synchronize parent orders
-            $orderIds = $suratJalan->items()->pluck('order_id')->unique()->filter();
-            foreach ($orderIds as $orderId) {
-                $order = Order::with('items')->find($orderId);
-                if (! $order) {
-                    continue;
-                }
-
-                $allFulfilled = $order->items->every(fn ($i) => (float) $i->fulfilled_quantity >= (float) $i->quantity);
-                $hasPendingSj = SuratJalanItem::where('order_id', $orderId)
-                    ->whereHas('suratJalan', fn ($q) => $q->whereIn('status', ['PREPARED', 'DEPARTED', 'ON_THE_WAY', 'ARRIVED', 'UNLOADING']))
-                    ->exists();
-
-                // If all fulfilled and no pending shipments remain: mark delivered_at,
-                // but DO NOT finish the order. Order remains ON_DELIVERY until customer confirms or 48h timeout.
-                if ($allFulfilled && ! $hasPendingSj) {
-                    $order->update([
-                        'delivered_at' => now(),
-                    ]);
-                }
-            }
+            SuratJalan::syncOrdersDeliveredAt($suratJalan->items()->pluck('order_id')->unique()->filter());
         });
 
         return response()->json([

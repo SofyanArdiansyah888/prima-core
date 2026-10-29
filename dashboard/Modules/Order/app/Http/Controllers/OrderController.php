@@ -8,11 +8,11 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 use Modules\BatchingPlant\Models\BatchingPlant;
-use Modules\DeliveryRate\Services\PlantDistanceService;
 use Modules\Order\Http\Requests\UpdateOrderRequest;
 use Modules\Order\Models\Order;
+use Modules\Order\Services\ApproveOrderSite;
+use Modules\Order\Services\CancelOrder;
 use Modules\Order\Services\MidtransPaymentService;
-use Modules\Order\Services\OrderTotals;
 
 class OrderController extends Controller
 {
@@ -100,64 +100,20 @@ class OrderController extends Controller
         ]);
     }
 
-    public function approve(Request $request, Order $order, PlantDistanceService $distanceService): RedirectResponse
+    public function approve(Request $request, Order $order, ApproveOrderSite $approveSite): RedirectResponse
     {
         if ($order->status !== 'PENDING_APPROVAL') {
             return back()->with('error', 'Hanya pesanan berstatus Menunggu Verifikasi Tempat yang dapat disetujui.');
         }
 
         $validated = $request->validate([
-            'delivery_lat' => ['nullable', 'numeric'],
-            'delivery_lng' => ['nullable', 'numeric'],
+            'delivery_lat' => ['nullable', 'numeric', 'between:-90,90', 'required_with:delivery_lng'],
+            'delivery_lng' => ['nullable', 'numeric', 'between:-180,180', 'required_with:delivery_lat'],
             'delivery_address' => ['nullable', 'string', 'max:500'],
             'survey_notes' => ['nullable', 'string', 'max:1000'],
         ]);
 
-        $updates = [
-            'status' => 'CONFIRMED',
-            'approved_at' => now(),
-            'approved_by_id' => auth()->id(),
-            'survey_notes' => $validated['survey_notes'] ?? $order->survey_notes,
-        ];
-
-        if (!empty($validated['delivery_address'])) {
-            $updates['delivery_address'] = $validated['delivery_address'];
-        }
-
-        // If coordinates were adjusted by sales/approver for big truck accessibility
-        if (
-            isset($validated['delivery_lat'], $validated['delivery_lng']) &&
-            ($validated['delivery_lat'] != $order->delivery_lat || $validated['delivery_lng'] != $order->delivery_lng)
-        ) {
-            $newLat = (float) $validated['delivery_lat'];
-            $newLng = (float) $validated['delivery_lng'];
-            $updates['delivery_lat'] = $newLat;
-            $updates['delivery_lng'] = $newLng;
-
-            $plant = $order->batchingPlant;
-            if ($plant && $plant->lat && $plant->lng) {
-                $newDistance = $distanceService->calculateDistanceKm($newLat, $newLng, (float) $plant->lat, (float) $plant->lng);
-                $updates['distance_km'] = $newDistance;
-
-                $firstItem = $order->items()->with('product')->first();
-                $category = $firstItem?->product?->category ?? 'readymix';
-                $totalQty = (float) $order->items()->sum('quantity');
-
-                $feeResult = $distanceService->calculateDeliveryFee($plant->id, $newDistance, $category, $totalQty);
-                $newDeliveryFee = (float) $feeResult['delivery_fee'];
-                $updates['delivery_fee'] = $newDeliveryFee;
-
-                $adminFee = (float) $order->admin_fee;
-                $lineAmounts = $order->items->map(fn ($item) => (float) $item->subtotal)->all();
-                $totals = OrderTotals::fromLineAmounts($lineAmounts, $newDeliveryFee, $adminFee);
-
-                $updates['subtotal'] = $totals['subtotal'];
-                $updates['ppn'] = $totals['ppn'];
-                $updates['total_price'] = $totals['total_price'];
-            }
-        }
-
-        $order->update($updates);
+        $approveSite->approve($order, $request->user(), $validated);
 
         return back()->with('success', "Pesanan {$order->code} berhasil diverifikasi dan disetujui (ACC). Titik lokasi akses armada telah diperbarui dan pelanggan kini dapat melakukan pembayaran.");
     }
@@ -188,50 +144,57 @@ class OrderController extends Controller
         return back()->with('success', "Status pembayaran pesanan {$order->code}: {$statusLabel}.");
     }
 
+    /**
+     * Verifikasi pembayaran manual (mis. transfer) dan catatan. Perubahan status
+     * pesanan mengikuti alur (ACC, SPK, SJ, konfirmasi pelanggan), bukan form ini.
+     */
     public function update(UpdateOrderRequest $request, Order $order): RedirectResponse
     {
+        abort_unless($request->user()?->isAdmin(), 403, 'Hanya admin yang dapat mengubah data pembayaran pesanan.');
+
         $data = $request->validated();
-        $newStatus = $data['status'] ?? $order->status;
 
         if (in_array($order->status, ['COMPLETED', 'CANCELLED'], true)) {
             return back()->with('error', 'Status pesanan sudah final dan tidak dapat diubah lagi.');
         }
 
-        if ($newStatus === 'COMPLETED') {
-            return back()->with('error', 'Status pesanan tidak dapat diselesaikan secara manual. Status akan otomatis Selesai setelah pengantaran Surat Jalan tuntas.');
+        if (isset($data['status']) && $data['status'] !== $order->status) {
+            return back()->with('error', 'Status pesanan tidak dapat diubah manual. Gunakan alur ACC, SPK, Surat Jalan, atau tombol Batalkan & Refund.');
         }
 
-        if ($newStatus === 'CANCELLED') {
-            $hasActiveDeliveries = $order->suratJalanItems()
-                ->whereIn('status', ['ON_TRUCK', 'DELIVERED'])
-                ->exists();
-
-            if ($hasActiveDeliveries) {
-                return back()->with('error', 'Pesanan tidak dapat dibatalkan karena pengiriman sedang berjalan atau telah diserahterimakan.');
-            }
+        unset($data['status']);
+        if (($data['payment_status'] ?? null) === 'PAID' && ! $order->paid_at) {
+            $data['paid_at'] = now();
         }
 
         $order->update($data);
 
-        return redirect()->route('orders.show', $order)->with('success', 'Status pesanan berhasil diperbarui.');
+        return redirect()->route('orders.show', $order)->with('success', 'Data pesanan berhasil diperbarui.');
+    }
+
+    public function cancel(Request $request, Order $order, CancelOrder $cancelOrder): RedirectResponse
+    {
+        abort_unless($request->user()?->isAdmin(), 403, 'Hanya admin yang dapat membatalkan pesanan.');
+
+        $validated = $request->validate([
+            'cancellation_reason' => ['required', 'string', 'max:1000'],
+            'refund_amount' => ['nullable', 'numeric', 'min:0'],
+            'refund_reference' => ['nullable', 'string', 'max:128'],
+        ]);
+
+        $wasPaid = $order->isPaid();
+        $cancelOrder->cancel($order, $request->user(), $validated);
+
+        return redirect()->route('orders.show', $order)->with(
+            'success',
+            $wasPaid
+                ? "Pesanan {$order->code} dibatalkan dan refund tercatat. Pastikan dana sudah dikembalikan ke pelanggan."
+                : "Pesanan {$order->code} dibatalkan."
+        );
     }
 
     public function destroy(Order $order): RedirectResponse
     {
-        if (in_array($order->status, ['COMPLETED', 'CANCELLED'], true)) {
-            return back()->with('error', 'Pesanan tidak dapat dibatalkan.');
-        }
-
-        $hasActiveDeliveries = $order->suratJalanItems()
-            ->whereIn('status', ['ON_TRUCK', 'DELIVERED'])
-            ->exists();
-
-        if ($hasActiveDeliveries) {
-            return back()->with('error', 'Pesanan tidak dapat dibatalkan karena pengiriman sedang berjalan.');
-        }
-
-        $order->update(['status' => 'CANCELLED']);
-
-        return redirect()->route('orders.index')->with('success', 'Pesanan dibatalkan.');
+        return back()->with('error', 'Gunakan tombol Batalkan Pesanan (admin) agar alasan dan refund tercatat.');
     }
 }

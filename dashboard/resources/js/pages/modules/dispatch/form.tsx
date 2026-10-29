@@ -13,6 +13,14 @@ type Plant = {
     uuid: string;
     code: string;
     name: string;
+    branch_id: number;
+};
+
+type Driver = {
+    id: number;
+    name: string;
+    phone: string | null;
+    branch_id: number | null;
 };
 
 type Order = {
@@ -53,10 +61,12 @@ type Order = {
 
 export default function DispatchForm({
     plants,
+    drivers,
     activeOrders,
     vehicleTypes,
 }: {
     plants: Plant[];
+    drivers: Driver[];
     activeOrders: Order[];
     vehicleTypes: { value: string; label: string }[];
 }) {
@@ -68,6 +78,7 @@ export default function DispatchForm({
         batching_plant_id: defaultPlant?.id ?? '',
         vehicle_number: '',
         vehicle_type: 'MIXER_TRUCK_7M3',
+        driver_id: null as number | null,
         driver_name: '',
         driver_phone: '',
         gross_weight_kg: '' as unknown as number,
@@ -91,6 +102,19 @@ export default function DispatchForm({
             },
         ],
     });
+
+    const selectedPlant = plants.find((p) => p.id === Number(data.batching_plant_id));
+    const plantDrivers = drivers.filter((d) => !selectedPlant || !d.branch_id || d.branch_id === selectedPlant.branch_id);
+
+    const handleDriverSelect = (value: string) => {
+        const driver = drivers.find((d) => d.id === Number(value));
+        setData((prev) => ({
+            ...prev,
+            driver_id: driver?.id ?? null,
+            driver_name: driver?.name ?? '',
+            driver_phone: driver?.phone ?? '',
+        }));
+    };
 
     // Auto-calculate Net Weight
     const handleGrossWeight = (gross: number) => {
@@ -116,6 +140,7 @@ export default function DispatchForm({
     const allProducts = activeOrders.flatMap((o) => o.items.map((i) => i.product));
     const hasNonCombinableProduct = data.items.some((it) => {
         const prod = allProducts.find((p) => p.id === Number(it.product_id));
+
         return prod && !prod.allow_combined_delivery;
     });
 
@@ -148,6 +173,7 @@ export default function DispatchForm({
     const addDropStop = () => {
         if (hasNonCombinableProduct) {
             toast.error('Produk Ready Mix / Khusus tidak dapat digabung pengirimannya dengan customer lain.');
+
             return;
         }
 
@@ -173,17 +199,23 @@ export default function DispatchForm({
     };
 
     const removeDropStop = (index: number) => {
-        if (data.items.length === 1) return;
+        if (data.items.length === 1) {
+return;
+}
+
         const newItems = data.items.filter((_, i) => i !== index).map((it, i) => ({ ...it, delivery_sequence: i + 1 }));
         setData('items', newItems);
     };
 
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
+
         if (isCombinableConflict) {
             toast.error('Produk Ready Mix atau semen curah khusus tidak dapat digabung multi-customer dalam 1 ritase armada!');
+
             return;
         }
+
         post('/dispatch/surat-jalan');
     };
 
@@ -264,13 +296,36 @@ export default function DispatchForm({
                             </div>
 
                             <div>
+                                <Label htmlFor="driver_id">Supir Terdaftar (Akun Mobile)</Label>
+                                <select
+                                    id="driver_id"
+                                    value={data.driver_id ?? ''}
+                                    onChange={(e) => handleDriverSelect(e.target.value)}
+                                    className="mt-1.5 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 dark:border-slate-800 dark:bg-slate-900 dark:text-white"
+                                >
+                                    <option value="">— Supir eksternal / tanpa akun mobile (isi manual) —</option>
+                                    {plantDrivers.map((d) => (
+                                        <option key={d.id} value={d.id}>
+                                            {d.name}
+                                            {d.phone ? ` · ${d.phone}` : ''}
+                                        </option>
+                                    ))}
+                                </select>
+                                <p className="mt-1 text-xs text-slate-500">
+                                    Surat Jalan akan muncul di aplikasi mobile supir terpilih untuk serah terima (e-POD).
+                                </p>
+                                {errors.driver_id && <p className="mt-1 text-xs text-rose-600">{errors.driver_id}</p>}
+                            </div>
+
+                            <div>
                                 <Label htmlFor="driver_name">Nama Pengemudi (Driver) *</Label>
                                 <Input
                                     id="driver_name"
                                     value={data.driver_name}
                                     onChange={(e) => setData('driver_name', e.target.value)}
                                     placeholder="Contoh: Pak Syamsuddin"
-                                    className="mt-1.5"
+                                    readOnly={data.driver_id !== null}
+                                    className="mt-1.5 read-only:bg-slate-50 dark:read-only:bg-slate-800/60"
                                 />
                                 {errors.driver_name && <p className="mt-1 text-xs text-rose-600">{errors.driver_name}</p>}
                             </div>
@@ -281,8 +336,9 @@ export default function DispatchForm({
                                     id="driver_phone"
                                     value={data.driver_phone}
                                     onChange={(e) => setData('driver_phone', e.target.value)}
-                                    placeholder="0812-4112-9901"
-                                    className="mt-1.5 font-mono"
+                                    placeholder="081241129901"
+                                    readOnly={data.driver_id !== null}
+                                    className="mt-1.5 font-mono read-only:bg-slate-50 dark:read-only:bg-slate-800/60"
                                 />
                             </div>
                         </div>

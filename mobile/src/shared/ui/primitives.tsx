@@ -269,12 +269,12 @@ export function NavBar({
 }) {
   return (
     <HeaderShell>
-      <div className="flex items-center justify-between">
-        <Link to={backHref} className="flex items-center gap-1.5 text-slate-700 hover:text-[#0c1d37] transition-colors font-bold text-sm">
-          <IonIcon icon={chevronBackOutline} className="text-lg" />
-          <span>{title}</span>
+      <div className="flex items-center justify-between gap-2">
+        <Link to={backHref} className="flex min-w-0 shrink items-center gap-1.5 text-slate-700 no-underline hover:text-[#0c1d37] transition-colors font-bold text-sm">
+          <IonIcon icon={chevronBackOutline} className="text-lg shrink-0" />
+          <span className="truncate">{title}</span>
         </Link>
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           {end}
         </div>
       </div>

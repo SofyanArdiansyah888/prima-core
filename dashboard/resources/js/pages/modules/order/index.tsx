@@ -1,5 +1,4 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { formatDateTime } from '@/lib/utils';
 import {
     ShoppingCart,
     Smartphone,
@@ -21,6 +20,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { formatDateTime } from '@/lib/utils';
 import { dashboard } from '@/routes';
 
 type OrderRow = {
@@ -70,8 +70,13 @@ export default function OrderIndex({
     const flash = (usePage().props as { flash?: { success?: string; error?: string } }).flash;
 
     useEffect(() => {
-        if (flash?.success) toast.success(flash.success);
-        if (flash?.error) toast.error(flash.error);
+        if (flash?.success) {
+toast.success(flash.success);
+}
+
+        if (flash?.error) {
+toast.error(flash.error);
+}
     }, [flash?.success, flash?.error]);
 
     const submitSearch = (e: React.FormEvent) => {
@@ -90,10 +95,12 @@ export default function OrderIndex({
     // Calculate Quick Stats
     const stats = useMemo(() => {
         const total = orders.total ?? orders.data.length;
+        const pending = orders.data.filter((o) => o.status === 'PENDING_APPROVAL').length;
         const confirmed = orders.data.filter((o) => o.status === 'CONFIRMED').length;
         const inProd = orders.data.filter((o) => o.status === 'PROCESSING' || o.status === 'IN_PRODUCTION' || o.status === 'WORK_ORDER_CREATED').length;
         const completed = orders.data.filter((o) => o.status === 'COMPLETED').length;
-        return { total, confirmed, inProd, completed };
+
+        return { total, pending, confirmed, inProd, completed };
     }, [orders]);
 
     const statusLabels: Record<string, string> = {
@@ -159,10 +166,14 @@ export default function OrderIndex({
                 </div>
 
                 {/* KPI Statistics Ribbon */}
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                    <div className="rounded-2xl border border-slate-200/80 bg-white p-3.5 shadow-2xs dark:border-slate-800 dark:bg-slate-900">
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+                    <div className="col-span-2 rounded-2xl border border-slate-200/80 bg-white p-3.5 shadow-2xs sm:col-span-1 dark:border-slate-800 dark:bg-slate-900">
                         <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Total Pesanan</span>
                         <span className="font-mono text-xl font-extrabold text-[#0c1d37] dark:text-white mt-0.5 block">{stats.total}</span>
+                    </div>
+                    <div className="rounded-2xl border border-orange-100 bg-orange-50/50 p-3.5 shadow-2xs dark:border-orange-900/40 dark:bg-orange-950/20">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-orange-800 dark:text-orange-300 block">Menunggu Verifikasi</span>
+                        <span className="font-mono text-xl font-extrabold text-orange-700 dark:text-orange-400 mt-0.5 block">{stats.pending}</span>
                     </div>
                     <div className="rounded-2xl border border-blue-100 bg-blue-50/50 p-3.5 shadow-2xs dark:border-blue-900/40 dark:bg-blue-950/20">
                         <span className="text-[10px] font-bold uppercase tracking-wider text-blue-700 dark:text-blue-300 block">Dikonfirmasi</span>
@@ -305,7 +316,7 @@ export default function OrderIndex({
                                             </td>
 
                                             {/* 3. PLANT & DISTANCE */}
-                                            <td className="px-4 py-3 align-top whitespace-nowrap">
+                                            <td className="px-4 py-3 align-top min-w-[150px] max-w-[200px]">
                                                 <p className="font-bold text-slate-800 dark:text-slate-200">
                                                     {o.batching_plant?.name ?? '—'}
                                                 </p>
@@ -317,7 +328,7 @@ export default function OrderIndex({
                                             {/* 4. TOTAL PRICE */}
                                             <td className="px-4 py-3 align-top whitespace-nowrap">
                                                 <span className="font-mono text-xs font-black text-[#0c1d37] dark:text-white">
-                                                    Rp {Number(o.total_price).toLocaleString('id-ID')}
+                                                    Rp {Number(o.total_price).toLocaleString('id-ID', { maximumFractionDigits: 0 })}
                                                 </span>
                                                 <span className="text-[10px] text-slate-400 block mt-0.5">
                                                     {o.items_count} item material
@@ -326,7 +337,11 @@ export default function OrderIndex({
 
                                             {/* 5. PAYMENT STATUS */}
                                             <td className="px-4 py-3 align-top text-center whitespace-nowrap">
-                                                {o.payment_status === 'APPROVED_CREDIT' || o.payment_status === 'PAID' ? (
+                                                {o.status === 'PENDING_APPROVAL' || o.status === 'CANCELLED' ? (
+                                                    <span className="text-[10px] font-semibold text-slate-400">
+                                                        {o.status === 'CANCELLED' ? '—' : 'Belum ditagih'}
+                                                    </span>
+                                                ) : o.payment_status === 'APPROVED_CREDIT' || o.payment_status === 'PAID' ? (
                                                     <span className="inline-flex items-center rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-extrabold text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">
                                                         {o.payment_status === 'PAID' ? 'LUNAS' : 'KREDIT OK'}
                                                     </span>
@@ -358,7 +373,15 @@ export default function OrderIndex({
                                                             <span>Detail</span>
                                                         </Link>
                                                     </Button>
-                                                    {o.status === 'CONFIRMED' && (
+                                                    {o.status === 'PENDING_APPROVAL' && (
+                                                        <Button asChild size="sm" className="h-7.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-white px-2.5 text-xs font-bold shadow-xs">
+                                                            <Link href={`/sales/orders/${o.uuid}`}>
+                                                                <MapPin className="size-3.5 mr-1" />
+                                                                <span>Verifikasi</span>
+                                                            </Link>
+                                                        </Button>
+                                                    )}
+                                                    {o.status === 'CONFIRMED' && (o.payment_status === 'PAID' || o.payment_status === 'APPROVED_CREDIT') && (
                                                         <Button asChild size="sm" className="h-7.5 rounded-lg bg-[#0c1d37] hover:bg-[#162e55] text-white px-2.5 text-xs font-bold shadow-xs">
                                                             <Link href={`/production/work-orders/create?order_id=${o.id}`}>
                                                                 <FileSpreadsheet className="size-3.5 mr-1 text-amber-400" />

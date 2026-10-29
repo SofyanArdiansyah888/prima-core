@@ -2,12 +2,15 @@
 
 namespace Modules\Order\Models;
 
+use App\Models\User;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Modules\BatchingPlant\Models\BatchingPlant;
 use Modules\Customer\Models\Customer;
+use Modules\Dispatch\Models\SuratJalanItem;
 use Modules\Order\Observers\OrderObserver;
 use Modules\Shared\Concerns\HasUuid;
 use Modules\WorkOrder\Models\WorkOrder;
@@ -53,6 +56,13 @@ class Order extends Model
         'delivered_at',
         'customer_confirmed_at',
         'completed_by',
+        'cancelled_at',
+        'cancelled_by_id',
+        'cancellation_reason',
+        'refunded_at',
+        'refunded_by_id',
+        'refund_amount',
+        'refund_reference',
         'po_number',
         'notes',
     ];
@@ -73,7 +83,60 @@ class Order extends Model
             'approved_at' => 'datetime',
             'delivered_at' => 'datetime',
             'customer_confirmed_at' => 'datetime',
+            'cancelled_at' => 'datetime',
+            'refunded_at' => 'datetime',
+            'refund_amount' => 'decimal:2',
         ];
+    }
+
+    /** `APPROVED_CREDIT` = nilai lama untuk kredit B2B yang diperlakukan lunas. */
+    public const PAID_STATUSES = ['PAID', 'APPROVED_CREDIT'];
+
+    /** Status pesanan yang boleh diterbitkan SPK / Surat Jalan (asal sudah lunas). */
+    public const PRODUCTION_STATUSES = ['CONFIRMED', 'PROCESSING', 'ON_DELIVERY'];
+
+    public function isPaid(): bool
+    {
+        return in_array($this->payment_status, self::PAID_STATUSES, true);
+    }
+
+    public function isReadyForProduction(): bool
+    {
+        return $this->isPaid() && in_array($this->status, self::PRODUCTION_STATUSES, true);
+    }
+
+    /**
+     * @param  Builder<self>  $query
+     */
+    public function scopeReadyForProduction($query): void
+    {
+        $query->whereIn('payment_status', self::PAID_STATUSES)
+            ->whereIn('status', self::PRODUCTION_STATUSES);
+    }
+
+    public static function productionBlockReason(?self $order): ?string
+    {
+        if (! $order) {
+            return 'Pesanan tidak ditemukan.';
+        }
+        if (! in_array($order->status, self::PRODUCTION_STATUSES, true)) {
+            return "Pesanan {$order->code} belum disetujui sales atau sudah selesai/dibatalkan.";
+        }
+        if (! $order->isPaid()) {
+            return "Pesanan {$order->code} belum lunas. SPK dan Surat Jalan hanya bisa diterbitkan setelah pembayaran diterima.";
+        }
+
+        return null;
+    }
+
+    public function canceller(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'cancelled_by_id');
+    }
+
+    public function refunder(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'refunded_by_id');
     }
 
     public function customer(): BelongsTo
@@ -83,7 +146,7 @@ class Order extends Model
 
     public function approver(): BelongsTo
     {
-        return $this->belongsTo(\App\Models\User::class, 'approved_by_id');
+        return $this->belongsTo(User::class, 'approved_by_id');
     }
 
     public function items(): HasMany
@@ -103,6 +166,6 @@ class Order extends Model
 
     public function suratJalanItems(): HasMany
     {
-        return $this->hasMany(\Modules\Dispatch\Models\SuratJalanItem::class);
+        return $this->hasMany(SuratJalanItem::class);
     }
 }

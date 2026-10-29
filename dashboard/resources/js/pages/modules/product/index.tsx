@@ -257,7 +257,7 @@ export default function ProductIndex({
                                         <td className="px-5 py-3.5">
                                             <div className="flex items-baseline gap-1">
                                                 <span className="font-mono font-bold text-slate-900 dark:text-white">
-                                                    Rp {Number(p.base_price).toLocaleString('id-ID')}
+                                                    Rp {Number(p.base_price).toLocaleString('id-ID', { maximumFractionDigits: 0 })}
                                                 </span>
                                                 <span className="text-xs text-slate-500">/{p.unit}</span>
                                             </div>

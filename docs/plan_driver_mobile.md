@@ -140,7 +140,8 @@ Pendaftaran akun bawaan untuk pengujian & operasional di `database/seeders/Maste
 ### B. Endpoint API Mobile Backend (`dashboard/routes/api.php` / Modul Terkait)
 
 #### 1. Modul Sales Mobile (`Modules/Order/` / `Modules/Sales/`)
-- `POST /api/sales/v1/login`: Login Sales dengan Nomor HP/Email + Password. Mengembalikan token Sanctum dan memverifikasi `role === 'sales'`.
+- `POST /api/staff/v1/login`: **Login tunggal yang dipakai aplikasi** untuk sales & supir (HP format 08/62/+62 atau email). Mengembalikan token Sanctum + `user.role`; aplikasi mengarahkan ke halaman sales/supir. Juga `GET /api/staff/v1/me` dan `POST /api/staff/v1/logout`.
+- `POST /api/sales/v1/login`: Login khusus Sales (kompatibilitas). Memverifikasi `role === 'sales'`.
 - `GET /api/sales/v1/me`: Mendapatkan data profil sales aktif dan cabang yang ditugaskan.
 - `GET /api/sales/v1/orders`: Daftar pesanan yang butuh verifikasi (`PENDING_APPROVAL`) dan riwayat ACC/ditolak.
 - `GET /api/sales/v1/orders/{uuid}`: Detail koordinat pemesan, produk pesanan, jarak estimasi plant, dan alamat proyek.

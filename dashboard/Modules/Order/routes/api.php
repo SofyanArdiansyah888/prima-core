@@ -1,13 +1,8 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use Modules\Order\Http\Controllers\OrderController;
 use Modules\Order\Http\Controllers\SalesOrderApiController;
 use Modules\Order\Http\Middleware\EnsureSales;
-
-Route::middleware(['auth:sanctum'])->prefix('v1')->group(function () {
-    Route::apiResource('orders', OrderController::class)->names('order');
-});
 
 Route::prefix('sales/v1')->group(function () {
     Route::post('login', [SalesOrderApiController::class, 'login'])->middleware('throttle:10,1');

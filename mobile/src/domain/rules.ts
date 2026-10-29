@@ -33,5 +33,12 @@ export function orderStatusTone(status: string): StatusTone {
 }
 
 export function paymentStatusLabel(status: string): string {
-  return status === 'PENDING' ? 'Menunggu' : status;
+  const labels: Record<string, string> = {
+    PENDING: 'Menunggu',
+    PAID: 'Lunas',
+    APPROVED_CREDIT: 'Lunas',
+    FAILED: 'Gagal',
+    REFUNDED: 'Dikembalikan (Refund)',
+  };
+  return labels[status] ?? status;
 }

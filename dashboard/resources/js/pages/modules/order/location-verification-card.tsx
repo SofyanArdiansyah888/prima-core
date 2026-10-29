@@ -42,6 +42,7 @@ function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): nu
         Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) *
         Math.sin(dLng / 2) * Math.sin(dLng / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
     return Math.round(R * c * 100) / 100;
 }
 
@@ -71,7 +72,9 @@ export function LocationVerificationCard({ order }: { order: OrderProps }) {
 
     // Initialize Leaflet Map
     useEffect(() => {
-        if (!mapContainerRef.current) return;
+        if (!mapContainerRef.current) {
+return;
+}
 
         if (!mapInstanceRef.current) {
             const map = L.map(mapContainerRef.current, {
@@ -152,6 +155,7 @@ export function LocationVerificationCard({ order }: { order: OrderProps }) {
         if (markerRef.current) {
             markerRef.current.setLatLng([lat, lng]);
         }
+
         if (polylineRef.current) {
             polylineRef.current.setLatLngs([[plantLat, plantLng], [lat, lng]]);
         }
@@ -161,6 +165,7 @@ export function LocationVerificationCard({ order }: { order: OrderProps }) {
         setLat(originalLat);
         setLng(originalLng);
         setAddress(order.delivery_address || '');
+
         if (mapInstanceRef.current) {
             mapInstanceRef.current.setView([originalLat, originalLng], 14);
         }
@@ -183,7 +188,10 @@ export function LocationVerificationCard({ order }: { order: OrderProps }) {
     };
 
     const handleReject = () => {
-        if (!rejectionReason.trim()) return;
+        if (!rejectionReason.trim()) {
+return;
+}
+
         setSubmitting(true);
         router.post(
             `/sales/orders/${order.uuid}/reject`,
@@ -346,6 +354,8 @@ export function LocationVerificationCard({ order }: { order: OrderProps }) {
                 variant="destructive"
                 confirmText={submitting ? 'Menolak...' : 'Konfirmasi Tolak Pesanan'}
                 onConfirm={handleReject}
+                isLoading={submitting}
+                confirmDisabled={!rejectionReason.trim()}
             >
                 <div className="mt-3">
                     <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">

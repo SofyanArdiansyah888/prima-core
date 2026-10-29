@@ -12,10 +12,10 @@ Pesanan disederhanakan menjadi **6 status utama** yang merefleksikan tahapan rii
 |-------------|----------|------------------|---------------------------|
 | `PENDING_APPROVAL` | **Menunggu Verifikasi** | Pesanan baru masuk via Mobile B2C; menunggu pengecekan akses jalan armada truk besar oleh tim sales. | Otomatis saat checkout pesanan via Mobile (`PlaceOrder`). |
 | `CONFIRMED` | **Dikonfirmasi** | Pesanan disetujui (ACC) oleh Sales; titik bongkar tervalidasi dan pembayaran Midtrans aktif. | Petugas **Sales via Mobile** setelah survei akses armada & input catatan survei (`survey_notes`). |
-| `PROCESSING` | **Diproses** | SPK terbit & proses penimbangan / mixing batching berjalan di plant. | **Otomatis** saat SPK diterbitkan untuk pesanan ini. |
+| `PROCESSING` | **Diproses** | SPK terbit & proses penimbangan / mixing batching berjalan di plant. | **Otomatis** saat SPK diterbitkan untuk pesanan ini. SPK & Surat Jalan **hanya bisa terbit bila pesanan sudah lunas** (`PAID`). |
 | `ON_DELIVERY` | **Dalam Pengiriman** | Armada truk mixer / kapsul sedang dalam perjalanan membawa muatan ke lokasi proyek. | **Otomatis** saat Surat Jalan pertama kali diterbitkan untuk pesanan ini. |
 | `COMPLETED` | **Selesai** | Seluruh kuantitas produk pesanan telah terkirim dan telah dikonfirmasi tuntas. | **Dikonfirmasi oleh Pelanggan (User)** di Mobile setelah semua Surat Jalan tiba, atau **Otomatis Selesai (Auto-Finish)** oleh sistem jika tidak dikonfirmasi dalam waktu **2 x 24 jam (48 jam)**. *(Supir hanya menyelesaikan Surat Jalan fisik e-POD, tidak otomatis menyelesaikan pesanan).* |
-| `CANCELLED` | **Dibatalkan** | Pesanan ditolak sales karena akses tidak memadai, atau dibatalkan sebelum diproses. | Ditolak oleh Sales via Mobile (`rejection_reason`), atau Pelanggan via Mobile saat masih `PENDING_APPROVAL`/`CONFIRMED`, atau pembatalan di dashboard jika belum ada ritase aktif. |
+| `CANCELLED` | **Dibatalkan** | Pesanan ditolak sales karena akses tidak memadai, atau dibatalkan sebelum diproses. | Ditolak oleh Sales via Mobile (`rejection_reason`), atau **dibatalkan Admin** di dashboard (`cancellation_reason`) selama belum ada ritase SJ. Pelanggan **tidak bisa** membatalkan sendiri. Bila sudah lunas, admin wajib mencatat refund (`payment_status = REFUNDED`). |
 
 ### Aturan Transisi Pesanan:
 ```text
@@ -75,7 +75,8 @@ Status pembayaran disederhanakan menjadi **3 status standar**:
   - `challenge` ➔ `PENDING`
   - `deny`, `cancel`, `expire`, `refund`, `partial_refund` ➔ `FAILED`
 - **Tombol "Cek Midtrans"**: Dashboard dan Mobile menyediakan tombol sinkronisasi langsung untuk mengecek status transaksi ke API Midtrans secara real-time.
-- **Kompatibilitas Lama**: Nilai lama `APPROVED_CREDIT` diperlakukan sebagai `PAID`, `CHALLENGE` sebagai `PENDING`, dan `REFUNDED` sebagai `FAILED`.
+- **`REFUNDED`**: dicatat admin saat membatalkan pesanan lunas (nominal, referensi transfer, waktu, petugas). Dana dikembalikan manual (transfer / dashboard Midtrans); sinkron Midtrans tidak menimpa status ini.
+- **Kompatibilitas Lama**: Nilai lama `APPROVED_CREDIT` diperlakukan sebagai `PAID`, dan `CHALLENGE` sebagai `PENDING`.
 
 ---
 
@@ -93,6 +94,11 @@ Status pengiriman logistik armada disederhanakan dari 7 status mikro menjadi **3
 - `ON_TRUCK`: Barang sedang dalam perjalanan di atas truk.
 - `DELIVERED`: Barang telah diserahterimakan di lokasi tujuan proyek.
 - `REJECTED`: Barang ditolak (misal slump tidak sesuai atau retur lapangan).
+
+### Aturan Transisi Surat Jalan:
+- `COMPLETED` dan `CANCELLED` bersifat final: tidak bisa diubah lagi dari dashboard, dan supir tidak bisa menyelesaikan SJ yang sudah dibatalkan.
+- SJ ditugaskan ke supir lewat pilihan **Supir Terdaftar** di form SJ (`driver_id`). Fallback lama: pencocokan `driver_phone` persis sama dengan nomor HP akun supir.
+- `orders.delivered_at` diisi saat seluruh kuantitas terkirim **dan** tidak ada ritase aktif; dikosongkan lagi bila sebuah ritase dibatalkan. Pelanggan baru bisa "Konfirmasi Selesai" setelah tidak ada ritase aktif.
 
 *Catatan Penyederhanaan*: 7 status logistik lama (`PREPARED`, `DEPARTED`, `ON_THE_WAY`, `ARRIVED`, `UNLOADING`, `COMPLETED`, `RETURNED`) dipadatkan karena pada operasional batching ready-mix, durasi pengantaran beton sangat sensitif terhadap waktu ikat semen (slump life), sehingga pencatatan mikro manual justru membebani operator lapangan.
 

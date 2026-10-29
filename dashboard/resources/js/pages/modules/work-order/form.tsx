@@ -18,6 +18,7 @@ type Order = {
         id: number;
         product_id: number;
         quantity: number;
+        fulfilled_quantity: number;
         unit: string;
         product: { id: number; name: string; code: string; slump: string | null };
     }[];
@@ -55,7 +56,7 @@ export default function WorkOrderForm({
         order_id: selectedOrder?.id ?? '',
         product_id: defaultProduct?.product_id ?? '',
         batching_plant_id: selectedOrder?.batching_plant_id ?? plants[0]?.id ?? '',
-        assigned_user_id: '',
+        assigned_user_id: '' as number | '',
         scheduled_date: new Date().toISOString().split('T')[0],
         scheduled_time_slot: '',
         target_quantity: (defaultProduct ? Number(defaultProduct.quantity) - Number(defaultProduct.fulfilled_quantity) : '') as unknown as number,
@@ -66,6 +67,7 @@ export default function WorkOrderForm({
 
     const handleOrderChange = (orderId: number) => {
         const ord = orders.find((o) => o.id === orderId);
+
         if (ord) {
             const prod = ord.items[0];
             setData({
@@ -154,9 +156,10 @@ export default function WorkOrderForm({
                                 <select
                                     id="assigned_user_id"
                                     value={data.assigned_user_id}
-                                    onChange={(e) => setData('assigned_user_id', Number(e.target.value))}
+                                    onChange={(e) => setData('assigned_user_id', e.target.value === '' ? '' : Number(e.target.value))}
                                     className="mt-1.5 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 dark:border-slate-800 dark:bg-slate-900 dark:text-white"
                                 >
+                                    <option value="">— Belum ditentukan —</option>
                                     {(users ?? []).map((u) => (
                                         <option key={u.id} value={u.id}>
                                             {u.name} ({u.code})
