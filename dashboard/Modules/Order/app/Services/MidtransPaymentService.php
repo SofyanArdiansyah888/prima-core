@@ -278,6 +278,11 @@ class MidtransPaymentService
         $transactionId = (string) ($payload['transaction_id'] ?? '');
         $settlementTime = $payload['settlement_time'] ?? null;
 
+        // Refund dicatat admin; status gateway (mis. settlement lama) tidak boleh menimpanya.
+        if ($order->payment_status === 'REFUNDED') {
+            return $order;
+        }
+
         $newPaymentStatus = $order->payment_status;
         $paidAt = $order->paid_at;
 

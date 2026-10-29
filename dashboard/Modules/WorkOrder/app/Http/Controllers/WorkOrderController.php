@@ -66,18 +66,22 @@ class WorkOrderController extends Controller
         ]);
     }
 
-    public function create(Request $request): Response
+    public function create(Request $request): Response|RedirectResponse
     {
         $orderId = $request->input('order_id');
         $selectedOrder = null;
 
         if ($orderId) {
             $selectedOrder = Order::with(['items.product', 'batchingPlant'])->find($orderId);
+
+            if ($reason = Order::productionBlockReason($selectedOrder)) {
+                return back()->with('error', $reason);
+            }
         }
 
         return Inertia::render('modules/work-order/form', [
             'selectedOrder' => $selectedOrder,
-            'orders' => Order::query()->whereNotIn('status', ['COMPLETED', 'CANCELLED'])->with(['items.product', 'batchingPlant'])->orderByDesc('id')->get(),
+            'orders' => Order::query()->readyForProduction()->with(['items.product', 'batchingPlant'])->orderByDesc('id')->get(),
             'plants' => BatchingPlant::query()->where('is_active', true)->orderBy('code')->get(['id', 'uuid', 'code', 'name']),
             'users' => User::query()->where('is_active', true)->orderBy('name')->get(['id', 'name', 'code', 'role']),
         ]);

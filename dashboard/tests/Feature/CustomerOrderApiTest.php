@@ -197,14 +197,16 @@ class CustomerOrderApiTest extends TestCase
 
         $this->app['auth']->forgetGuards();
 
+        // Pembatalan hanya oleh admin di dashboard.
         $this->withToken($token)
             ->postJson('/api/customer/v1/orders/'.$uuid.'/cancel')
-            ->assertOk()
-            ->assertJsonPath('data.status', 'CANCELLED');
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('status');
 
+        $this->assertSame('PENDING_APPROVAL', $order->fresh()->status);
         $this->withToken($token)
-            ->postJson('/api/customer/v1/orders/'.$uuid.'/cancel')
-            ->assertStatus(422);
+            ->getJson('/api/customer/v1/orders/'.$uuid)
+            ->assertJsonPath('data.can_cancel', false);
     }
 
     public function test_customer_order_calculates_admin_fee_and_generates_midtrans_token(): void

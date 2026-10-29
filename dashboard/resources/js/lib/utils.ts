@@ -38,7 +38,7 @@ export function formatDateTime(dateString: string | null | undefined): string {
 
 export function formatCurrency(amount: number | string | null | undefined): string {
     const num = Number(amount) || 0;
-    return 'Rp ' + num.toLocaleString('id-ID');
+    return 'Rp ' + num.toLocaleString('id-ID', { maximumFractionDigits: 0 });
 }
 
 export function formatNumber(amount: number | string | null | undefined, decimals = 2): string {

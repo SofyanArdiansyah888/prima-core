@@ -89,6 +89,7 @@ export default function OrderForm({
 
     const calculateNearestPlant = async (lat = data.delivery_lat, lng = data.delivery_lng) => {
         setIsCalculating(true);
+
         try {
             const firstItem = data.items[0];
             const prod = products.find((p) => p.id === Number(firstItem?.product_id));
@@ -134,7 +135,10 @@ export default function OrderForm({
     };
 
     const removeItem = (index: number) => {
-        if (data.items.length === 1) return;
+        if (data.items.length === 1) {
+return;
+}
+
         const newItems = data.items.filter((_, i) => i !== index);
         setData('items', newItems);
     };
@@ -148,6 +152,7 @@ export default function OrderForm({
     // Calculate subtotal & grand total
     const subtotal = data.items.reduce((sum, item) => {
         const prod = products.find((p) => p.id === Number(item.product_id));
+
         return sum + (prod ? Number(prod.base_price) * Number(item.quantity || 0) : 0);
     }, 0);
 
@@ -344,7 +349,7 @@ export default function OrderForm({
                                     id="delivery_lat"
                                     type="number"
                                     step="0.0000001"
-                                    value={data.delivery_lat}
+                                    value={data.delivery_lat ?? ''}
                                     onChange={(e) => setData('delivery_lat', Number(e.target.value))}
                                     className="mt-1.5 font-mono text-xs"
                                 />
@@ -356,7 +361,7 @@ export default function OrderForm({
                                     id="delivery_lng"
                                     type="number"
                                     step="0.0000001"
-                                    value={data.delivery_lng}
+                                    value={data.delivery_lng ?? ''}
                                     onChange={(e) => setData('delivery_lng', Number(e.target.value))}
                                     className="mt-1.5 font-mono text-xs"
                                 />
@@ -399,7 +404,7 @@ export default function OrderForm({
                                         <div className="border-l border-slate-200 dark:border-slate-800 pl-4">
                                             <span className="text-[11px] text-slate-500 uppercase tracking-wider">Estimasi Ongkir</span>
                                             <p className="text-base font-bold text-emerald-700 dark:text-emerald-400">
-                                                Rp {Number(data.delivery_fee).toLocaleString('id-ID')}
+                                                Rp {Number(data.delivery_fee).toLocaleString('id-ID', { maximumFractionDigits: 0 })}
                                             </p>
                                         </div>
                                     </div>
@@ -438,7 +443,7 @@ export default function OrderForm({
                                             >
                                                 {products.map((p) => (
                                                     <option key={p.id} value={p.id}>
-                                                        {p.name} (Rp {Number(p.base_price).toLocaleString('id-ID')}/{p.unit})
+                                                        {p.name} (Rp {Number(p.base_price).toLocaleString('id-ID', { maximumFractionDigits: 0 })}/{p.unit})
                                                     </option>
                                                 ))}
                                             </select>
@@ -458,7 +463,7 @@ export default function OrderForm({
                                         <div className="sm:col-span-3">
                                             <Label className="text-xs">Subtotal Item</Label>
                                             <p className="mt-2 text-sm font-bold text-slate-900 dark:text-white">
-                                                Rp {itemSubtotal.toLocaleString('id-ID')}
+                                                Rp {itemSubtotal.toLocaleString('id-ID', { maximumFractionDigits: 0 })}
                                             </p>
                                         </div>
 
@@ -483,19 +488,19 @@ export default function OrderForm({
                         <div className="mt-6 rounded-lg bg-slate-50 p-4 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-800 max-w-sm ml-auto space-y-2">
                             <div className="flex justify-between text-xs text-slate-600 dark:text-slate-400">
                                 <span>Subtotal Material:</span>
-                                <span className="font-semibold text-slate-900 dark:text-white">Rp {subtotal.toLocaleString('id-ID')}</span>
+                                <span className="font-semibold text-slate-900 dark:text-white">Rp {subtotal.toLocaleString('id-ID', { maximumFractionDigits: 0 })}</span>
                             </div>
                             <div className="flex justify-between text-xs text-slate-600 dark:text-slate-400">
                                 <span>Ongkos Kirim Plant:</span>
-                                <span className="font-semibold text-slate-900 dark:text-white">Rp {deliveryFee.toLocaleString('id-ID')}</span>
+                                <span className="font-semibold text-slate-900 dark:text-white">Rp {deliveryFee.toLocaleString('id-ID', { maximumFractionDigits: 0 })}</span>
                             </div>
                             <div className="flex justify-between text-xs text-slate-600 dark:text-slate-400">
                                 <span>PPN (11%):</span>
-                                <span className="font-semibold text-slate-900 dark:text-white">Rp {ppn.toLocaleString('id-ID')}</span>
+                                <span className="font-semibold text-slate-900 dark:text-white">Rp {ppn.toLocaleString('id-ID', { maximumFractionDigits: 0 })}</span>
                             </div>
                             <div className="border-t border-slate-200 dark:border-slate-700 pt-2 flex justify-between text-sm font-bold text-slate-900 dark:text-white">
                                 <span>Total Tagihan:</span>
-                                <span className="text-emerald-700 dark:text-emerald-400">Rp {grandTotal.toLocaleString('id-ID')}</span>
+                                <span className="text-emerald-700 dark:text-emerald-400">Rp {grandTotal.toLocaleString('id-ID', { maximumFractionDigits: 0 })}</span>
                             </div>
                         </div>
                     </div>

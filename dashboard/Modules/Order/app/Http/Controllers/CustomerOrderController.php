@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Validation\ValidationException;
 use Modules\Customer\Models\Customer;
+use Modules\Dispatch\Models\SuratJalan;
 use Modules\Order\Http\Requests\QuoteDeliveryRequest;
 use Modules\Order\Http\Requests\StoreCustomerOrderRequest;
 use Modules\Order\Models\Order;
@@ -116,6 +117,18 @@ class CustomerOrderController extends Controller
             ]);
         }
 
+        if ($order->status === 'CANCELLED') {
+            throw ValidationException::withMessages([
+                'order' => 'Pesanan sudah dibatalkan dan tidak dapat dibayar.',
+            ]);
+        }
+
+        if ($order->payment_status === 'PAID') {
+            throw ValidationException::withMessages([
+                'order' => 'Pesanan ini sudah lunas.',
+            ]);
+        }
+
         $order->load([
             'batchingPlant:id,code,name,phone,whatsapp',
             'items.product:id,uuid,code,name,unit,category',
@@ -155,28 +168,16 @@ class CustomerOrderController extends Controller
         }
     }
 
+    /**
+     * Pelanggan tidak bisa membatalkan pesanan sendiri; pembatalan & refund oleh admin.
+     * Route tetap ada agar aplikasi versi lama mendapat pesan yang jelas.
+     */
     public function cancel(Request $request, Order $order): JsonResponse
     {
         $this->owned($request, $order);
 
-        if (!in_array($order->status, ['PENDING_APPROVAL', 'CONFIRMED'], true)) {
-            throw ValidationException::withMessages([
-                'status' => 'Pesanan tidak dapat dibatalkan.',
-            ]);
-        }
-
-        $order->update(['status' => 'CANCELLED']);
-        $order->load([
-            'batchingPlant:id,code,name,phone,whatsapp',
-            'items.product:id,uuid,code,name,unit,category',
-            'workOrders.product',
-            'workOrders.assignedUser',
-            'suratJalanItems.suratJalan.batchingPlant',
-            'suratJalanItems.product',
-        ]);
-
-        return response()->json([
-            'data' => $this->transform($order),
+        throw ValidationException::withMessages([
+            'status' => ['Pembatalan pesanan hanya dapat dilakukan oleh admin PKM. Silakan hubungi admin / batching plant.'],
         ]);
     }
 
@@ -199,7 +200,10 @@ class CustomerOrderController extends Controller
 
         $order->load('items');
         $allFulfilled = $order->items->every(fn ($i) => (float) $i->fulfilled_quantity >= (float) $i->quantity);
-        if (! $allFulfilled) {
+        $hasActiveSj = $order->suratJalanItems()
+            ->whereHas('suratJalan', fn ($q) => $q->whereIn('status', SuratJalan::ACTIVE_STATUSES))
+            ->exists();
+        if (! $allFulfilled || $hasActiveSj) {
             throw ValidationException::withMessages([
                 'status' => ['Pengantaran seluruh ritase pesanan belum tuntas 100%.'],
             ]);
@@ -234,7 +238,7 @@ class CustomerOrderController extends Controller
 
         if ($type === 'spk') {
             $workOrder = $order->workOrders()->with(['product', 'assignedUser', 'batchingPlant'])->first();
-            if (!$workOrder) {
+            if (! $workOrder) {
                 abort(404, 'Dokumen SPK belum diterbitkan oleh bagian produksi batching plant.');
             }
             $pdf = Pdf::loadView('order::pdf.spk', compact('order', 'workOrder'));
@@ -244,7 +248,7 @@ class CustomerOrderController extends Controller
 
         if ($type === 'surat-jalan' || $type === 'suratjalan') {
             $suratJalanItem = $order->suratJalanItems()->with(['suratJalan.batchingPlant', 'suratJalan.driver', 'product', 'workOrder.assignedUser'])->first();
-            if (!$suratJalanItem || !$suratJalanItem->suratJalan) {
+            if (! $suratJalanItem || ! $suratJalanItem->suratJalan) {
                 abort(404, 'Dokumen Surat Jalan belum diterbitkan oleh bagian logistik.');
             }
             $suratJalan = $suratJalanItem->suratJalan;
@@ -292,11 +296,14 @@ class CustomerOrderController extends Controller
         $hasSpk = $workOrders->isNotEmpty();
         $hasSuratJalan = $suratJalans->isNotEmpty();
         $hasFaktur = in_array($order->payment_status, ['PAID'], true) || in_array($order->status, ['CONFIRMED', 'PROCESSING', 'ON_DELIVERY', 'COMPLETED'], true);
-        $canPay = $order->status === 'CONFIRMED' && $order->payment_status === 'PENDING';
-        $canCancel = in_array($order->status, ['PENDING_APPROVAL', 'CONFIRMED'], true);
+        // Selaras dengan guard endpoint pay(): tagihan aktif setelah ACC sampai lunas.
+        $canPay = ! in_array($order->status, ['PENDING_APPROVAL', 'CANCELLED'], true)
+            && in_array($order->payment_status, ['PENDING', 'FAILED'], true);
+        $canCancel = false;
         $items = $order->relationLoaded('items') ? $order->items : collect();
         $allFulfilled = $items->isNotEmpty() && $items->every(fn ($i) => (float) $i->fulfilled_quantity >= (float) $i->quantity);
-        $canConfirmComplete = $order->status === 'ON_DELIVERY' && $allFulfilled;
+        $hasActiveSj = $suratJalans->contains(fn ($sj) => in_array($sj->status, SuratJalan::ACTIVE_STATUSES, true));
+        $canConfirmComplete = $order->status === 'ON_DELIVERY' && $allFulfilled && ! $hasActiveSj;
         $autoCompleteAt = $order->delivered_at ? $order->delivered_at->copy()->addHours(48)->toIso8601String() : null;
 
         return [
@@ -315,6 +322,9 @@ class CustomerOrderController extends Controller
             'payment_method' => $order->payment_method,
             'payment_method_label' => $this->paymentLabel($order->payment_method),
             'payment_status' => $order->payment_status,
+            'refund_amount' => $order->refund_amount !== null ? (float) $order->refund_amount : null,
+            'refunded_at' => $order->refunded_at?->toIso8601String(),
+            'cancellation_reason' => $order->cancellation_reason ?? $order->rejection_reason,
             'snap_token' => $order->snap_token,
             'snap_redirect_url' => $order->snap_redirect_url,
             'midtrans_client_key' => (string) config('services.midtrans.client_key', ''),

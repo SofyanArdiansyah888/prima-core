@@ -20,6 +20,10 @@ export type ConfirmModalProps = {
     variant?: 'default' | 'destructive' | 'emerald' | 'purple' | 'amber';
     onConfirm: () => void;
     isLoading?: boolean;
+    /** Tombol konfirmasi nonaktif, mis. saat input wajib di `children` masih kosong. */
+    confirmDisabled?: boolean;
+    /** Konten tambahan (mis. textarea alasan) di bawah deskripsi. */
+    children?: React.ReactNode;
 };
 
 export function ConfirmModal({
@@ -32,6 +36,8 @@ export function ConfirmModal({
     variant = 'emerald',
     onConfirm,
     isLoading = false,
+    confirmDisabled = false,
+    children,
 }: ConfirmModalProps) {
     const getVariantStyles = () => {
         switch (variant) {
@@ -87,6 +93,8 @@ export function ConfirmModal({
                     </div>
                 </div>
 
+                {children}
+
                 <DialogFooter className="mt-6 flex flex-row items-center justify-end gap-2">
                     <Button
                         type="button"
@@ -102,7 +110,7 @@ export function ConfirmModal({
                         type="button"
                         size="sm"
                         onClick={handleConfirm}
-                        disabled={isLoading}
+                        disabled={isLoading || confirmDisabled}
                         className={`text-xs h-9 px-4 font-semibold ${styles.confirmButton}`}
                     >
                         {confirmText}

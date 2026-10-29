@@ -437,7 +437,7 @@ export default function Dashboard({
                                     </div>
                                     <div className="ml-3 text-right shrink-0">
                                         <p className="text-xs font-bold text-emerald-700 dark:text-emerald-400">
-                                            Rp {Number(o.total_price).toLocaleString('id-ID')}
+                                            Rp {Number(o.total_price).toLocaleString('id-ID', { maximumFractionDigits: 0 })}
                                         </p>
                                     </div>
                                 </Link>

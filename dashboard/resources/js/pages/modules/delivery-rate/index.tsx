@@ -159,13 +159,13 @@ export default function DeliveryRateIndex({
                                             </span>
                                         </td>
                                         <td className="px-5 py-3.5 font-semibold text-slate-900 dark:text-white">
-                                            Rp {Number(r.base_fee).toLocaleString('id-ID')}
+                                            Rp {Number(r.base_fee).toLocaleString('id-ID', { maximumFractionDigits: 0 })}
                                         </td>
                                         <td className="px-5 py-3.5 text-slate-700 dark:text-slate-300">
-                                            Rp {Number(r.cost_per_km_unit).toLocaleString('id-ID')}
+                                            Rp {Number(r.cost_per_km_unit).toLocaleString('id-ID', { maximumFractionDigits: 0 })}
                                         </td>
                                         <td className="px-5 py-3.5 text-slate-700 dark:text-slate-300">
-                                            Rp {Number(r.min_charge).toLocaleString('id-ID')}
+                                            Rp {Number(r.min_charge).toLocaleString('id-ID', { maximumFractionDigits: 0 })}
                                         </td>
                                         <td className="px-5 py-3.5 text-right">
                                             <div className="flex items-center justify-end gap-1">

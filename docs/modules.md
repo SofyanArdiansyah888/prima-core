@@ -28,6 +28,7 @@
 - Model auth: `App\Models\User` (Fortify)
 - Pages: `resources/js/pages/modules/user/{index,form}.tsx`
 - Sync: `batching_plant_ids[]` → pivot `batching_plant_user`
+- API login staf mobile (sales & supir): `/api/staff/v1/{login,me,logout}` → `StaffAuthApiController` (test: `tests/Feature/StaffMobileLoginTest.php`)
 
 ## Customer
 
@@ -78,6 +79,10 @@
 - Fitur: Sales Order pemesanan, auto-select batching plant terdekat, hitung ongkir otomatis, tracking pemenuhan per item, process stepper alur 4 tahap, dan riwayat ritase Surat Jalan.
 - Pembuatan SO dari dashboard saat ini di-hide/dinonaktifkan; seluruh pesanan baru masuk secara otomatis dari aplikasi mobile pelanggan (`customer_id`, `customer_type = B2C`) lewat `CustomerOrderService` / `PlaceOrder`.
 - Alur Status: `PENDING_APPROVAL` (menunggu verifikasi sales lapangan via mobile) ➔ `CONFIRMED` (disetujui sales & pembayaran aktif) ➔ `PROCESSING` (saat SPK terbit) ➔ `ON_DELIVERY` (saat SJ terbit) ➔ `COMPLETED` (dikonfirmasi selesai oleh pelanggan di mobile, atau otomatis selesai setelah 2x24 jam / 48 jam). Supir hanya menyelesaikan ritase Surat Jalan (e-POD), tidak otomatis menyelesaikan pesanan.
+- ACC verifikasi tempat (dashboard `orders.approve` & mobile `/api/sales/v1/orders/{uuid}/approve`) lewat satu service `Modules\Order\Services\ApproveOrderSite`: bila pin digeser, jarak, ongkir, PPN, dan total dihitung ulang.
+- Pembatalan pesanan hanya oleh admin (`POST /sales/orders/{uuid}/cancel`, service `CancelOrder`); pesanan lunas wajib catat refund. Endpoint batal pelanggan selalu menolak (422).
+- SPK & Surat Jalan wajib pesanan lunas: `Order::readyForProduction()` / `Order::productionBlockReason()`.
+- Test alur end-to-end mobile + dashboard: `tests/Feature/MobileTransactionFlowTest.php`.
 
 ## WorkOrder
 
@@ -93,7 +98,9 @@
 - Controller: `Modules\Dispatch\Http\Controllers\DispatchController`
 - Model: `Modules\Dispatch\Models\SuratJalan`, `Modules\Dispatch\Models\SuratJalanItem`
 - Pages: `resources/js/pages/modules/dispatch/{index,form,show,print}.tsx`
-- Fitur: Ritase armada, jembatan timbang (gross/tare/netto), telematics IoT, partial delivery, multi-drop combined customer, dan cetak Surat Jalan resmi Tonasa. Penerbitan SJ memicu status order `ON_DELIVERY`; penyelesaian SJ tuntas memicu status order `COMPLETED`.
+- Fitur: Ritase armada, jembatan timbang (gross/tare/netto), telematics IoT, partial delivery, multi-drop combined customer, dan cetak Surat Jalan resmi Tonasa. Penerbitan SJ memicu status order `ON_DELIVERY`; penyelesaian seluruh SJ hanya mengisi `orders.delivered_at` (order selesai lewat konfirmasi pelanggan / auto-finish 48 jam). Form SJ memilih supir terdaftar (`driver_id`) agar SJ muncul di app supir.
+- API supir mobile: `/api/driver/v1` (`DriverDeliveryApiController`, middleware `EnsureDriver`).
+- Tidak ada `apiResource` master di `/api/v1/*`: guard `auth:sanctum` juga meloloskan token pelanggan/sales/supir, jadi master data hanya lewat web admin.
 
 ## Report
 

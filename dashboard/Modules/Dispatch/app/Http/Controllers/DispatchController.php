@@ -3,6 +3,7 @@
 namespace Modules\Dispatch\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -16,6 +17,7 @@ use Modules\Dispatch\Models\SuratJalanItem;
 use Modules\Order\Models\Order;
 use Modules\Order\Models\OrderItem;
 use Modules\Product\Models\Product;
+use Modules\Shared\Enums\UserRole;
 use Modules\Shared\Services\CodeGenerator;
 use Modules\WorkOrder\Models\WorkOrder;
 
@@ -73,7 +75,7 @@ class DispatchController extends Controller
         $plantId = $request->input('batching_plant_id');
 
         $activeOrders = Order::query()
-            ->whereNotIn('status', ['COMPLETED', 'CANCELLED'])
+            ->readyForProduction()
             ->whereHas('workOrders', fn ($q) => $q->whereRaw('dispatched_quantity < target_quantity'))
             ->with([
                 'items.product',
@@ -84,7 +86,12 @@ class DispatchController extends Controller
             ->get();
 
         return Inertia::render('modules/dispatch/form', [
-            'plants' => BatchingPlant::query()->where('is_active', true)->orderBy('code')->get(['id', 'uuid', 'code', 'name']),
+            'plants' => BatchingPlant::query()->where('is_active', true)->orderBy('code')->get(['id', 'uuid', 'code', 'name', 'branch_id']),
+            'drivers' => User::query()
+                ->where('role', UserRole::Driver)
+                ->where('is_active', true)
+                ->orderBy('name')
+                ->get(['id', 'name', 'phone', 'branch_id']),
             'activeOrders' => $activeOrders,
             'vehicleTypes' => [
                 ['value' => 'MIXER_TRUCK_7M3', 'label' => 'Truk Mixer Standar (Kapasitas 7 m³)'],
@@ -107,6 +114,7 @@ class DispatchController extends Controller
                 'batching_plant_id' => $plant->id,
                 'vehicle_number' => $data['vehicle_number'],
                 'vehicle_type' => $data['vehicle_type'],
+                'driver_id' => $data['driver_id'] ?? null,
                 'driver_name' => $data['driver_name'],
                 'driver_phone' => $data['driver_phone'] ?? null,
                 'status' => 'ON_THE_WAY',
@@ -211,6 +219,10 @@ class DispatchController extends Controller
             return redirect()->route('surat-jalan.show', $suratJalan);
         }
 
+        if (in_array($previousStatus, SuratJalan::FINAL_STATUSES, true)) {
+            return back()->with('error', 'Surat Jalan yang sudah selesai atau dibatalkan tidak dapat diubah statusnya.');
+        }
+
         DB::transaction(function () use ($suratJalan, $status, $data) {
             $updateData = ['status' => $status];
             if ($status === 'COMPLETED' && empty($suratJalan->arrival_time)) {
@@ -226,23 +238,7 @@ class DispatchController extends Controller
                     'received_at' => $data['received_at'] ?? now(),
                 ]);
 
-                // Check and update parent orders if all items are fulfilled and no pending shipments remain
-                $orderIds = $suratJalan->items()->pluck('order_id')->unique()->filter();
-                foreach ($orderIds as $orderId) {
-                    $order = Order::with('items')->find($orderId);
-                    if (! $order) {
-                        continue;
-                    }
-
-                    $allFulfilled = $order->items->every(fn ($i) => (float) $i->fulfilled_quantity >= (float) $i->quantity);
-                    $hasPendingSj = SuratJalanItem::where('order_id', $orderId)
-                        ->whereHas('suratJalan', fn ($q) => $q->where('status', 'ON_THE_WAY'))
-                        ->exists();
-
-                    if ($allFulfilled && ! $hasPendingSj) {
-                        $order->update(['delivered_at' => now()]);
-                    }
-                }
+                SuratJalan::syncOrdersDeliveredAt($suratJalan->items()->pluck('order_id')->unique()->filter());
             } elseif ($status === 'CANCELLED') {
                 $suratJalan->items()->update([
                     'status' => 'REJECTED',
@@ -271,7 +267,7 @@ class DispatchController extends Controller
                     if ($order && $order->status === 'ON_DELIVERY') {
                         $hasOtherDeliveries = SuratJalanItem::where('order_id', $item->order_id)
                             ->where('surat_jalan_id', '!=', $suratJalan->id)
-                            ->whereHas('suratJalan', fn ($q) => $q->where('status', 'ON_THE_WAY'))
+                            ->whereHas('suratJalan', fn ($q) => $q->whereIn('status', [...SuratJalan::ACTIVE_STATUSES, 'COMPLETED']))
                             ->exists();
 
                         if (! $hasOtherDeliveries) {
@@ -279,6 +275,8 @@ class DispatchController extends Controller
                         }
                     }
                 }
+
+                SuratJalan::syncOrdersDeliveredAt($suratJalan->items->pluck('order_id')->unique()->filter());
             }
         });
 

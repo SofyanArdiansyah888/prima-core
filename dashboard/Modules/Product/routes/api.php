@@ -1,8 +1,4 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-use Modules\Product\Http\Controllers\ProductController;
-
-Route::middleware(['auth:sanctum'])->prefix('v1')->group(function () {
-    Route::apiResource('products', ProductController::class)->names('product');
-});
+// Master data dikelola lewat dashboard web (middleware admin). Jangan buka apiResource
+// di bawah auth:sanctum: token pelanggan/sales/supir ikut lolos guard tersebut.

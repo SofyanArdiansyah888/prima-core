@@ -225,7 +225,7 @@ export default function LoginPage() {
                 }`}
               >
                 <IonIcon icon={briefcaseOutline} className="text-sm text-amber-400" />
-                <span>Staf Lapangan (Sales / Sopir)</span>
+                <span className="whitespace-nowrap">Sales / Sopir</span>
               </button>
             </div>
 

@@ -1,8 +1,4 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-use Modules\Branch\Http\Controllers\BranchController;
-
-Route::middleware(['auth:sanctum'])->prefix('v1')->group(function () {
-    Route::apiResource('branches', BranchController::class)->names('branch');
-});
+// Master data dikelola lewat dashboard web (middleware admin). Jangan buka apiResource
+// di bawah auth:sanctum: token pelanggan/sales/supir ikut lolos guard tersebut.

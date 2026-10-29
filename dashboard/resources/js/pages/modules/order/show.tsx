@@ -1,6 +1,4 @@
-import { useState } from 'react';
-import { Head, Link, router } from '@inertiajs/react';
-import { formatDate, formatDateTime } from '@/lib/utils';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import {
     ArrowLeft,
     Building2,
@@ -18,8 +16,10 @@ import {
     Truck,
     XCircle,
 } from 'lucide-react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { ConfirmModal } from '@/components/ui/confirm-modal';
+import { formatDate, formatDateTime } from '@/lib/utils';
 import { dashboard } from '@/routes';
 import { LocationVerificationCard } from './location-verification-card';
 
@@ -46,6 +46,11 @@ type OrderDetail = {
     approved_at?: string | null;
     survey_notes?: string | null;
     rejection_reason?: string | null;
+    cancellation_reason?: string | null;
+    cancelled_at?: string | null;
+    refund_amount?: string | number | null;
+    refund_reference?: string | null;
+    refunded_at?: string | null;
     approver?: { id: number; name: string; code: string } | null;
     po_number: string | null;
     notes: string | null;
@@ -119,39 +124,31 @@ const paymentLabels: Record<string, string> = {
     // Backward compat
     APPROVED_CREDIT: 'Lunas',
     CHALLENGE: 'Menunggu Pembayaran',
-    REFUNDED: 'Gagal / Dibatalkan',
+    REFUNDED: 'Dikembalikan (Refund)',
 };
 
 export default function OrderShow({ order }: { order: OrderDetail }) {
-    const [confirmDialog, setConfirmDialog] = useState<{
-        open: boolean;
-        title: string;
-        description: string;
-        newStatus: string;
-        variant?: 'emerald' | 'purple' | 'amber' | 'destructive';
-    }>({
-        open: false,
-        title: '',
-        description: '',
-        newStatus: '',
-        variant: 'emerald',
-    });
+    const isAdmin = usePage().props.auth?.user?.role === 'admin';
+    const [cancelOpen, setCancelOpen] = useState(false);
+    const [cancelForm, setCancelForm] = useState({ reason: '', refundAmount: '', refundReference: '' });
+    const [cancelling, setCancelling] = useState(false);
 
     const triggerCancelOrder = () => {
-        setConfirmDialog({
-            open: true,
-            title: 'Konfirmasi Pembatalan Pesanan',
-            description: `Apakah Anda yakin ingin membatalkan pesanan ${order.code}? Tindakan ini bersifat permanen.`,
-            newStatus: 'CANCELLED',
-            variant: 'destructive',
-        });
+        setCancelForm({ reason: '', refundAmount: String(Math.round(Number(order.total_price))), refundReference: '' });
+        setCancelOpen(true);
     };
 
-    const handleConfirmStatus = () => {
-        router.put(`/sales/orders/${order.uuid}`, {
-            status: confirmDialog.newStatus,
-            payment_status: order.payment_status,
-        });
+    const handleCancelOrder = () => {
+        setCancelling(true);
+        router.post(
+            `/sales/orders/${order.uuid}/cancel`,
+            {
+                cancellation_reason: cancelForm.reason,
+                refund_amount: isPaid ? cancelForm.refundAmount : null,
+                refund_reference: isPaid ? cancelForm.refundReference : null,
+            },
+            { preserveScroll: true, onFinish: () => setCancelling(false) },
+        );
     };
 
     const getStepIndex = (status: string) => {
@@ -177,6 +174,10 @@ export default function OrderShow({ order }: { order: OrderDetail }) {
 
     const activeStep = getStepIndex(order.status);
     const isCancelled = order.status === 'CANCELLED';
+    // SPK & Surat Jalan hanya boleh terbit setelah pesanan lunas.
+    const isPaid = order.payment_status === 'PAID' || order.payment_status === 'APPROVED_CREDIT';
+    // Tagihan baru aktif setelah ACC verifikasi tempat.
+    const paymentBillable = order.status !== 'PENDING_APPROVAL' && !(isCancelled && !['PAID', 'REFUNDED'].includes(order.payment_status));
 
     const steps = [
         { id: 'PENDING_APPROVAL', number: 1, title: 'Verifikasi Tempat', desc: 'Akses armada mixer / mobil besar' },
@@ -219,13 +220,19 @@ export default function OrderShow({ order }: { order: OrderDetail }) {
                                 }`}>
                                     {statusLabels[order.status] ?? order.status}
                                 </span>
-                                <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-                                    order.payment_status === 'PAID'
-                                        ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
-                                        : 'bg-amber-500/10 text-amber-700 dark:text-amber-300'
-                                }`}>
-                                    {paymentLabels[order.payment_status] ?? order.payment_status}
-                                </span>
+                                {paymentBillable ? (
+                                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                                        order.payment_status === 'PAID'
+                                            ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+                                            : 'bg-amber-500/10 text-amber-700 dark:text-amber-300'
+                                    }`}>
+                                        {paymentLabels[order.payment_status] ?? order.payment_status}
+                                    </span>
+                                ) : (
+                                    <span className="inline-flex items-center rounded-full bg-slate-500/10 px-2.5 py-0.5 text-xs font-semibold text-slate-600 dark:text-slate-300">
+                                        Belum Ditagih
+                                    </span>
+                                )}
                             </div>
                             <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white mt-1">
                                 {order.project_title}
@@ -237,7 +244,7 @@ export default function OrderShow({ order }: { order: OrderDetail }) {
                     </div>
 
                     <div className="flex items-center gap-2 flex-wrap">
-                        {order.payment_method === 'MIDTRANS' && (
+                        {order.payment_method === 'MIDTRANS' && paymentBillable && (
                             <Button
                                 variant="outline"
                                 size="sm"
@@ -260,24 +267,32 @@ export default function OrderShow({ order }: { order: OrderDetail }) {
                         {/* Tahap 1: CONFIRMED -> Terbitkan SPK */}
                         {order.status === 'CONFIRMED' && (
                             <>
-                                <Button asChild size="sm" className="bg-purple-700 hover:bg-purple-800 font-bold text-white h-8 shadow-sm">
-                                    <Link href={`/production/work-orders/create?order_id=${order.id}`}>
-                                        <FileSpreadsheet className="size-3.5 mr-1.5" /> Terbitkan SPK Produksi
-                                    </Link>
-                                </Button>
-                                <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={triggerCancelOrder}
-                                    className="h-8 text-xs font-bold border-red-200 bg-red-50 text-[#d91424] hover:bg-red-100"
-                                >
-                                    Batalkan Pesanan
-                                </Button>
+                                {isPaid ? (
+                                    <Button asChild size="sm" className="bg-purple-700 hover:bg-purple-800 font-bold text-white h-8 shadow-sm">
+                                        <Link href={`/production/work-orders/create?order_id=${order.id}`}>
+                                            <FileSpreadsheet className="size-3.5 mr-1.5" /> Terbitkan SPK Produksi
+                                        </Link>
+                                    </Button>
+                                ) : (
+                                    <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-300 bg-amber-500/15 px-3 py-1 text-xs font-black text-amber-800 dark:border-amber-700 dark:text-amber-300">
+                                        <Clock className="size-3.5 text-amber-600" /> Menunggu Pelunasan &mdash; SPK terkunci
+                                    </span>
+                                )}
+                                {isAdmin && (
+                                    <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={triggerCancelOrder}
+                                        className="h-8 text-xs font-bold border-red-200 bg-red-50 text-[#d91424] hover:bg-red-100"
+                                    >
+                                        {isPaid ? 'Batalkan & Refund' : 'Batalkan Pesanan'}
+                                    </Button>
+                                )}
                             </>
                         )}
 
                         {/* Tahap 2: PROCESSING -> Terbitkan Surat Jalan */}
-                        {order.status === 'PROCESSING' && (
+                        {order.status === 'PROCESSING' && isPaid && (
                             <>
                                 <Button asChild size="sm" className="bg-[#0c1d37] hover:bg-[#162e55] font-bold text-white h-8 shadow-sm">
                                     <Link href={`/dispatch/surat-jalan/create?batching_plant_id=${order.batching_plant?.id}`}>
@@ -289,7 +304,7 @@ export default function OrderShow({ order }: { order: OrderDetail }) {
                                         <Plus className="size-3.5 mr-1" /> Tambah SPK
                                     </Link>
                                 </Button>
-                                {!hasActiveDeliveries && (
+                                {!hasActiveDeliveries && isAdmin && (
                                     <Button
                                         size="sm"
                                         variant="outline"
@@ -303,7 +318,7 @@ export default function OrderShow({ order }: { order: OrderDetail }) {
                         )}
 
                         {/* Tahap 3: ON_DELIVERY -> Terbitkan Ritase Tambahan bila ada sisa volume */}
-                        {order.status === 'ON_DELIVERY' && hasRemainingVolume && (
+                        {order.status === 'ON_DELIVERY' && hasRemainingVolume && isPaid && (
                             <Button asChild size="sm" className="bg-[#0c1d37] hover:bg-[#162e55] font-bold text-white h-8 shadow-sm">
                                 <Link href={`/dispatch/surat-jalan/create?batching_plant_id=${order.batching_plant?.id}`}>
                                     <Truck className="size-3.5 mr-1.5 text-amber-400" /> Terbitkan Ritase Berikutnya
@@ -351,9 +366,16 @@ export default function OrderShow({ order }: { order: OrderDetail }) {
 
                     {isCancelled ? (
                         <div className="rounded-lg bg-red-50 border border-red-200 p-3 text-xs text-[#d91424] dark:bg-red-950/20 dark:border-red-900">
-                            Pesanan ini telah dibatalkan.
-                            {order.rejection_reason && (
-                                <p className="mt-1 font-semibold text-xs">Alasan: {order.rejection_reason}</p>
+                            Pesanan ini telah dibatalkan{order.cancelled_at ? ` pada ${formatDateTime(order.cancelled_at)}` : ''}.
+                            {(order.cancellation_reason || order.rejection_reason) && (
+                                <p className="mt-1 font-semibold text-xs">Alasan: {order.cancellation_reason || order.rejection_reason}</p>
+                            )}
+                            {order.refund_amount != null && (
+                                <p className="mt-1 text-xs text-emerald-700 dark:text-emerald-400">
+                                    Refund Rp {Number(order.refund_amount).toLocaleString('id-ID', { maximumFractionDigits: 0 })} dicatat
+                                    {order.refunded_at ? ` (${formatDateTime(order.refunded_at)})` : ''}
+                                    {order.refund_reference ? ` · Ref: ${order.refund_reference}` : ''}
+                                </p>
                             )}
                         </div>
                     ) : (
@@ -498,7 +520,7 @@ export default function OrderShow({ order }: { order: OrderDetail }) {
                                     </div>
                                     <div className="flex justify-between mt-1">
                                         <span className="text-slate-600 dark:text-slate-400">Ongkos Kirim Plant:</span>
-                                        <span className="font-bold text-emerald-700 dark:text-emerald-400">Rp {Number(order.delivery_fee).toLocaleString('id-ID')}</span>
+                                        <span className="font-bold text-emerald-700 dark:text-emerald-400">Rp {Number(order.delivery_fee).toLocaleString('id-ID', { maximumFractionDigits: 0 })}</span>
                                     </div>
                                 </div>
                             </div>
@@ -511,19 +533,19 @@ export default function OrderShow({ order }: { order: OrderDetail }) {
                             </h2>
                             <div className="flex justify-between text-xs text-slate-600 dark:text-slate-400">
                                 <span>Subtotal Produk:</span>
-                                <span className="font-semibold text-slate-900 dark:text-white">Rp {Number(order.subtotal).toLocaleString('id-ID')}</span>
+                                <span className="font-semibold text-slate-900 dark:text-white">Rp {Number(order.subtotal).toLocaleString('id-ID', { maximumFractionDigits: 0 })}</span>
                             </div>
                             <div className="flex justify-between text-xs text-slate-600 dark:text-slate-400">
                                 <span>Ongkos Kirim:</span>
-                                <span className="font-semibold text-slate-900 dark:text-white">Rp {Number(order.delivery_fee).toLocaleString('id-ID')}</span>
+                                <span className="font-semibold text-slate-900 dark:text-white">Rp {Number(order.delivery_fee).toLocaleString('id-ID', { maximumFractionDigits: 0 })}</span>
                             </div>
                             <div className="flex justify-between text-xs text-slate-600 dark:text-slate-400">
                                 <span>PPN (11%):</span>
-                                <span className="font-semibold text-slate-900 dark:text-white">Rp {Number(order.ppn).toLocaleString('id-ID')}</span>
+                                <span className="font-semibold text-slate-900 dark:text-white">Rp {Number(order.ppn).toLocaleString('id-ID', { maximumFractionDigits: 0 })}</span>
                             </div>
                             <div className="border-t border-slate-200 dark:border-slate-800 pt-2 flex justify-between text-sm font-bold text-slate-900 dark:text-white">
                                 <span>Total Tagihan:</span>
-                                <span className="text-emerald-700 dark:text-emerald-400">Rp {Number(order.total_price).toLocaleString('id-ID')}</span>
+                                <span className="text-emerald-700 dark:text-emerald-400">Rp {Number(order.total_price).toLocaleString('id-ID', { maximumFractionDigits: 0 })}</span>
                             </div>
 
                             <div className="flex justify-between items-center text-xs text-slate-600 dark:text-slate-400 pt-2.5 border-t border-slate-100 dark:border-slate-800">
@@ -537,7 +559,7 @@ export default function OrderShow({ order }: { order: OrderDetail }) {
                                         ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400'
                                         : 'bg-amber-500/15 text-amber-700 dark:text-amber-400'
                                 }`}>
-                                    {order.payment_status === 'PAID' ? 'LUNAS' : order.payment_status}
+                                    {paymentBillable ? (paymentLabels[order.payment_status] ?? order.payment_status) : 'Belum Ditagih'}
                                 </span>
                             </div>
 
@@ -580,6 +602,7 @@ export default function OrderShow({ order }: { order: OrderDetail }) {
                                     <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                                         {order.items.map((item) => {
                                             const percent = Math.min(100, Math.round((Number(item.fulfilled_quantity) / Number(item.quantity)) * 100));
+
                                             return (
                                                 <tr key={item.id}>
                                                     <td className="px-4 py-3.5">
@@ -612,10 +635,10 @@ export default function OrderShow({ order }: { order: OrderDetail }) {
                                                         </div>
                                                     </td>
                                                     <td className="px-4 py-3.5 text-slate-700 dark:text-slate-300">
-                                                        Rp {Number(item.unit_price).toLocaleString('id-ID')}
+                                                        Rp {Number(item.unit_price).toLocaleString('id-ID', { maximumFractionDigits: 0 })}
                                                     </td>
                                                     <td className="px-4 py-3.5 text-right font-bold text-slate-900 dark:text-white">
-                                                        Rp {Number(item.subtotal).toLocaleString('id-ID')}
+                                                        Rp {Number(item.subtotal).toLocaleString('id-ID', { maximumFractionDigits: 0 })}
                                                     </td>
                                                 </tr>
                                             );
@@ -636,7 +659,7 @@ export default function OrderShow({ order }: { order: OrderDetail }) {
                                         Instruksi penimbangan dan mixing mix design beton batching plant
                                     </p>
                                 </div>
-                                {order.status !== 'COMPLETED' && order.status !== 'CANCELLED' && (
+                                {isPaid && ['CONFIRMED', 'PROCESSING', 'ON_DELIVERY'].includes(order.status) && (
                                     <Button asChild size="sm" variant="outline" className="h-8 gap-1 text-xs">
                                         <Link href={`/production/work-orders/create?order_id=${order.id}`}>
                                             <FileSpreadsheet className="size-3.5 text-purple-600" /> Buat SPK Baru
@@ -728,7 +751,11 @@ export default function OrderShow({ order }: { order: OrderDetail }) {
                                 <div className="space-y-3">
                                     {order.surat_jalan_items.map((sji) => {
                                         const sj = sji.surat_jalan;
-                                        if (!sj) return null;
+
+                                        if (!sj) {
+return null;
+}
+
                                         const isSjDone = sj.status === 'COMPLETED';
                                         const isSjCancelled = sj.status === 'CANCELLED';
 
@@ -783,15 +810,58 @@ export default function OrderShow({ order }: { order: OrderDetail }) {
                 </div>
 
                 <ConfirmModal
-                    open={confirmDialog.open}
-                    onOpenChange={(open) => setConfirmDialog((prev) => ({ ...prev, open }))}
-                    title={confirmDialog.title}
-                    description={confirmDialog.description}
-                    variant={confirmDialog.variant}
-                    confirmText="Ya, Batalkan"
+                    open={cancelOpen}
+                    onOpenChange={setCancelOpen}
+                    title={isPaid ? 'Batalkan Pesanan & Catat Refund' : 'Batalkan Pesanan'}
+                    description={
+                        isPaid
+                            ? `Pesanan ${order.code} sudah lunas. Kembalikan dana ke pelanggan (transfer / dashboard Midtrans), lalu catat nominal refund di sini. Tindakan ini permanen.`
+                            : `Pesanan ${order.code} akan dibatalkan permanen dan SPK yang belum selesai ikut dihentikan.`
+                    }
+                    variant="destructive"
+                    confirmText={cancelling ? 'Memproses...' : 'Ya, Batalkan'}
                     cancelText="Kembali"
-                    onConfirm={handleConfirmStatus}
-                />
+                    onConfirm={handleCancelOrder}
+                    isLoading={cancelling}
+                    confirmDisabled={!cancelForm.reason.trim() || (isPaid && cancelForm.refundAmount === '')}
+                >
+                    <div className="mt-4 space-y-3 text-xs">
+                        <div>
+                            <label className="mb-1 block font-bold text-slate-700 dark:text-slate-300">Alasan Pembatalan *</label>
+                            <textarea
+                                rows={3}
+                                value={cancelForm.reason}
+                                onChange={(e) => setCancelForm((f) => ({ ...f, reason: e.target.value }))}
+                                placeholder="Contoh: Permintaan pelanggan via telepon, proyek ditunda."
+                                className="w-full rounded-lg border border-slate-300 bg-white p-2.5 text-xs text-slate-900 outline-none focus:border-red-500 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+                            />
+                        </div>
+                        {isPaid && (
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="mb-1 block font-bold text-slate-700 dark:text-slate-300">Nominal Refund (Rp) *</label>
+                                    <input
+                                        type="number"
+                                        min={0}
+                                        max={Number(order.total_price)}
+                                        value={cancelForm.refundAmount}
+                                        onChange={(e) => setCancelForm((f) => ({ ...f, refundAmount: e.target.value }))}
+                                        className="w-full rounded-lg border border-slate-300 bg-white p-2 font-mono text-xs text-slate-900 outline-none focus:border-red-500 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="mb-1 block font-bold text-slate-700 dark:text-slate-300">No. Referensi Transfer</label>
+                                    <input
+                                        value={cancelForm.refundReference}
+                                        onChange={(e) => setCancelForm((f) => ({ ...f, refundReference: e.target.value }))}
+                                        placeholder="Opsional"
+                                        className="w-full rounded-lg border border-slate-300 bg-white p-2 text-xs text-slate-900 outline-none focus:border-red-500 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+                                    />
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </ConfirmModal>
             </div>
         </>
     );

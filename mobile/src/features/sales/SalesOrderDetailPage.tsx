@@ -16,8 +16,18 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useNavigate, useParams } from 'react-router-dom';
 import { staffApi } from '../../data/staffApi';
+import { formatRupiah } from '../../domain/format';
 import type { SalesOrderSummary } from '../../domain/types';
 import { Card, Screen } from '../../shared/ui';
+
+const STATUS_LABEL: Record<string, string> = {
+  PENDING_APPROVAL: 'Perlu Survei',
+  CONFIRMED: 'Disetujui',
+  PROCESSING: 'Diproses',
+  ON_DELIVERY: 'Dalam Pengiriman',
+  COMPLETED: 'Selesai',
+  CANCELLED: 'Ditolak / Batal',
+};
 
 function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 6371;
@@ -126,7 +136,7 @@ export default function SalesOrderDetailPage() {
         icon: truckIcon,
       }).addTo(map);
 
-      marker.bindPopup('<b>Titik Bongkar Armada Truk</b><br>Geser ke jalan yang muat untuk truk mixer besar.').openPopup();
+      marker.bindPopup('<b>Titik Bongkar Armada Truk</b><br>Geser ke jalan yang muat untuk truk mixer besar.');
 
       marker.on('dragend', () => {
         const pos = marker.getLatLng();
@@ -272,14 +282,25 @@ export default function SalesOrderDetailPage() {
               <h2 className="text-sm font-black text-slate-900">{order.customer_name}</h2>
               <p className="text-xs text-slate-600">{order.customer_phone}</p>
             </div>
-            <span className="rounded bg-slate-100 border border-slate-300 px-2 py-0.5 text-[10px] font-black text-slate-700">
-              {order.status}
+            <span
+              className={`shrink-0 rounded-lg border px-2 py-0.5 text-[10px] font-black ${
+                order.status === 'PENDING_APPROVAL'
+                  ? 'border-amber-300 bg-amber-100 text-amber-800'
+                  : order.status === 'CANCELLED'
+                  ? 'border-red-200 bg-red-100 text-red-700'
+                  : 'border-emerald-200 bg-emerald-100 text-emerald-800'
+              }`}
+            >
+              {STATUS_LABEL[order.status] ?? order.status}
             </span>
           </div>
 
           <div className="mt-2.5 pt-2 border-t border-slate-100 text-xs text-slate-600 space-y-1">
             <p><strong>Proyek:</strong> {order.project_title}</p>
             <p><strong>Total Muatan:</strong> {order.items.map((i) => `${i.name} (${i.quantity} ${i.unit})`).join(', ')}</p>
+            {order.delivery_fee !== undefined && (
+              <p><strong>Ongkir:</strong> {formatRupiah(order.delivery_fee)} · <strong>Total:</strong> {formatRupiah(order.total_price)}</p>
+            )}
           </div>
         </Card>
 
@@ -296,9 +317,11 @@ export default function SalesOrderDetailPage() {
 
           <div className="relative overflow-hidden rounded-2xl border-2 border-slate-300 bg-slate-100 shadow-sm h-64">
             <div ref={mapContainerRef} className="w-full h-full z-0" />
-            <div className="absolute bottom-2 left-2 z-10 rounded-lg bg-white/90 backdrop-blur-xs px-2.5 py-1 text-[10px] font-bold text-slate-800 border border-slate-200 shadow-xs">
-              📍 Geser pin merah (🚚) ke jalan yang muat untuk truk mixer
-            </div>
+            {order.status === 'PENDING_APPROVAL' && (
+              <div className="pointer-events-none absolute left-2 right-2 top-2 z-[500] ml-10 rounded-lg border border-slate-200 bg-white/90 px-2.5 py-1 text-[10px] font-bold text-slate-800 shadow-xs backdrop-blur-xs">
+                📍 Geser pin merah (🚚) ke jalan yang muat untuk truk mixer. Ongkir dihitung ulang saat ACC.
+              </div>
+            )}
           </div>
         </div>
 
@@ -356,7 +379,7 @@ export default function SalesOrderDetailPage() {
             </div>
           ) : (
             <div className="rounded-xl bg-slate-100 p-3 text-center text-xs text-slate-600 border border-slate-200">
-              Pesanan ini telah diproses (Status: <strong>{order.status}</strong>).
+              Pesanan ini telah diproses (Status: <strong>{STATUS_LABEL[order.status] ?? order.status}</strong>).
             </div>
           )}
         </div>

@@ -1,6 +1,7 @@
 import type { DriverDeliverySummary, SalesOrderSummary, StaffUser } from '../domain/types';
 
-const API_URL = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/+$/, '') || '';
+// Fallback sama dengan api.ts: build tanpa VITE_API_URL (mis. APK) tetap menembak server produksi.
+const API_URL = ((import.meta.env.VITE_API_URL as string | undefined) || 'https://pkm.orcaid.cloud').replace(/\/+$/, '');
 const STAFF_TOKEN_KEY = 'pkm_staff_token';
 const STAFF_USER_KEY = 'pkm_staff_user';
 
@@ -65,33 +66,19 @@ async function staffRequest<T>(endpoint: string, options: RequestInit = {}): Pro
 
 export const staffApi = {
   async loginStaff(payload: { login: string; password: string }): Promise<{ token: string; user: StaffUser }> {
-    // Try Sales login first
-    try {
-      const salesRes = await staffRequest<{ token: string; user: StaffUser }>('/api/sales/v1/login', {
-        method: 'POST',
-        body: JSON.stringify(payload),
-      });
-      setStaffToken(salesRes.token);
-      setStaffUser(salesRes.user);
-      return salesRes;
-    } catch (salesErr: any) {
-      // If error indicates driver credentials or non-sales, try Driver login
-      try {
-        const driverRes = await staffRequest<{ token: string; user: StaffUser }>('/api/driver/v1/login', {
-          method: 'POST',
-          body: JSON.stringify(payload),
-        });
-        setStaffToken(driverRes.token);
-        setStaffUser(driverRes.user);
-        return driverRes;
-      } catch (driverErr: any) {
-        // Throw the most relevant error
-        throw new Error(salesErr.message?.includes('tidak cocok') ? salesErr.message : driverErr.message || 'Login staf lapangan gagal.');
-      }
-    }
+    const res = await staffRequest<{ token: string; user: StaffUser }>('/api/staff/v1/login', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+    setStaffToken(res.token);
+    setStaffUser(res.user);
+    return res;
   },
 
   logoutStaff() {
+    if (getStaffToken()) {
+      void staffRequest('/api/staff/v1/logout', { method: 'POST' }).catch(() => undefined);
+    }
     setStaffToken(null);
     setStaffUser(null);
   },

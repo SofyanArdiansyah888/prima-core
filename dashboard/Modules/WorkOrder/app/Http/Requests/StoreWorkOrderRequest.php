@@ -2,7 +2,9 @@
 
 namespace Modules\WorkOrder\Http\Requests;
 
+use Closure;
 use Illuminate\Foundation\Http\FormRequest;
+use Modules\Order\Models\Order;
 
 class StoreWorkOrderRequest extends FormRequest
 {
@@ -14,7 +16,11 @@ class StoreWorkOrderRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'order_id' => ['required', 'exists:orders,id'],
+            'order_id' => ['required', 'exists:orders,id', function (string $attribute, mixed $value, Closure $fail) {
+                if ($reason = Order::productionBlockReason(Order::find($value))) {
+                    $fail($reason);
+                }
+            }],
             'product_id' => ['required', 'exists:products,id'],
             'batching_plant_id' => ['required', 'exists:batching_plants,id'],
             'assigned_user_id' => ['nullable', 'exists:users,id'],

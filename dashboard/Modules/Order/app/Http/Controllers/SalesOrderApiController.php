@@ -8,8 +8,8 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
-use Modules\DeliveryRate\Services\PlantDistanceService;
 use Modules\Order\Models\Order;
+use Modules\Order\Services\ApproveOrderSite;
 use Modules\Shared\Enums\UserRole;
 
 class SalesOrderApiController extends Controller
@@ -152,50 +152,18 @@ class SalesOrderApiController extends Controller
         ]);
     }
 
-    public function approve(Request $request, Order $order, PlantDistanceService $distanceService): JsonResponse
+    public function approve(Request $request, Order $order, ApproveOrderSite $approveSite): JsonResponse
     {
         $this->authorizeAccess($request->user(), $order);
 
-        if ($order->status !== 'PENDING_APPROVAL') {
-            throw ValidationException::withMessages([
-                'status' => ['Pesanan ini tidak dalam status menunggu verifikasi tempat.'],
-            ]);
-        }
-
         $validated = $request->validate([
-            'delivery_lat' => ['nullable', 'numeric'],
-            'delivery_lng' => ['nullable', 'numeric'],
+            'delivery_lat' => ['nullable', 'numeric', 'between:-90,90', 'required_with:delivery_lng'],
+            'delivery_lng' => ['nullable', 'numeric', 'between:-180,180', 'required_with:delivery_lat'],
             'delivery_address' => ['nullable', 'string', 'max:500'],
             'survey_notes' => ['nullable', 'string', 'max:1000'],
         ]);
 
-        $lat = isset($validated['delivery_lat']) ? (float) $validated['delivery_lat'] : (float) $order->delivery_lat;
-        $lng = isset($validated['delivery_lng']) ? (float) $validated['delivery_lng'] : (float) $order->delivery_lng;
-        $address = $validated['delivery_address'] ?? $order->delivery_address;
-        $notes = $validated['survey_notes'] ?? null;
-
-        $updateData = [
-            'status' => 'CONFIRMED',
-            'approved_at' => now(),
-            'approved_by_id' => $request->user()->id,
-            'survey_notes' => $notes,
-            'delivery_lat' => $lat,
-            'delivery_lng' => $lng,
-            'delivery_address' => $address,
-        ];
-
-        // Recalculate distance if coordinates changed
-        if ($order->batchingPlant && $order->batchingPlant->lat && $order->batchingPlant->lng) {
-            $newDist = $distanceService->calculateDistanceKm(
-                (float) $order->batchingPlant->lat,
-                (float) $order->batchingPlant->lng,
-                $lat,
-                $lng
-            );
-            $updateData['distance_km'] = $newDist;
-        }
-
-        $order->update($updateData);
+        $order = $approveSite->approve($order, $request->user(), $validated);
 
         return response()->json([
             'message' => 'Pesanan berhasil disetujui (ACC).',
@@ -217,10 +185,20 @@ class SalesOrderApiController extends Controller
             'rejection_reason' => ['required', 'string', 'max:1000'],
         ]);
 
-        $order->update([
-            'status' => 'CANCELLED',
-            'rejection_reason' => $validated['rejection_reason'],
-        ]);
+        $updated = Order::query()
+            ->whereKey($order->id)
+            ->where('status', 'PENDING_APPROVAL')
+            ->update([
+                'status' => 'CANCELLED',
+                'rejection_reason' => $validated['rejection_reason'],
+                'updated_at' => now(),
+            ]);
+
+        if ($updated === 0) {
+            throw ValidationException::withMessages([
+                'status' => ['Pesanan ini sudah diproses oleh petugas lain.'],
+            ]);
+        }
 
         return response()->json([
             'message' => 'Pesanan berhasil ditolak.',
@@ -250,6 +228,9 @@ class SalesOrderApiController extends Controller
             'delivery_lat' => $order->delivery_lat !== null ? (float) $order->delivery_lat : null,
             'delivery_lng' => $order->delivery_lng !== null ? (float) $order->delivery_lng : null,
             'distance_km' => (float) $order->distance_km,
+            'subtotal' => (float) $order->subtotal,
+            'delivery_fee' => (float) $order->delivery_fee,
+            'ppn' => (float) $order->ppn,
             'total_price' => (float) $order->total_price,
             'status' => $order->status,
             'approved_at' => $order->approved_at?->toIso8601String(),

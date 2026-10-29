@@ -19,6 +19,13 @@ import type { DriverDeliverySummary, StaffUser } from '../../domain/types';
 import { Card, Screen } from '../../shared/ui';
 import PkmLogo from '../../shared/ui/PkmLogo';
 
+const VEHICLE_LABEL: Record<string, string> = {
+  MIXER_TRUCK_7M3: 'Truk Mixer 7 m³',
+  BULK_CARRIER_300T: 'Truk Kapsul Curah',
+  FLATBED_SAK: 'Truk Flatbed Sak',
+  LIGHT_TRUCK: 'Truk Ringan',
+};
+
 export default function DriverDeliveriesPage() {
   const navigate = useNavigate();
   const [user, setUser] = useState<StaffUser | null>(() => getStaffUser());
@@ -202,7 +209,7 @@ export default function DriverDeliveriesPage() {
                       {sj.code}
                     </span>
                     <h3 className="text-xs font-black text-slate-900 mt-0.5">
-                      {sj.vehicle_number} • {sj.vehicle_type.replace('_', ' ')}
+                      {sj.vehicle_number} • {VEHICLE_LABEL[sj.vehicle_type] ?? sj.vehicle_type.replaceAll('_', ' ')}
                     </h3>
                     <p className="text-[11px] text-slate-500">
                       Asal: {sj.plant?.name || 'Plant'}

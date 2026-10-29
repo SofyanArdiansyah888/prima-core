@@ -1,8 +1,4 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-use Modules\WorkOrder\Http\Controllers\WorkOrderController;
-
-Route::middleware(['auth:sanctum'])->prefix('v1')->group(function () {
-    Route::apiResource('workorders', WorkOrderController::class)->names('workorder');
-});
+// Master data dikelola lewat dashboard web (middleware admin). Jangan buka apiResource
+// di bawah auth:sanctum: token pelanggan/sales/supir ikut lolos guard tersebut.

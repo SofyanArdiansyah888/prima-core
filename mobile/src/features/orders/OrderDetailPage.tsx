@@ -220,12 +220,12 @@ export default function OrderDetailPage() {
                   title="Sinkronkan Status"
                 >
                   <SyncIcon spinning={refreshing} className="size-3.5 text-slate-600" />
-                  <span>Sync</span>
+                  <span className="sr-only">Sync</span>
                 </button>
                 <button
                   type="button"
                   onClick={copyOrderCode}
-                  className="flex items-center gap-1 rounded-lg bg-slate-100 hover:bg-slate-200 px-2 py-1 font-mono text-[11px] font-extrabold text-[#0c1d37] transition-colors cursor-pointer"
+                  className="flex items-center gap-1 whitespace-nowrap rounded-lg bg-slate-100 hover:bg-slate-200 px-2 py-1 font-mono text-[11px] font-extrabold text-[#0c1d37] transition-colors cursor-pointer"
                   title="Salin Kode"
                 >
                   <span>{order.code}</span>
@@ -249,7 +249,7 @@ export default function OrderDetailPage() {
               <span>{completing ? 'Menyimpan Konfirmasi…' : 'Konfirmasi Pesanan Diterima & Selesai'}</span>
             </button>
           </StickyBar>
-        ) : order && isPendingPayment ? (
+        ) : order && (canPay || (isPendingApproval && isPendingPayment)) ? (
           <StickyBar>
             {isPendingApproval ? (
               <div className="flex items-center gap-2 rounded-xl bg-amber-50 border border-amber-200 px-3 py-2.5 text-xs text-amber-800">
@@ -346,8 +346,8 @@ export default function OrderDetailPage() {
               <div className="mt-4 grid grid-cols-2 gap-2 border-t border-slate-700/80 pt-3 text-xs">
                 <div>
                   <span className="text-[10px] text-slate-300 block">Plant Pengirim</span>
-                  <p className="font-bold text-white mt-0.5 truncate flex items-center gap-1">
-                    <IonIcon icon={businessOutline} className="text-slate-400 text-xs" />
+                  <p className="font-bold text-white mt-0.5 flex items-start gap-1 leading-snug">
+                    <IonIcon icon={businessOutline} className="text-slate-400 text-xs mt-0.5 shrink-0" />
                     <span>{order.plant?.name || 'Batching Plant Pangkep'}</span>
                   </p>
                 </div>
@@ -358,6 +358,24 @@ export default function OrderDetailPage() {
                   </p>
                 </div>
               </div>
+
+              {isCancelled && (
+                <div className="mt-3 rounded-xl border border-red-300/40 bg-red-500/15 p-2.5 text-xs text-red-50">
+                  <div className="flex items-center gap-1.5 font-bold text-red-200 text-[11px]">
+                    <IonIcon icon={alertCircleOutline} className="shrink-0" />
+                    <span>Pesanan Dibatalkan</span>
+                  </div>
+                  {order.cancellation_reason && (
+                    <p className="mt-1 text-[11px] leading-relaxed text-white">"{order.cancellation_reason}"</p>
+                  )}
+                  {order.refund_amount != null && (
+                    <p className="mt-1.5 text-[11px] font-bold text-emerald-200">
+                      Refund {formatRupiah(order.refund_amount)} telah diproses admin
+                      {order.refunded_at ? ` (${formatDate(order.refunded_at)})` : ''}.
+                    </p>
+                  )}
+                </div>
+              )}
 
               {/* Survey notes callout if present */}
               {order.survey_notes && (
@@ -624,7 +642,7 @@ export default function OrderDetailPage() {
                     </p>
                   </div>
                 </div>
-              ) : isPendingPayment ? (
+              ) : canPay ? (
                 <div className="pt-2 space-y-2">
                   <button
                     type="button"
