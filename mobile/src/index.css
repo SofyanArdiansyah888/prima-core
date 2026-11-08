@@ -1,4 +1,9 @@
 @import "./theme/tokens.css";
+
+/* Aplikasi selalu tema terang, apa pun pengaturan dark mode perangkat. */
+:root {
+  color-scheme: light only;
+}
 @import "leaflet/dist/leaflet.css";
 
 @import "tailwindcss/theme.css" layer(theme);
