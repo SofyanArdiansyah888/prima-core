@@ -13,7 +13,6 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { api } from '../../data/api';
 import { useAuth } from '../../data/auth';
 import { useCart } from '../../data/cart';
-import { formatRupiah } from '../../domain/format';
 import type { Quote } from '../../domain/types';
 import { 
   Card, 
@@ -142,15 +141,15 @@ export default function CheckoutPage() {
 
   return (
     <Screen
-      header={<NavBar title="Konfirmasi & Pembayaran" backHref="/cart" />}
+      header={<NavBar title="Konfirmasi Pesanan" backHref="/cart" />}
       footer={
         lines.length > 0 ? (
           <StickyBar>
             <div className="mb-2.5 flex items-center justify-between">
               <div>
-                <span className="block text-[10px] text-slate-400 font-medium">Total Tagihan Final</span>
-                <span className="text-base font-extrabold text-[#d91424]">
-                  {quote ? formatRupiah(quote.total_price) : calculating ? 'Menghitung…' : hasAddress ? 'Memuat tarif…' : 'Pilih Alamat Dulu'}
+                <span className="block text-[10px] text-slate-400 font-medium">Harga</span>
+                <span className="text-[11px] font-bold text-amber-700">
+                  {calculating ? 'Mendeteksi plant…' : hasAddress ? 'Muncul setelah verifikasi sales' : 'Pilih Alamat Dulu'}
                 </span>
               </div>
               {quote && (
@@ -169,7 +168,7 @@ export default function CheckoutPage() {
                 disabled={submitting || lines.length === 0 || !quote || calculating} 
                 onClick={() => void submit()}
               >
-                <span>{submitting ? 'Menghubungkan Midtrans…' : 'Bayar Sekarang via Midtrans'}</span>
+                <span>{submitting ? 'Mengirim Pesanan…' : 'Kirim Pesanan untuk Verifikasi'}</span>
                 <IonIcon icon={arrowForwardOutline} className="text-sm" />
               </PrimaryButton>
             ) : (
@@ -296,15 +295,11 @@ export default function CheckoutPage() {
               </div>
             </div>
 
-            <div className="flex items-center justify-between text-[11px] bg-white/70 px-2.5 py-1.5 rounded-lg border border-emerald-100">
-              <span className="text-slate-600">Estimasi Biaya Pengantaran Armada:</span>
-              <span className="font-bold text-[#0c1d37] font-mono">{formatRupiah(quote.delivery_fee)}</span>
-            </div>
           </Card>
         ) : calculating ? (
           <div className="rounded-2xl border border-slate-200 bg-white p-4 text-center text-xs text-slate-500 flex items-center justify-center gap-2">
             <span className="animate-spin text-[#ea580c]">⏳</span>
-            <span>Mendeteksi batching plant terdekat dan mengalkulasi tarif...</span>
+            <span>Mendeteksi batching plant terdekat...</span>
           </div>
         ) : null}
 
@@ -338,50 +333,16 @@ export default function CheckoutPage() {
           </Field>
         </Card>
 
-        {/* SECTION 4: RINCIAN BIAYA SERVER (QUOTE) */}
-        {quote && (
-          <Card className="space-y-3 p-4 border border-slate-200/90 shadow-xs">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
-              <h2 className="text-xs font-extrabold text-[#0c1d37] uppercase tracking-wide">
-                Rincian Biaya Pesanan
-              </h2>
-            </div>
-
-            <dl className="space-y-1.5 border-b border-slate-100 pb-2.5 text-xs">
-              <div className="flex justify-between">
-                <dt className="text-slate-500">Subtotal Produk</dt>
-                <dd className="font-semibold text-slate-800">{formatRupiah(quote.subtotal)}</dd>
-              </div>
-              <div className="flex justify-between">
-                <dt className="text-slate-500">Ongkos Kirim ({quote.distance_km} km)</dt>
-                <dd className="font-semibold text-slate-800">{formatRupiah(quote.delivery_fee)}</dd>
-              </div>
-              <div className="flex justify-between">
-                <dt className="text-slate-500">PPN (11%)</dt>
-                <dd className="font-semibold text-slate-800">{formatRupiah(quote.ppn)}</dd>
-              </div>
-              {Number(quote.admin_fee) > 0 && (
-                <div className="flex justify-between">
-                  <dt className="text-slate-500">Biaya Layanan Pembayaran</dt>
-                  <dd className="font-semibold text-slate-800">{formatRupiah(quote.admin_fee)}</dd>
-                </div>
-              )}
-            </dl>
-
-            <div className="flex items-center justify-between pt-1">
-              <span className="text-xs font-bold text-slate-700">Total Tagihan Final</span>
-              <span className="font-extrabold text-base text-[#d91424]">
-                {formatRupiah(quote.total_price)}
-              </span>
-            </div>
-
-            {quote.details && (
-              <p className="text-[11px] text-slate-400 leading-relaxed bg-slate-50 p-2 rounded-lg border border-slate-100">
-                {quote.details}
-              </p>
-            )}
-          </Card>
-        )}
+        {/* SECTION 4: INFO HARGA (disembunyikan sampai di-ACC sales) */}
+        <Card className="space-y-1.5 p-4 border border-amber-200 bg-amber-50/70 shadow-xs">
+          <h2 className="text-xs font-extrabold text-amber-900 uppercase tracking-wide">
+            Harga Menunggu Verifikasi
+          </h2>
+          <p className="text-[11px] leading-relaxed text-amber-800">
+            Tim sales akan memverifikasi lokasi dan akses armada ke proyek Anda. Rincian harga dan tombol pembayaran
+            akan muncul di halaman detail pesanan setelah pesanan disetujui.
+          </p>
+        </Card>
       </form>
     </Screen>
   );

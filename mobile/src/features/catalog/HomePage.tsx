@@ -16,7 +16,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '../../data/api';
 import { useCart } from '../../data/cart';
-import { formatQty, formatRupiah } from '../../domain/format';
+import { formatQty } from '../../domain/format';
 import { categoryLabel, quantityAfterStep } from '../../domain/rules';
 import type { HomeBanner, Product } from '../../domain/types';
 import { 
@@ -168,10 +168,6 @@ function ShowcaseCard({
           </p>
         </div>
         <div className="mt-2.5 border-t border-slate-100 pt-2">
-          <div className="mb-2 flex items-baseline gap-0.5">
-            <span className="text-xs font-black text-[#d91424]">{formatRupiah(product.base_price)}</span>
-            <span className="text-[9px] font-medium text-slate-400">/{product.unit}</span>
-          </div>
           {qtyInCart === 0 ? (
             <button
               type="button"
@@ -323,10 +319,6 @@ export default function HomePage() {
       }
     }
   };
-
-  const totalCartPrice = useMemo(() => {
-    return cart.lines.reduce((sum, line) => sum + line.product.base_price * line.quantity, 0);
-  }, [cart.lines]);
 
   const selectedCollection = searchParams.get('koleksi'); // 'unggulan' | 'terlaris' | null
 
@@ -732,9 +724,9 @@ export default function HomePage() {
                 </span>
               </div>
               <div>
-                <span className="text-[10px] text-slate-300 block">Total Est. Material</span>
+                <span className="text-[10px] text-slate-300 block">Keranjang Material</span>
                 <p className="text-xs sm:text-sm font-extrabold text-white">
-                  {formatRupiah(totalCartPrice)}
+                  {cart.count} produk dipilih
                 </p>
               </div>
             </div>

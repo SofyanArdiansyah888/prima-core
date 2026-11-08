@@ -10,7 +10,7 @@ import {
   shieldCheckmarkOutline
 } from 'ionicons/icons';
 import { useCart } from '../../data/cart';
-import { formatQty, formatRupiah } from '../../domain/format';
+import { formatQty } from '../../domain/format';
 import { categoryLabel, quantityAfterStep } from '../../domain/rules';
 import { getProductImage } from '../../domain/product';
 import type { Product } from '../../domain/types';
@@ -31,7 +31,6 @@ export default function CartPage() {
   const [deletingProduct, setDeletingProduct] = useState<{ uuid: string; name: string } | null>(null);
   
   const totalItems = lines.reduce((sum, line) => sum + line.quantity, 0);
-  const subtotal = lines.reduce((sum, line) => sum + line.product.base_price * line.quantity, 0);
 
   return (
     <Screen
@@ -50,10 +49,8 @@ export default function CartPage() {
         <StickyBar>
           <div className="mb-3 flex items-center justify-between">
             <div>
-              <span className="block text-[11px] text-slate-400 font-medium">Total Estimasi Material</span>
-              <span className="font-extrabold text-base text-[#d91424]">
-                {formatRupiah(subtotal)}
-              </span>
+              <span className="block text-[11px] text-slate-400 font-medium">Harga</span>
+              <span className="text-[11px] font-bold text-amber-700">Muncul setelah verifikasi sales</span>
             </div>
             <span className="text-right text-[11px] font-mono text-slate-500 font-semibold">
               {totalItems} unit produk
@@ -98,7 +95,6 @@ export default function CartPage() {
           {/* Cart Item Cards */}
           <div className="space-y-2.5">
             {lines.map((line) => {
-              const lineTotal = line.product.base_price * line.quantity;
               const imageSrc = getProductImage(line.product);
 
               return (
@@ -131,19 +127,14 @@ export default function CartPage() {
                         {line.product.name}
                       </h2>
                       <p className="text-[11px] text-slate-500 mt-0.5">
-                        {formatRupiah(line.product.base_price)} <span className="text-[10px] text-slate-400">/ {line.product.unit}</span>
+                        Min. {formatQty(line.product.min_order)} {line.product.unit}
                       </p>
                     </div>
                   </div>
 
                   {/* Quantity & Subtotal Row */}
                   <div className="flex items-center justify-between border-t border-slate-100 px-3 py-2.5">
-                    <div>
-                      <span className="block text-[10px] text-slate-400">Subtotal Item</span>
-                      <span className="text-xs font-extrabold text-[#0c1d37]">
-                        {formatRupiah(lineTotal)}
-                      </span>
-                    </div>
+                    <span className="block text-[10px] text-slate-400">Jumlah</span>
 
                     <Stepper
                       label={`${formatQty(line.quantity)} ${line.product.unit}`}

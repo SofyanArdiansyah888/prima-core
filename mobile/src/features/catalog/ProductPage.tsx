@@ -12,7 +12,7 @@ import {
 import { useNavigate, useParams } from 'react-router-dom';
 import { api } from '../../data/api';
 import { useCart } from '../../data/cart';
-import { formatQty, formatRupiah } from '../../domain/format';
+import { formatQty } from '../../domain/format';
 import { categoryLabel, quantityAfterStep } from '../../domain/rules';
 import { getProductImage } from '../../domain/product';
 import type { Product } from '../../domain/types';
@@ -72,8 +72,6 @@ export default function ProductPage() {
     navigate('/cart');
   };
 
-  const totalPrice = product ? product.base_price * quantity : 0;
-
   return (
     <Screen
       header={
@@ -93,10 +91,10 @@ export default function ProductPage() {
             <div className="flex items-center justify-between gap-3">
               <div>
                 <span className="block text-[10px] text-slate-400 font-medium">
-                  Min. {formatQty(product.min_order)} {product.unit} · Subtotal
+                  Min. pemesanan
                 </span>
-                <span className="text-base font-extrabold text-[#d91424]">
-                  {formatRupiah(totalPrice)}
+                <span className="text-base font-extrabold text-[#0c1d37]">
+                  {formatQty(product.min_order)} {product.unit}
                 </span>
               </div>
               <PrimaryButton 
@@ -166,12 +164,9 @@ export default function ProductPage() {
                 {product.name}
               </h1>
 
-              <div className="flex items-baseline gap-1.5 pt-1">
-                <span className="text-xl font-extrabold text-[#d91424]">
-                  {formatRupiah(product.base_price)}
-                </span>
-                <span className="text-xs font-semibold text-slate-400">/ {product.unit}</span>
-              </div>
+              <p className="pt-1 text-[11px] font-medium text-slate-500">
+                Harga final diinformasikan setelah lokasi proyek diverifikasi tim sales.
+              </p>
 
               {product.slump && (
                 <div className="mt-2 inline-flex items-center gap-1.5 rounded-xl border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs text-amber-900 font-medium">

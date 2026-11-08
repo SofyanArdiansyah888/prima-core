@@ -18,6 +18,15 @@ export function segmentLabel(category: ProductCategory): string {
   return category === 'cement' ? 'Semen (Sak)' : 'Ready Mix (m³)';
 }
 
+/**
+ * Harga baru ditampilkan ke customer setelah pesanan di-ACC sales
+ * (verifikasi lokasi). Pesanan yang ditolak sebelum di-ACC tetap tersembunyi.
+ */
+export function isOrderPriceVisible(order: { status: string; approved_at?: string | null }): boolean {
+  if (order.approved_at) return true;
+  return order.status !== 'PENDING_APPROVAL' && order.status !== 'CANCELLED';
+}
+
 export type StatusTone = 'success' | 'danger' | 'warning';
 
 export function orderStatusTone(status: string): StatusTone {

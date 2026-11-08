@@ -23,7 +23,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useParams } from 'react-router-dom';
 import { api } from '../../data/api';
 import { formatDate, formatQty, formatRupiah } from '../../domain/format';
-import { orderStatusTone, paymentStatusLabel } from '../../domain/rules';
+import { isOrderPriceVisible, orderStatusTone, paymentStatusLabel } from '../../domain/rules';
 import { STATUS_LABELS, STATUS_STEPS, type CustomerOrder } from '../../domain/types';
 import { Card, ErrorText, Eyebrow, NavBar, OrderDetailSkeleton, Screen, StatusBadge, StickyBar, SyncIcon } from '../../shared/ui';
 import { openSnapPayment } from '../../lib/midtrans';
@@ -198,6 +198,7 @@ export default function OrderDetailPage() {
   const isCompleted = order?.status === 'COMPLETED';
   const isCancelled = order?.status === 'CANCELLED';
   const isPendingApproval = order?.status === 'PENDING_APPROVAL';
+  const showPrice = order ? isOrderPriceVisible(order) : false;
   const isActive = order && !isCompleted && !isCancelled;
   const isPendingPayment = order?.payment_status === 'PENDING' && !isCancelled;
   const canPay = Boolean(order?.can_pay ?? (isPendingPayment && !isPendingApproval));
@@ -561,8 +562,12 @@ export default function OrderDetailPage() {
                       <p className="text-[12px] font-bold leading-snug text-slate-900">{item.name || item.code}</p>
                       <p className="mt-0.5 text-[10px] leading-tight text-slate-500">
                         <span className="font-mono font-semibold text-[#0c1d37]">{formatQty(item.quantity)} {item.unit}</span>
-                        <span className="mx-1">·</span>
-                        <span className="font-mono">@ {formatRupiah(item.unit_price)}</span>
+                        {showPrice && (
+                          <>
+                            <span className="mx-1">·</span>
+                            <span className="font-mono">@ {formatRupiah(item.unit_price)}</span>
+                          </>
+                        )}
                       </p>
                       {item.notes ? (
                         <p className="mt-1 inline-block rounded bg-amber-50 px-1.5 py-0.5 text-[10px] leading-tight text-amber-800">
@@ -570,12 +575,14 @@ export default function OrderDetailPage() {
                         </p>
                       ) : null}
                     </div>
-                    <div className="shrink-0 text-right">
-                      <span className="block text-[9px] leading-none text-slate-400">Subtotal</span>
-                      <span className="font-mono text-[11px] font-bold leading-tight text-slate-900">
-                        {formatRupiah(item.subtotal)}
-                      </span>
-                    </div>
+                    {showPrice && (
+                      <div className="shrink-0 text-right">
+                        <span className="block text-[9px] leading-none text-slate-400">Subtotal</span>
+                        <span className="font-mono text-[11px] font-bold leading-tight text-slate-900">
+                          {formatRupiah(item.subtotal)}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -604,6 +611,7 @@ export default function OrderDetailPage() {
                   <span>Metode</span>
                   <span className="font-bold text-slate-900">{order.payment_method === 'MIDTRANS' ? 'Midtrans' : order.payment_method_label}</span>
                 </div>
+                {showPrice ? (<>
                 <div className="flex justify-between gap-3 text-slate-600">
                   <span>Subtotal</span>
                   <span className="font-mono font-medium text-slate-800">{formatRupiah(order.subtotal)}</span>
@@ -628,6 +636,12 @@ export default function OrderDetailPage() {
                   <span>Total</span>
                   <span className="font-mono">{formatRupiah(order.total_price)}</span>
                 </div>
+                </>) : (
+                <div className="flex justify-between gap-3 text-slate-600">
+                  <span>Harga</span>
+                  <span className="font-bold text-amber-700">Setelah verifikasi sales</span>
+                </div>
+                )}
               </div>
 
               {isPendingApproval ? (

@@ -17,7 +17,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../../data/api';
 import { formatDate, formatQty, formatRupiah } from '../../domain/format';
-import { orderStatusTone } from '../../domain/rules';
+import { isOrderPriceVisible, orderStatusTone } from '../../domain/rules';
 import type { CustomerOrder } from '../../domain/types';
 import { BrandBar, Card, ErrorText, OrderCardSkeleton, Screen, StatusBadge, SyncIcon } from '../../shared/ui';
 
@@ -354,10 +354,16 @@ export default function OrdersPage() {
                             )}
                           </div>
                           <div className="text-right">
-                            <span className="text-[10px] text-slate-400 mr-1">Total:</span>
-                            <span className="font-mono font-black text-sm text-[#0c1d37]">
-                              {formatRupiah(order.total_price)}
-                            </span>
+                            {isOrderPriceVisible(order) ? (
+                              <>
+                                <span className="text-[10px] text-slate-400 mr-1">Total:</span>
+                                <span className="font-mono font-black text-sm text-[#0c1d37]">
+                                  {formatRupiah(order.total_price)}
+                                </span>
+                              </>
+                            ) : (
+                              <span className="text-[10px] font-bold text-amber-700">Harga setelah verifikasi</span>
+                            )}
                           </div>
                         </div>
                       </div>
