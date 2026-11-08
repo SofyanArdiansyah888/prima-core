@@ -123,23 +123,31 @@ export function SitePhotoCapture({ title, stampLabel, reference, photos, upload,
   };
 
   return (
-    <div className="space-y-2" onClick={(e) => e.stopPropagation()}>
-      {!compact && (
-        <p className="flex items-center gap-1.5 text-[11px] font-extrabold uppercase tracking-wide text-[#0c1d37]">
-          <IonIcon icon={cameraOutline} className="text-sm text-slate-500" />
-          {title}
-        </p>
+    <div className="flex flex-col gap-3" onClick={(e) => e.stopPropagation()}>
+      {!readOnly && (
+        <input
+          ref={inputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          className="hidden"
+          onChange={(e) => void handleFile(e.target.files?.[0])}
+        />
       )}
 
-      {!readOnly && (<>
-      <input
-        ref={inputRef}
-        type="file"
-        accept="image/*"
-        capture="environment"
-        className="hidden"
-        onChange={(e) => void handleFile(e.target.files?.[0])}
-      />
+      {!compact && (
+        <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-2">
+          <p className="flex items-center gap-1.5 text-[11px] font-extrabold uppercase tracking-wide text-[#0c1d37]">
+            <IonIcon icon={cameraOutline} className="text-sm text-slate-500" />
+            {title}
+          </p>
+          {photos.length > 0 ? (
+            <span className="text-[10px] font-bold text-slate-400">{photos.length} foto</span>
+          ) : null}
+        </div>
+      )}
+
+      {!readOnly && (
       <button
         type="button"
         disabled={busy !== ''}
@@ -151,7 +159,7 @@ export function SitePhotoCapture({ title, stampLabel, reference, photos, upload,
           {busy === 'gps' ? 'Mengambil lokasi GPS…' : busy === 'upload' ? 'Mengunggah foto…' : 'Ambil Foto di Lokasi'}
         </span>
       </button>
-      </>)}
+      )}
 
       {error ? (
         <p className="flex items-start gap-1.5 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-2 text-[11px] text-amber-800">
