@@ -24,13 +24,7 @@ class WorkOrderController extends Controller
         $status = $request->string('status')->trim()->toString();
         $plantId = $request->input('batching_plant_id');
 
-        $workOrders = WorkOrder::query()
-            ->with([
-                'order:id,uuid,code,customer_name,project_title,delivery_address',
-                'product:id,uuid,code,name,unit,category',
-                'batchingPlant:id,uuid,code,name',
-                'assignedUser:id,name,code',
-            ])
+        $filtered = fn () => WorkOrder::query()
             ->when($search !== '', function ($q) use ($search) {
                 $q->where(function ($inner) use ($search) {
                     $inner->where('code', 'like', "%{$search}%")
@@ -41,8 +35,16 @@ class WorkOrderController extends Controller
                         });
                 });
             })
+            ->when($plantId, fn ($q) => $q->where('batching_plant_id', $plantId));
+
+        $workOrders = $filtered()
+            ->with([
+                'order:id,uuid,code,customer_name,project_title,delivery_address',
+                'product:id,uuid,code,name,unit,category',
+                'batchingPlant:id,uuid,code,name',
+                'assignedUser:id,name,code',
+            ])
             ->when($status !== '', fn ($q) => $q->where('status', $status))
-            ->when($plantId, fn ($q) => $q->where('batching_plant_id', $plantId))
             ->orderByDesc('scheduled_date')
             ->orderByDesc('id')
             ->paginate(10)
@@ -50,6 +52,7 @@ class WorkOrderController extends Controller
 
         return Inertia::render('modules/work-order/index', [
             'workOrders' => $workOrders,
+            'counts' => $filtered()->selectRaw('status, count(*) as total')->groupBy('status')->pluck('total', 'status'),
             'plants' => BatchingPlant::query()->where('is_active', true)->orderBy('code')->get(['id', 'uuid', 'code', 'name']),
             'statuses' => [
                 ['value' => 'SCHEDULED', 'label' => 'Terjadwal'],

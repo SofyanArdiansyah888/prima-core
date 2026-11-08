@@ -29,13 +29,7 @@ class DispatchController extends Controller
         $status = $request->string('status')->trim()->toString();
         $plantId = $request->input('batching_plant_id');
 
-        $suratJalans = SuratJalan::query()
-            ->with([
-                'batchingPlant:id,uuid,code,name',
-                'items.product:id,uuid,code,name,unit',
-                'items.order:id,uuid,code,customer_name,project_title',
-            ])
-            ->withCount('items')
+        $filtered = fn () => SuratJalan::query()
             ->when($search !== '', function ($q) use ($search) {
                 $q->where(function ($inner) use ($search) {
                     $inner->where('code', 'like', "%{$search}%")
@@ -48,14 +42,23 @@ class DispatchController extends Controller
                         });
                 });
             })
+            ->when($plantId, fn ($q) => $q->where('batching_plant_id', $plantId));
+
+        $suratJalans = $filtered()
+            ->with([
+                'batchingPlant:id,uuid,code,name',
+                'items.product:id,uuid,code,name,unit',
+                'items.order:id,uuid,code,customer_name,project_title',
+            ])
+            ->withCount('items')
             ->when($status !== '', fn ($q) => $q->where('status', $status))
-            ->when($plantId, fn ($q) => $q->where('batching_plant_id', $plantId))
             ->orderByDesc('id')
             ->paginate(10)
             ->withQueryString();
 
         return Inertia::render('modules/dispatch/index', [
             'suratJalans' => $suratJalans,
+            'counts' => $filtered()->selectRaw('status, count(*) as total')->groupBy('status')->pluck('total', 'status'),
             'plants' => BatchingPlant::query()->where('is_active', true)->orderBy('code')->get(['id', 'uuid', 'code', 'name']),
             'statuses' => [
                 ['value' => 'ON_THE_WAY', 'label' => 'Dalam Perjalanan'],

@@ -22,13 +22,8 @@ class OrderController extends Controller
         $status = $request->string('status')->trim()->toString();
         $plantId = $request->input('batching_plant_id');
 
-        $orders = Order::query()
-            ->with([
-                'batchingPlant:id,uuid,code,name,branch_id',
-                'batchingPlant.branch:id,code,name',
-                'items.product:id,uuid,code,name,unit,category',
-            ])
-            ->withCount(['items', 'workOrders'])
+        // Filter pencarian & plant (tanpa status) — dipakai juga untuk hitungan chip status
+        $filtered = fn () => Order::query()
             ->when($search !== '', function ($q) use ($search) {
                 $q->where(function ($inner) use ($search) {
                     $inner->where('code', 'like', "%{$search}%")
@@ -37,8 +32,16 @@ class OrderController extends Controller
                         ->orWhere('po_number', 'like', "%{$search}%");
                 });
             })
+            ->when($plantId, fn ($q) => $q->where('batching_plant_id', $plantId));
+
+        $orders = $filtered()
+            ->with([
+                'batchingPlant:id,uuid,code,name,branch_id',
+                'batchingPlant.branch:id,code,name',
+                'items.product:id,uuid,code,name,unit,category',
+            ])
+            ->withCount(['items', 'workOrders'])
             ->when($status !== '', fn ($q) => $q->where('status', $status))
-            ->when($plantId, fn ($q) => $q->where('batching_plant_id', $plantId))
             ->orderByDesc('id')
             ->paginate(10)
             ->withQueryString();
@@ -51,6 +54,7 @@ class OrderController extends Controller
 
         return Inertia::render('modules/order/index', [
             'orders' => $orders,
+            'counts' => $filtered()->selectRaw('status, count(*) as total')->groupBy('status')->pluck('total', 'status'),
             'plants' => BatchingPlant::query()->where('is_active', true)->orderBy('code')->get(['id', 'uuid', 'code', 'name']),
             'statuses' => [
                 ['value' => 'PENDING_APPROVAL', 'label' => 'Menunggu Verifikasi Tempat'],

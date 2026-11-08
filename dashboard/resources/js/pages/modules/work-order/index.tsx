@@ -1,25 +1,24 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { formatDate } from '@/lib/utils';
-import {
-    FileSpreadsheet,
-    Plus,
-    Search,
-    Calendar,
-    Factory,
-    Eye,
-    CheckCircle2,
-    Copy,
-    Check,
-    FlaskConical,
-    Clock,
-    Layers,
-    UserCheck,
-    TrendingUp
-} from 'lucide-react';
-import { useEffect, useState, useMemo } from 'react';
+import { Plus } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
+import {
+    Badge,
+    EmptyRow,
+    FilterSelect,
+    ListHeader,
+    ListPage,
+    ListTable,
+    ListToolbar,
+    Pagination,
+    Progress,
+    StatusChips,
+    Td,
+    Th,
+} from '@/components/list-page';
+import type { Tone } from '@/components/list-page';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { formatDate } from '@/lib/utils';
 import { dashboard } from '@/routes';
 
 type WorkOrderRow = {
@@ -29,33 +28,15 @@ type WorkOrderRow = {
     scheduled_date: string;
     scheduled_time_slot: string | null;
     target_quantity: number;
-    produced_quantity: number;
     dispatched_quantity: number;
     unit: string;
     status: string;
-    batch_recipe_code: string | null;
-    slump_target: string | null;
     order: {
-        id: number;
-        uuid: string;
         code: string;
         customer_name: string;
         project_title: string;
-        delivery_address: string;
-    };
-    product?: {
-        name: string;
-        code: string;
-    };
-    batching_plant: {
-        id: number;
-        code: string;
-        name: string;
-    };
-    assigned_user?: {
-        name: string;
-        code: string;
-    };
+    } | null;
+    product?: { name: string; code: string } | null;
 };
 
 type Paginated<T> = {
@@ -64,335 +45,197 @@ type Paginated<T> = {
     total?: number;
 };
 
+const STATUS: Record<string, { label: string; tone: Tone }> = {
+    SCHEDULED: { label: 'Terjadwal', tone: 'slate' },
+    IN_PRODUCTION: { label: 'Produksi', tone: 'amber' },
+    READY_FOR_DISPATCH: { label: 'Siap Kirim', tone: 'blue' },
+    COMPLETED: { label: 'Selesai', tone: 'emerald' },
+    CANCELLED: { label: 'Dibatalkan', tone: 'red' },
+};
+
 export default function WorkOrderIndex({
     workOrders,
+    counts = {},
     plants = [],
     statuses = [],
     filters = {},
 }: {
     workOrders: Paginated<WorkOrderRow>;
+    counts?: Record<string, number>;
     plants?: { id: number; code: string; name: string }[];
     statuses?: { value: string; label: string }[];
-    filters?: { search?: string; batching_plant_id?: string; status?: string };
+    filters?: { search?: string; status?: string; batching_plant_id?: string };
 }) {
-    const [search, setSearch] = useState(filters?.search ?? '');
-    const [status, setStatus] = useState(filters?.status ?? '');
-    const [plantId, setPlantId] = useState(filters?.batching_plant_id ?? '');
-    const [copiedCode, setCopiedCode] = useState<string | null>(null);
-    const flash = (usePage().props as { flash?: { success?: string; error?: string } }).flash;
+    const [search, setSearch] = useState(filters.search ?? '');
+    const status = filters.status ?? '';
+    const plantId = filters.batching_plant_id ?? '';
+    const flash = (
+        usePage().props as { flash?: { success?: string; error?: string } }
+    ).flash;
 
     useEffect(() => {
-        if (flash?.success) toast.success(flash.success);
-        if (flash?.error) toast.error(flash.error);
+        if (flash?.success) {
+            toast.success(flash.success);
+        }
+
+        if (flash?.error) {
+            toast.error(flash.error);
+        }
     }, [flash?.success, flash?.error]);
 
-    const submitSearch = (e: React.FormEvent) => {
-        e.preventDefault();
-        router.get('/production/work-orders', { search, status, batching_plant_id: plantId }, { preserveState: true });
-    };
+    const go = (params: {
+        search?: string;
+        status?: string;
+        batching_plant_id?: string;
+    }) =>
+        router.get(
+            '/production/work-orders',
+            { search, status, batching_plant_id: plantId, ...params },
+            { preserveState: true },
+        );
 
-    const copyToClipboard = (e: React.MouseEvent, code: string) => {
-        e.stopPropagation();
-        navigator.clipboard?.writeText(code);
-        setCopiedCode(code);
-        toast.success(`Kode SPK ${code} disalin`);
-        setTimeout(() => setCopiedCode(null), 2000);
-    };
-
-    // Calculate Quick KPI Stats based on volume fulfillment
-    const stats = useMemo(() => {
-        const list = workOrders?.data ?? [];
-        const total = workOrders?.total ?? list.length;
-        const queued = list.filter((w) => Number(w.dispatched_quantity) === 0).length;
-        const inProgress = list.filter(
-            (w) => Number(w.dispatched_quantity) > 0 && Number(w.dispatched_quantity) < Number(w.target_quantity)
-        ).length;
-        const fulfilled = list.filter((w) => Number(w.dispatched_quantity) >= Number(w.target_quantity)).length;
-        return { total, queued, inProgress, fulfilled };
-    }, [workOrders]);
+    const totalAll = Object.values(counts).reduce((a, b) => a + Number(b), 0);
 
     return (
         <>
-            <Head title="Surat Perintah Kerja (SPK Produksi)" />
-            <div className="flex flex-1 flex-col gap-5 p-4 md:p-6 max-w-[1600px] mx-auto w-full">
-                {/* Header */}
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                        <div className="flex items-center gap-2">
-                            <span className="inline-flex items-center rounded-md bg-[#ea580c]/10 border border-[#ea580c]/20 px-2 py-0.5 text-[10px] font-extrabold tracking-wider text-[#ea580c] uppercase">
-                                Produksi & Batching Plant PKM
-                            </span>
-                        </div>
-                        <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white">
-                            Surat Perintah Kerja (SPK Produksi)
-                        </h1>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">
-                            Tiket instruksi batching mix design beton, target volume, dan monitoring pemenuhan armada pengiriman.
-                        </p>
-                    </div>
-                    <Button asChild className="h-10 rounded-xl bg-[#0c1d37] hover:bg-[#162e55] px-4 font-bold text-white shadow-md shadow-[#0c1d37]/15 transition-all">
-                        <Link href="/production/work-orders/create">
-                            <Plus className="size-4 mr-1.5" /> Terbitkan SPK Baru
-                        </Link>
-                    </Button>
-                </div>
-
-                {/* KPI Ribbon */}
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                    <div className="rounded-2xl border border-slate-200/80 bg-white p-3.5 shadow-2xs dark:border-slate-800 dark:bg-slate-900">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Total SPK</span>
-                        <span className="font-mono text-xl font-extrabold text-[#0c1d37] dark:text-white mt-0.5 block">{stats.total}</span>
-                    </div>
-                    <div className="rounded-2xl border border-blue-100 bg-blue-50/50 p-3.5 shadow-2xs dark:border-blue-900/40 dark:bg-blue-950/20">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-blue-700 dark:text-blue-300 block">Antrian Belum Dikirim</span>
-                        <span className="font-mono text-xl font-extrabold text-blue-700 dark:text-blue-300 mt-0.5 block">{stats.queued}</span>
-                    </div>
-                    <div className="rounded-2xl border border-amber-100 bg-amber-50/50 p-3.5 shadow-2xs dark:border-amber-900/40 dark:bg-amber-950/20">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800 dark:text-amber-300 block">Pengiriman Berjalan</span>
-                        <span className="font-mono text-xl font-extrabold text-amber-700 dark:text-amber-400 mt-0.5 block">{stats.inProgress}</span>
-                    </div>
-                    <div className="rounded-2xl border border-emerald-100 bg-emerald-50/50 p-3.5 shadow-2xs dark:border-emerald-900/40 dark:bg-emerald-950/20">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300 block">Volume Tuntas (100%)</span>
-                        <span className="font-mono text-xl font-extrabold text-emerald-700 dark:text-emerald-400 mt-0.5 block">{stats.fulfilled}</span>
-                    </div>
-                </div>
-
-                {/* Filter Toolbar */}
-                <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200/80 bg-white p-3 shadow-2xs dark:border-slate-800 dark:bg-slate-900">
-                    <form onSubmit={submitSearch} className="flex flex-1 flex-wrap items-center gap-2">
-                        <div className="relative min-w-[240px] max-w-sm flex-1">
-                            <Search className="absolute top-2.5 left-3 size-4 text-slate-400" />
-                            <Input
-                                className="h-9.5 rounded-xl border-slate-200 bg-slate-50/70 pl-9 text-xs font-medium placeholder:text-slate-400 focus-visible:bg-white focus-visible:border-[#0c1d37] focus-visible:ring-2 focus-visible:ring-[#0c1d37]/15 dark:border-slate-800 dark:bg-slate-800/60"
-                                value={search}
-                                onChange={(e) => setSearch(e.target.value)}
-                                placeholder="Cari kode SPK, pelanggan, nomor SO..."
-                            />
-                        </div>
-
-                        {statuses && statuses.length > 0 && (
-                            <select
-                                value={status}
-                                onChange={(e) => {
-                                    setStatus(e.target.value);
-                                    router.get('/production/work-orders', { search, status: e.target.value, batching_plant_id: plantId }, { preserveState: true });
-                                }}
-                                className="h-9.5 rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-xs font-semibold text-slate-700 outline-none focus:border-[#0c1d37] dark:border-slate-800 dark:bg-slate-800 dark:text-slate-200"
-                            >
-                                <option value="">Semua Status Produksi</option>
-                                {(statuses ?? []).map((s) => (
-                                    <option key={s.value} value={s.value}>
-                                        {s.label}
-                                    </option>
-                                ))}
-                            </select>
-                        )}
-
-                        <select
-                            value={plantId}
-                            onChange={(e) => {
-                                setPlantId(e.target.value);
-                                router.get('/production/work-orders', { search, status, batching_plant_id: e.target.value }, { preserveState: true });
-                            }}
-                            className="h-9.5 rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-xs font-semibold text-slate-700 outline-none focus:border-[#0c1d37] dark:border-slate-800 dark:bg-slate-800 dark:text-slate-200"
+            <Head title="Work Orders (SPK)" />
+            <ListPage>
+                <ListHeader
+                    title="Work Orders (SPK)"
+                    subtitle="Jadwal produksi batching dan progres pengirimannya."
+                    actions={
+                        <Button
+                            asChild
+                            size="sm"
+                            className="h-9 rounded-lg bg-[#0c1d37] text-xs font-semibold text-white hover:bg-[#162e55]"
                         >
-                            <option value="">Semua Batching Plant</option>
-                            {(plants ?? []).map((p) => (
-                                <option key={p.id} value={p.id}>
-                                    {p.name}
-                                </option>
-                            ))}
-                        </select>
-
-                        <Button type="submit" variant="secondary" size="sm" className="h-9.5 rounded-xl px-4 text-xs font-bold">
-                            Filter
+                            <Link href="/production/work-orders/create">
+                                <Plus className="mr-1 size-4" /> Terbitkan SPK
+                            </Link>
                         </Button>
-                    </form>
+                    }
+                />
 
-                    <div className="text-xs text-slate-400 font-medium">
-                        Menampilkan <span className="font-bold text-slate-900 dark:text-white">{(workOrders?.data ?? []).length}</span> dari {workOrders?.total ?? (workOrders?.data ?? []).length} SPK
-                    </div>
-                </div>
+                <StatusChips
+                    value={status}
+                    onChange={(v) => go({ status: v })}
+                    allCount={totalAll}
+                    options={statuses.map((s) => ({
+                        value: s.value,
+                        label: STATUS[s.value]?.label ?? s.label,
+                        count: Number(counts[s.value] ?? 0),
+                    }))}
+                />
 
-                {/* Main Table Card */}
-                <div className="overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-2xs dark:border-slate-800 dark:bg-slate-900">
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left text-xs">
-                            <thead className="border-b border-slate-100 bg-slate-50/80 text-[11px] font-extrabold uppercase tracking-wider text-slate-500 dark:border-slate-800 dark:bg-slate-800/60 dark:text-slate-400">
-                                <tr>
-                                    <th className="px-4 py-3">Kode SPK & Ref SO</th>
-                                    <th className="px-4 py-3">Batching Plant & Operator</th>
-                                    <th className="px-4 py-3">Mutu Produk & Recipe</th>
-                                    <th className="px-4 py-3">Jadwal Batching</th>
-                                    <th className="px-4 py-3 min-w-[200px]">Pemenuhan Volume</th>
-                                    <th className="px-4 py-3 text-right">Tindakan</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                                {(workOrders?.data ?? []).length === 0 ? (
-                                    <tr>
-                                        <td colSpan={6} className="px-6 py-12 text-center">
-                                            <div className="mx-auto flex max-w-xs flex-col items-center justify-center text-center">
-                                                <div className="flex size-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-400 dark:bg-slate-800">
-                                                    <FileSpreadsheet className="size-6" />
-                                                </div>
-                                                <p className="mt-3 text-sm font-bold text-slate-900 dark:text-white">Belum Ada Work Order</p>
-                                                <p className="mt-1 text-xs text-slate-500">
-                                                    Terbitkan SPK dari pesanan customer yang sudah dikonfirmasi.
-                                                </p>
-                                                <Button asChild size="sm" className="mt-4 rounded-xl bg-[#0c1d37] text-white">
-                                                    <Link href="/production/work-orders/create">Terbitkan SPK Baru</Link>
-                                                </Button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ) : (
-                                    (workOrders?.data ?? []).map((wo) => {
-                                        const target = Number(wo.target_quantity) || 0;
-                                        const dispatched = Number(wo.dispatched_quantity) || 0;
-                                        const percent = target > 0 ? Math.min(100, Math.round((dispatched / target) * 100)) : 0;
-                                        const isFulfilled = dispatched >= target && target > 0;
+                <ListToolbar
+                    search={search}
+                    onSearchChange={setSearch}
+                    onSubmit={() => go({})}
+                    placeholder="Cari no. SPK, no. pesanan, pelanggan…"
+                >
+                    <FilterSelect
+                        value={plantId}
+                        onChange={(v) => go({ batching_plant_id: v })}
+                    >
+                        <option value="">Semua plant</option>
+                        {plants.map((p) => (
+                            <option key={p.id} value={p.id}>
+                                {p.name}
+                            </option>
+                        ))}
+                    </FilterSelect>
+                </ListToolbar>
 
-                                        return (
-                                            <tr key={wo.uuid} className="transition-colors hover:bg-slate-50/70 dark:hover:bg-slate-800/40">
-                                                {/* 1. CODE & REF SO */}
-                                                <td className="px-4 py-3 align-top whitespace-nowrap">
-                                                    <div className="flex items-center gap-1.5">
-                                                        <span className="font-mono text-xs font-black text-[#0c1d37] dark:text-slate-200">
-                                                            {wo.code}
-                                                        </span>
-                                                        <button
-                                                            type="button"
-                                                            onClick={(e) => copyToClipboard(e, wo.code)}
-                                                            className="text-slate-400 hover:text-slate-600 transition-colors p-0.5 rounded cursor-pointer"
-                                                            title="Salin Kode SPK"
-                                                        >
-                                                            {copiedCode === wo.code ? <Check className="size-3 text-emerald-600" /> : <Copy className="size-3" />}
-                                                        </button>
-                                                    </div>
-                                                    <p className="text-[11px] font-bold text-slate-800 dark:text-slate-200 truncate mt-0.5 max-w-[200px]">
-                                                        {wo.order?.customer_name}
-                                                    </p>
-                                                    <span className="text-[10px] text-slate-400 font-mono block">
-                                                        SO: {wo.order?.code}
-                                                    </span>
-                                                </td>
+                <ListTable
+                    head={
+                        <tr>
+                            <Th>No. SPK</Th>
+                            <Th>Pelanggan</Th>
+                            <Th>Produk</Th>
+                            <Th>Jadwal</Th>
+                            <Th>Progres Kirim</Th>
+                            <Th align="center">Status</Th>
+                        </tr>
+                    }
+                    footer={
+                        <Pagination
+                            links={workOrders.links}
+                            total={workOrders.total}
+                            shown={workOrders.data.length}
+                        />
+                    }
+                >
+                    {workOrders.data.length === 0 ? (
+                        <EmptyRow
+                            colSpan={6}
+                            message="Belum ada SPK yang sesuai filter."
+                        />
+                    ) : (
+                        workOrders.data.map((wo) => {
+                            const st = STATUS[wo.status] ?? {
+                                label: wo.status,
+                                tone: 'slate' as Tone,
+                            };
 
-                                                {/* 2. PLANT & OPERATOR */}
-                                                <td className="px-4 py-3 align-top whitespace-nowrap">
-                                                    <div className="flex items-center gap-1.5 font-bold text-slate-900 dark:text-white">
-                                                        <Factory className="size-3 text-[#ea580c] shrink-0" />
-                                                        <span>{wo.batching_plant?.name}</span>
-                                                    </div>
-                                                    <div className="flex items-center gap-1 text-[10px] text-slate-500 font-mono mt-0.5">
-                                                        <UserCheck className="size-2.5 text-slate-400 shrink-0" />
-                                                        <span>{wo.assigned_user?.name ? `Op: ${wo.assigned_user.name}` : 'Belum Ditugaskan'}</span>
-                                                    </div>
-                                                </td>
-
-                                                {/* 3. PRODUCT & RECIPE */}
-                                                <td className="px-4 py-3 align-top max-w-[240px]">
-                                                    <p className="font-bold text-slate-900 dark:text-white truncate">
-                                                        {wo.product?.name ?? 'Ready Mix Beton'}
-                                                    </p>
-                                                    <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                                                        {wo.batch_recipe_code && (
-                                                            <span className="inline-flex items-center gap-0.5 font-mono text-[10px] font-semibold text-purple-700 bg-purple-50 dark:bg-purple-900/30 dark:text-purple-300 px-1.5 py-0.2 rounded border border-purple-200 dark:border-purple-800">
-                                                                <FlaskConical className="size-2.5" />
-                                                                {wo.batch_recipe_code}
-                                                            </span>
-                                                        )}
-                                                        {wo.slump_target && (
-                                                            <span className="font-mono text-[10px] text-slate-500 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.2 rounded">
-                                                                Slump {wo.slump_target}
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                </td>
-
-                                                {/* 4. SCHEDULE */}
-                                                <td className="px-4 py-3 align-top whitespace-nowrap">
-                                                    <div className="flex items-center gap-1 font-semibold text-slate-800 dark:text-slate-200">
-                                                        <Calendar className="size-3 text-slate-400" />
-                                                        <span>{formatDate(wo.scheduled_date)}</span>
-                                                    </div>
-                                                    <div className="flex items-center gap-1 text-[10px] text-slate-400 font-mono mt-0.5">
-                                                        <Clock className="size-2.5 text-slate-400" />
-                                                        <span>{wo.scheduled_time_slot || 'Slot Reguler'}</span>
-                                                    </div>
-                                                </td>
-
-                                                {/* 5. VOLUME FULFILLMENT */}
-                                                <td className="px-4 py-3 align-top min-w-[200px]">
-                                                    <div className="flex items-center justify-between text-[11px] mb-1">
-                                                        <span className="font-mono font-bold text-slate-900 dark:text-white">
-                                                            {dispatched} / {target} {wo.unit}
-                                                        </span>
-                                                        <span className={`inline-flex items-center rounded-md px-1.5 py-0.2 text-[10px] font-extrabold ${
-                                                            isFulfilled ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : dispatched > 0 ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'bg-slate-100 text-slate-600 border border-slate-200'
-                                                        }`}>
-                                                            {isFulfilled ? 'Tuntas 100%' : dispatched > 0 ? `Dikirim ${percent}%` : 'Antrian'}
-                                                        </span>
-                                                    </div>
-                                                    <div className="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                                                        <div
-                                                            className={`h-full rounded-full transition-all duration-300 ${
-                                                                isFulfilled ? 'bg-emerald-500' : dispatched > 0 ? 'bg-[#ea580c]' : 'bg-slate-300 dark:bg-slate-700'
-                                                            }`}
-                                                            style={{ width: `${percent}%` }}
-                                                        />
-                                                    </div>
-                                                </td>
-
-                                                {/* 6. ACTIONS */}
-                                                <td className="px-4 py-3 align-top text-right whitespace-nowrap">
-                                                    <Button asChild size="sm" className="h-7.5 rounded-lg bg-[#0c1d37] hover:bg-[#162e55] text-white px-2.5 text-xs font-bold shadow-xs">
-                                                        <Link href={`/production/work-orders/${wo.uuid}`}>
-                                                            <Eye className="size-3.5 mr-1 text-slate-300" />
-                                                            <span>Detail SPK</span>
-                                                        </Link>
-                                                    </Button>
-                                                </td>
-                                            </tr>
-                                        );
-                                    })
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-
-                    {/* Pagination */}
-                    {workOrders?.links && workOrders.links.length > 3 && (
-                        <div className="flex items-center justify-between border-t border-slate-100 px-4 py-3 dark:border-slate-800">
-                            <span className="text-xs text-slate-400 font-medium">
-                                Navigasi halaman
-                            </span>
-                            <div className="flex gap-1">
-                                {(workOrders.links ?? []).map((link, idx) => (
-                                    <Button
-                                        key={idx}
-                                        asChild={Boolean(link.url)}
-                                        variant={link.active ? 'default' : 'outline'}
-                                        size="sm"
-                                        disabled={!link.url}
-                                        className={`h-8 px-3 rounded-lg text-xs font-bold ${
-                                            link.active
-                                                ? 'bg-[#0c1d37] text-white hover:bg-[#162e55]'
-                                                : 'border-slate-200 text-slate-700 dark:border-slate-800'
-                                        }`}
-                                    >
-                                        {link.url ? (
-                                            <Link href={link.url} dangerouslySetInnerHTML={{ __html: link.label }} />
-                                        ) : (
-                                            <span dangerouslySetInnerHTML={{ __html: link.label }} />
+                            return (
+                                <tr
+                                    key={wo.uuid}
+                                    onClick={() =>
+                                        router.visit(
+                                            `/production/work-orders/${wo.uuid}`,
+                                        )
+                                    }
+                                    className="cursor-pointer transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/40"
+                                >
+                                    <Td className="whitespace-nowrap">
+                                        <p className="font-mono font-bold text-[#0c1d37] dark:text-slate-100">
+                                            {wo.code}
+                                        </p>
+                                        <p className="font-mono text-[11px] text-slate-400">
+                                            {wo.order?.code}
+                                        </p>
+                                    </Td>
+                                    <Td className="max-w-[240px]">
+                                        <p className="truncate font-semibold text-slate-900 dark:text-white">
+                                            {wo.order?.customer_name ?? '—'}
+                                        </p>
+                                        <p className="truncate text-[11px] text-slate-500">
+                                            {wo.order?.project_title}
+                                        </p>
+                                    </Td>
+                                    <Td className="max-w-[200px]">
+                                        <p className="truncate text-slate-800 dark:text-slate-200">
+                                            {wo.product?.name ?? '—'}
+                                        </p>
+                                    </Td>
+                                    <Td className="whitespace-nowrap">
+                                        <p className="text-slate-800 dark:text-slate-200">
+                                            {formatDate(wo.scheduled_date)}
+                                        </p>
+                                        {wo.scheduled_time_slot && (
+                                            <p className="text-[11px] text-slate-400">
+                                                {wo.scheduled_time_slot}
+                                            </p>
                                         )}
-                                    </Button>
-                                ))}
-                            </div>
-                        </div>
+                                    </Td>
+                                    <Td>
+                                        <Progress
+                                            done={Number(
+                                                wo.dispatched_quantity,
+                                            )}
+                                            total={Number(wo.target_quantity)}
+                                            unit={wo.unit}
+                                        />
+                                    </Td>
+                                    <Td align="center">
+                                        <Badge tone={st.tone}>{st.label}</Badge>
+                                    </Td>
+                                </tr>
+                            );
+                        })
                     )}
-                </div>
-            </div>
+                </ListTable>
+            </ListPage>
         </>
     );
 }
@@ -400,6 +243,6 @@ export default function WorkOrderIndex({
 WorkOrderIndex.layout = {
     breadcrumbs: [
         { title: 'Dashboard', href: dashboard() },
-        { title: 'Work Orders', href: '/production/work-orders' },
+        { title: 'Work Orders (SPK)', href: '/production/work-orders' },
     ],
 };
