@@ -23,6 +23,7 @@ import { DeliveryMap } from '@/components/map/delivery-map';
 import { Button } from '@/components/ui/button';
 import { formatDate, formatDateTime } from '@/lib/utils';
 import { dashboard } from '@/routes';
+import { FEATURES } from '@/lib/features';
 
 type Stats = {
     branches: number;
@@ -485,6 +486,7 @@ export default function Dashboard({
                                         )}
                                         <p className="text-[11px] text-slate-400">{formatDateTime(sj.created_at)} · {sj.plant_name ?? '—'}</p>
                                     </div>
+                                    {FEATURES.weighbridge && (
                                     <div className="ml-3 text-right shrink-0">
                                         {sj.net_weight_kg ? (
                                             <div className="flex items-center gap-1 text-xs text-slate-600 dark:text-slate-300">
@@ -495,6 +497,7 @@ export default function Dashboard({
                                             <span className="text-[11px] text-slate-400">—</span>
                                         )}
                                     </div>
+                                    )}
                                 </Link>
                             ))}
                         </div>

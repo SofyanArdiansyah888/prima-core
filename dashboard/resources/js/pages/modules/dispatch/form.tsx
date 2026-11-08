@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { dashboard } from '@/routes';
+import { FEATURES } from '@/lib/features';
 
 type Plant = {
     id: number;
@@ -235,7 +236,7 @@ return;
                             Terbitkan Surat Jalan & Ritase Pengantaran
                         </h1>
                         <p className="text-xs text-slate-500">
-                            Atur armada pengangkut, timbangan muatan netto, serta alokasi pengantaran (Single Trip maupun Multi-Drop Gabungan).
+                            Atur armada pengangkut serta alokasi pengantaran (Single Trip maupun Multi-Drop Gabungan).
                         </p>
                     </div>
                 </div>
@@ -344,6 +345,8 @@ return;
                         </div>
                     </div>
 
+                    {FEATURES.weighbridge && (
+                    <>
                     {/* Weight Scale / Nota Timbangan Box */}
                     <div className="rounded-xl border border-slate-200/80 bg-white p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)] dark:border-slate-800 dark:bg-slate-900">
                         <div className="flex items-center gap-2 border-b border-slate-100 pb-4 mb-6 dark:border-slate-800">
@@ -399,13 +402,15 @@ return;
                             </div>
                         </div>
                     </div>
+                    </>
+                    )}
 
                     {/* Delivery Stops & Payload (Single or Combined Delivery) */}
                     <div className="rounded-xl border border-slate-200/80 bg-white p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)] dark:border-slate-800 dark:bg-slate-900">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-100 pb-4 mb-6 dark:border-slate-800 gap-2">
                             <div>
                                 <h2 className="text-base font-semibold text-slate-900 dark:text-white">
-                                    3. Muatan & Tujuan Pengantaran (Delivery Stops)
+                                    {FEATURES.weighbridge ? '3' : '2'}. Muatan & Tujuan Pengantaran (Delivery Stops)
                                 </h2>
                                 <p className="text-xs text-slate-500">
                                     Pilih pesanan yang akan diangkut. Jika produk adalah Semen Sak / Mortar, Anda dapat menggabungkan multi-drop untuk beberapa customer dalam 1 armada.
@@ -453,6 +458,23 @@ return;
                             {data.items.map((item, index) => {
                                 const currentOrder = activeOrders.find((o) => o.id === Number(item.order_id));
                                 const currentItem = currentOrder?.items.find((i) => i.product_id === Number(item.product_id)) ?? currentOrder?.items[0];
+                                const otherStopsQty = data.items.reduce(
+                                    (sum, other, j) =>
+                                        j !== index && Number(other.order_id) === Number(item.order_id) && Number(other.product_id) === Number(item.product_id)
+                                            ? sum + Number(other.quantity_delivered || 0)
+                                            : sum,
+                                    0,
+                                );
+                                const orderRemaining = currentItem
+                                    ? Math.max(0, Number(currentItem.quantity) - Number(currentItem.fulfilled_quantity) - otherStopsQty)
+                                    : null;
+                                const currentWo = currentOrder?.work_orders.find((w) => w.id === Number(item.work_order_id));
+                                const woRemaining = currentWo ? Math.max(0, Number(currentWo.target_quantity) - Number(currentWo.dispatched_quantity)) : null;
+                                const maxQty =
+                                    orderRemaining === null ? null : woRemaining === null ? orderRemaining : Math.min(orderRemaining, woRemaining);
+                                const roundedMax = maxQty === null ? null : Math.round(maxQty * 100) / 100;
+                                const overLimit = roundedMax !== null && Number(item.quantity_delivered || 0) > roundedMax + 0.0001;
+                                const qtyError = (errors as Record<string, string | undefined>)[`items.${index}.quantity_delivered`];
 
                                 return (
                                     <div
@@ -487,7 +509,7 @@ return;
                                                     <option value="">-- Pilih Pesanan Customer --</option>
                                                     {activeOrders.map((o) => (
                                                         <option key={o.id} value={o.id}>
-                                                            {o.code} — {o.customer_name} ({o.project_title})
+                                                            {o.code} — {o.customer_name} ({o.project_title}) • Lunas
                                                         </option>
                                                     ))}
                                                 </select>
@@ -514,14 +536,23 @@ return;
                                                 <Input
                                                     type="number"
                                                     step="0.1"
+                                                    min={0.1}
+                                                    max={roundedMax ?? undefined}
                                                     value={item.quantity_delivered}
                                                     onChange={(e) => {
                                                         const newItems = [...data.items];
                                                         newItems[index].quantity_delivered = Number(e.target.value);
                                                         setData('items', newItems);
                                                     }}
-                                                    className="mt-1 font-bold"
+                                                    className={`mt-1 font-bold ${overLimit ? 'border-rose-400 focus-visible:ring-rose-500/20' : ''}`}
                                                 />
+                                                {roundedMax !== null && (
+                                                    <p className={`mt-1 text-[11px] ${overLimit ? 'font-bold text-rose-600' : 'text-slate-500'}`}>
+                                                        {overLimit ? 'Melebihi sisa! ' : ''}Maks. {roundedMax} {currentItem?.unit}
+                                                        {woRemaining !== null && orderRemaining !== null && woRemaining < orderRemaining ? ' (sisa SPK)' : ' (sisa pesanan)'}
+                                                    </p>
+                                                )}
+                                                {qtyError && <p className="mt-1 text-xs text-rose-600">{qtyError}</p>}
                                             </div>
 
                                             <div className="sm:col-span-12 grid gap-3 sm:grid-cols-3 pt-2 border-t border-slate-200/60 dark:border-slate-700">

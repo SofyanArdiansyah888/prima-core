@@ -74,9 +74,11 @@ class DispatchController extends Controller
     {
         $plantId = $request->input('batching_plant_id');
 
+        // Hanya pesanan LUNAS dengan SPK aktif dan masih ada sisa volume yang belum dikirim
         $activeOrders = Order::query()
             ->readyForProduction()
             ->whereHas('workOrders', fn ($q) => $q->whereRaw('dispatched_quantity < target_quantity'))
+            ->whereHas('items', fn ($q) => $q->whereColumn('fulfilled_quantity', '<', 'quantity'))
             ->with([
                 'items.product',
                 'workOrders' => fn ($q) => $q->whereRaw('dispatched_quantity < target_quantity'),

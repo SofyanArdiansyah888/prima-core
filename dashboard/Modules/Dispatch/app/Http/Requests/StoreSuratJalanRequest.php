@@ -6,8 +6,10 @@ use Closure;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Modules\Order\Models\Order;
+use Modules\Order\Models\OrderItem;
 use Modules\Product\Models\Product;
 use Modules\Shared\Enums\UserRole;
+use Modules\WorkOrder\Models\WorkOrder;
 
 class StoreSuratJalanRequest extends FormRequest
 {
@@ -70,6 +72,76 @@ class StoreSuratJalanRequest extends FormRequest
                     );
                 }
             }
+
+            $this->validateRemainingQuantities($validator, $items);
         });
+    }
+
+    /**
+     * Volume ritase tidak boleh melebihi sisa pesanan (dipesan − sudah dikirim)
+     * maupun sisa SPK (target − sudah didispatch). Beberapa stop untuk item yang sama dijumlahkan.
+     *
+     * @param  array<int, array<string, mixed>>  $items
+     */
+    private function validateRemainingQuantities($validator, array $items): void
+    {
+        $perOrderItem = [];
+        $perWorkOrder = [];
+
+        foreach ($items as $index => $item) {
+            $qty = (float) ($item['quantity_delivered'] ?? 0);
+            if (! isset($item['order_id'], $item['product_id'])) {
+                continue;
+            }
+
+            $key = $item['order_id'].':'.$item['product_id'];
+            $perOrderItem[$key]['qty'] = ($perOrderItem[$key]['qty'] ?? 0) + $qty;
+            $perOrderItem[$key]['index'] = $index;
+
+            if (! empty($item['work_order_id'])) {
+                $perWorkOrder[$item['work_order_id']]['qty'] = ($perWorkOrder[$item['work_order_id']]['qty'] ?? 0) + $qty;
+                $perWorkOrder[$item['work_order_id']]['index'] = $index;
+            }
+        }
+
+        foreach ($perOrderItem as $key => $row) {
+            [$orderId, $productId] = explode(':', $key);
+            $orderItem = OrderItem::query()->with('order:id,code')->where('order_id', $orderId)->where('product_id', $productId)->first();
+
+            if (! $orderItem) {
+                $validator->errors()->add("items.{$row['index']}.product_id", 'Produk ini tidak ada dalam pesanan yang dipilih.');
+
+                continue;
+            }
+
+            $remaining = round((float) $orderItem->quantity - (float) $orderItem->fulfilled_quantity, 2);
+            if ($row['qty'] - $remaining > 0.0001) {
+                $validator->errors()->add(
+                    "items.{$row['index']}.quantity_delivered",
+                    'Volume melebihi sisa pesanan '.$orderItem->order?->code.': sisa '.$this->qty(max(0, $remaining)).' '.$orderItem->unit
+                        .' (dipesan '.$this->qty($orderItem->quantity).', sudah dikirim '.$this->qty($orderItem->fulfilled_quantity).').'
+                );
+            }
+        }
+
+        foreach ($perWorkOrder as $workOrderId => $row) {
+            $workOrder = WorkOrder::query()->find($workOrderId);
+            if (! $workOrder) {
+                continue;
+            }
+
+            $remaining = round((float) $workOrder->target_quantity - (float) $workOrder->dispatched_quantity, 2);
+            if ($row['qty'] - $remaining > 0.0001) {
+                $validator->errors()->add(
+                    "items.{$row['index']}.quantity_delivered",
+                    "Volume melebihi sisa SPK {$workOrder->code}: sisa ".$this->qty(max(0, $remaining))." {$workOrder->unit}."
+                );
+            }
+        }
+    }
+
+    private function qty(mixed $value): string
+    {
+        return rtrim(rtrim(number_format((float) $value, 2, ',', '.'), '0'), ',');
     }
 }

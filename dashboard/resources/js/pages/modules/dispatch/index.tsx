@@ -22,6 +22,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { dashboard } from '@/routes';
+import { FEATURES } from '@/lib/features';
 
 type SuratJalanRow = {
     id: number;
@@ -149,7 +150,7 @@ export default function DispatchIndex({
                             Surat Jalan & Pengantaran Armada
                         </h1>
                         <p className="text-xs text-slate-500 dark:text-slate-400">
-                            Penerbitan Surat Jalan (Single Trip / Multi-Drop), nota timbangan digital, dan monitoring GPS armada mixer.
+                            Penerbitan Surat Jalan (Single Trip / Multi-Drop) dan monitoring armada mixer.
                         </p>
                     </div>
 
@@ -245,7 +246,7 @@ export default function DispatchIndex({
                                     <th className="px-4 py-3">Armada & Driver</th>
                                     <th className="px-4 py-3">Plant & Tujuan Drop</th>
                                     <th className="px-4 py-3">Muatan & Volume</th>
-                                    <th className="px-4 py-3">Timbangan Netto</th>
+                                    {FEATURES.weighbridge && <th className="px-4 py-3">Timbangan Netto</th>}
                                     <th className="px-4 py-3 text-center">Status</th>
                                     <th className="px-4 py-3 text-right">Tindakan</th>
                                 </tr>
@@ -253,7 +254,7 @@ export default function DispatchIndex({
                             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                                 {suratJalans.data.length === 0 ? (
                                     <tr>
-                                        <td colSpan={7} className="px-6 py-12 text-center">
+                                        <td colSpan={FEATURES.weighbridge ? 7 : 6} className="px-6 py-12 text-center">
                                             <div className="mx-auto flex max-w-xs flex-col items-center justify-center text-center">
                                                 <div className="flex size-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-400 dark:bg-slate-800">
                                                     <Truck className="size-6" />
@@ -349,6 +350,8 @@ export default function DispatchIndex({
                                                     </p>
                                                 </td>
 
+                                                {FEATURES.weighbridge && (
+                                                <>
                                                 {/* 5. WEIGHING SCALE */}
                                                 <td className="px-4 py-3 align-top whitespace-nowrap">
                                                     {sj.net_weight_kg ? (
@@ -367,6 +370,8 @@ export default function DispatchIndex({
                                                         <span className="text-[11px] text-slate-400 font-mono">Timbangan Manual</span>
                                                     )}
                                                 </td>
+                                                </>
+                                                )}
 
                                                 {/* 6. STATUS */}
                                                 <td className="px-4 py-3 align-top text-center whitespace-nowrap">

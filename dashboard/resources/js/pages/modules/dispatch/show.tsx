@@ -47,6 +47,7 @@ type SuratJalanDetail = {
 
 import { useState } from 'react';
 import { ConfirmModal } from '@/components/ui/confirm-modal';
+import { FEATURES } from '@/lib/features';
 
 export default function DispatchShow({ suratJalan }: { suratJalan: SuratJalanDetail }) {
     const [confirmDialog, setConfirmDialog] = useState<{
@@ -185,6 +186,8 @@ export default function DispatchShow({ suratJalan }: { suratJalan: SuratJalanDet
                             </div>
                         </div>
 
+                        {FEATURES.weighbridge && (
+                        <>
                         {/* Weight scale */}
                         <div className="rounded-xl border border-slate-200/80 bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)] dark:border-slate-800 dark:bg-slate-900 space-y-2 text-sm">
                             <div className="flex items-center gap-1.5 border-b border-slate-100 pb-3 mb-2 dark:border-slate-800">
@@ -210,6 +213,9 @@ export default function DispatchShow({ suratJalan }: { suratJalan: SuratJalanDet
                                 <span className="font-mono">{Number(suratJalan.net_weight_kg || 0).toLocaleString('id-ID')} Kg</span>
                             </div>
                         </div>
+                        </>
+                        )}
+
                     </div>
 
                     {/* Right: Delivery Stops and Ordered Cargo */}

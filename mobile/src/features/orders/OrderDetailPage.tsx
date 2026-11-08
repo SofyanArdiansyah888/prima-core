@@ -221,10 +221,16 @@ export default function OrderDetailPage() {
   };
   const normalizedStatus = normalizeStatus(order?.status);
   const deliverySjs = (order?.surat_jalans ?? []).filter((sj) => sj.status !== 'CANCELLED' && sj.status !== 'RETURNED');
-  // Sopir sudah konfirmasi serah terima semua pengiriman → tahap pengiriman selesai, tinggal konfirmasi pelanggan
-  const driverDelivered =
-    order?.status === 'ON_DELIVERY' &&
-    (Boolean(order?.can_confirm_complete) || (deliverySjs.length > 0 && deliverySjs.every((sj) => sj.status === 'COMPLETED')));
+  // Seluruh material terkirim & diterima (server: can_confirm_complete) → tinggal konfirmasi pelanggan
+  const driverDelivered = order?.status === 'ON_DELIVERY' && Boolean(order?.can_confirm_complete);
+  // Sebagian sudah diterima, sisa volume belum dikirim (pengiriman bertahap)
+  const orderedQty = (order?.items ?? []).reduce((sum, i) => sum + Number(i.quantity || 0), 0);
+  const receivedQty = deliverySjs
+    .filter((sj) => sj.status === 'COMPLETED')
+    .reduce((sum, sj) => sum + sj.items.reduce((s, i) => s + Number(i.quantity || 0), 0), 0);
+  const deliveryUnit = order?.items?.[0]?.unit ?? '';
+  const partiallyDelivered =
+    order?.status === 'ON_DELIVERY' && !driverDelivered && receivedQty > 0 && receivedQty < orderedQty;
   const currentIndex = driverDelivered
     ? STATUS_STEPS.indexOf('COMPLETED')
     : normalizedStatus !== 'UNKNOWN' && normalizedStatus !== 'CANCELLED'
@@ -535,6 +541,8 @@ export default function OrderDetailPage() {
                       PROCESSING: 'Batching plant memproses produksi beton sesuai formula & SPK',
                       ON_DELIVERY: driverDelivered
                         ? 'Material telah diserahterimakan & dikonfirmasi oleh sopir'
+                        : partiallyDelivered
+                        ? `Pengiriman bertahap: ${formatQty(receivedQty)} dari ${formatQty(orderedQty)} ${deliveryUnit} telah diterima. Sisa ${formatQty(orderedQty - receivedQty)} ${deliveryUnit} sedang dijadwalkan. Konfirmasi selesai tersedia setelah seluruh material diterima.`
                         : 'Truk mixer dalam perjalanan mengantarkan beton ke proyek',
                       COMPLETED: driverDelivered
                         ? 'Mohon konfirmasi penerimaan melalui tombol di bawah layar'

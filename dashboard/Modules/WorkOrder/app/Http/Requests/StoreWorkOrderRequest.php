@@ -5,6 +5,8 @@ namespace Modules\WorkOrder\Http\Requests;
 use Closure;
 use Illuminate\Foundation\Http\FormRequest;
 use Modules\Order\Models\Order;
+use Modules\Order\Models\OrderItem;
+use Modules\WorkOrder\Models\WorkOrder;
 
 class StoreWorkOrderRequest extends FormRequest
 {
@@ -31,5 +33,44 @@ class StoreWorkOrderRequest extends FormRequest
             'slump_target' => ['nullable', 'string', 'max:64'],
             'production_notes' => ['nullable', 'string'],
         ];
+    }
+
+    /**
+     * Total target seluruh SPK aktif untuk satu item pesanan tidak boleh melebihi jumlah yang dipesan.
+     */
+    public function withValidator($validator): void
+    {
+        $validator->after(function ($validator) {
+            if ($validator->errors()->isNotEmpty()) {
+                return;
+            }
+
+            $orderItem = OrderItem::query()
+                ->where('order_id', $this->input('order_id'))
+                ->where('product_id', $this->input('product_id'))
+                ->first();
+
+            if (! $orderItem) {
+                $validator->errors()->add('product_id', 'Produk ini tidak ada dalam pesanan yang dipilih.');
+
+                return;
+            }
+
+            $scheduled = (float) WorkOrder::query()
+                ->where('order_id', $orderItem->order_id)
+                ->where('product_id', $orderItem->product_id)
+                ->where('status', '!=', 'CANCELLED')
+                ->sum('target_quantity');
+
+            $remaining = round((float) $orderItem->quantity - $scheduled, 2);
+            if ((float) $this->input('target_quantity') - $remaining > 0.0001) {
+                $fmt = fn ($v) => rtrim(rtrim(number_format((float) $v, 2, ',', '.'), '0'), ',');
+                $validator->errors()->add(
+                    'target_quantity',
+                    'Target melebihi sisa pesanan yang belum dibuatkan SPK: sisa '.$fmt(max(0, $remaining)).' '.$orderItem->unit
+                        .' (dipesan '.$fmt($orderItem->quantity).', sudah ada SPK '.$fmt($scheduled).').'
+                );
+            }
+        });
     }
 }
