@@ -243,7 +243,7 @@ export default function SalesOrderDetailPage() {
     return (
       <Screen>
         <div className="p-4 text-center">
-          <p className="text-xs text-red-600">Pesanan tidak ditemukan.</p>
+          <p className="text-xs text-red-600">{error || 'Pesanan tidak ditemukan.'}</p>
           <button
             type="button"
             onClick={() => navigate('/sales/orders')}
