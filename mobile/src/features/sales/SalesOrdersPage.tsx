@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { IonIcon } from '@ionic/react';
 import {
+  navigateOutline,
   arrowForwardOutline,
   briefcaseOutline,
   calendarOutline,
@@ -229,6 +230,19 @@ export default function SalesOrdersPage() {
                   </div>
                 )}
               </div>
+
+              {order.delivery_lat !== null && order.delivery_lng !== null && order.status === 'PENDING_APPROVAL' && (
+                <a
+                  href={`https://www.google.com/maps/dir/?api=1&destination=${order.delivery_lat},${order.delivery_lng}&travelmode=driving`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  className="mt-3 flex items-center justify-center gap-1.5 rounded-xl border border-blue-300 bg-blue-50 hover:bg-blue-100 py-2.5 px-3 text-xs font-bold text-blue-700 shadow-2xs active:scale-[0.98] transition-all"
+                >
+                  <IonIcon icon={navigateOutline} className="text-base text-blue-600" />
+                  <span>Rute ke Lokasi (Google Maps)</span>
+                </a>
+              )}
 
               {/* Action Button */}
               <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between">

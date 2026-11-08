@@ -460,17 +460,8 @@ export default function OrderDetailPage() {
 
                 <div className="rounded-xl bg-white/90 p-2.5 text-[11px] text-slate-600 border border-emerald-200/80 leading-relaxed">
                   ⏱ <strong>Tenggat Otomatis:</strong> Pesanan akan otomatis ditutup dalam waktu <strong>2x24 jam</strong> jika tidak dikonfirmasi manual.
+                  Gunakan tombol <strong>Konfirmasi</strong> di bagian bawah layar.
                 </div>
-
-                <button
-                  type="button"
-                  disabled={completing}
-                  onClick={() => void handleConfirmComplete()}
-                  className="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 py-3 text-xs font-black text-white shadow-md transition-all active:scale-[0.98] cursor-pointer disabled:opacity-60"
-                >
-                  <IonIcon icon={shieldCheckmarkOutline} className="text-base" />
-                  <span>{completing ? 'Menyimpan Konfirmasi…' : 'Konfirmasi Pesanan Diterima & Selesai'}</span>
-                </button>
               </Card>
             )}
 

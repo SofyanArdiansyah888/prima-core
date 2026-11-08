@@ -4,12 +4,13 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Str;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Modules\BatchingPlant\Models\BatchingPlant;
 use Modules\Branch\Models\Branch;
 use Modules\Customer\Models\Customer;
 use Modules\Order\Models\Order;
-use Modules\Order\Models\OrderItem;
+use Modules\Order\Models\SitePhoto;
 use Modules\Product\Models\Product;
 use Modules\ProductCategory\Models\ProductCategory;
 use Modules\Shared\Enums\UserRole;
@@ -20,10 +21,15 @@ class SalesMobileApiTest extends TestCase
     use RefreshDatabase;
 
     private Branch $branch;
+
     private BatchingPlant $plant;
+
     private User $sales;
+
     private User $driver;
+
     private Customer $customer;
+
     private Product $product;
 
     protected function setUp(): void
@@ -198,5 +204,54 @@ class SalesMobileApiTest extends TestCase
             'id' => $order->id,
             'status' => 'CANCELLED',
         ]);
+    }
+
+    public function test_sales_can_upload_on_site_photo_with_distance_to_project(): void
+    {
+        Storage::fake('public');
+        $token = $this->sales->createToken('test')->plainTextToken;
+
+        $order = Order::query()->create([
+            'customer_id' => $this->customer->id,
+            'code' => 'ORD-TEST-PHOTO',
+            'customer_name' => 'Pelanggan Proyek',
+            'customer_phone' => '081399990001',
+            'customer_type' => 'B2C',
+            'project_title' => 'Pengecoran Rumah',
+            'batching_plant_id' => $this->plant->id,
+            'delivery_address' => 'Jl. Gang Sempit No 1',
+            'delivery_lat' => -5.115,
+            'delivery_lng' => 119.495,
+            'status' => 'PENDING_APPROVAL',
+            'total_price' => 1000000,
+            'payment_method' => 'MIDTRANS',
+            'payment_status' => 'PENDING',
+        ]);
+
+        $res = $this->withHeader('Authorization', "Bearer {$token}")
+            ->post("/api/sales/v1/orders/{$order->uuid}/photos", [
+                'photo' => UploadedFile::fake()->image('lokasi.jpg', 800, 600),
+                'lat' => -5.1151,
+                'lng' => 119.4951,
+                'accuracy' => 12,
+            ], ['Accept' => 'application/json']);
+
+        $res->assertCreated()
+            ->assertJsonPath('data.role', 'sales')
+            ->assertJsonPath('data.on_site', true);
+        $this->assertLessThan(50, $res->json('data.distance_m'));
+        Storage::disk('public')->assertExists(SitePhoto::query()->first()->path);
+
+        $this->withHeader('Authorization', "Bearer {$token}")
+            ->getJson("/api/sales/v1/orders/{$order->uuid}")
+            ->assertOk()
+            ->assertJsonCount(1, 'data.site_photos');
+
+        // Bukan gambar -> ditolak
+        $this->withHeader('Authorization', "Bearer {$token}")
+            ->post("/api/sales/v1/orders/{$order->uuid}/photos", [
+                'photo' => UploadedFile::fake()->create('x.pdf', 10, 'application/pdf'),
+            ], ['Accept' => 'application/json'])
+            ->assertStatus(422);
     }
 }

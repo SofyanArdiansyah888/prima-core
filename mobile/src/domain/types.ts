@@ -188,6 +188,20 @@ export type StaffUser = {
   branch?: { id: number; code: string; name: string } | null;
 };
 
+export type SitePhoto = {
+  uuid: string;
+  role: 'sales' | 'driver' | string;
+  url: string;
+  lat: number | null;
+  lng: number | null;
+  accuracy_m: number | null;
+  distance_m: number | null;
+  on_site: boolean | null;
+  notes: string | null;
+  taken_by: string | null;
+  taken_at: string | null;
+};
+
 export type SalesOrderSummary = {
   uuid: string;
   code: string;
@@ -208,6 +222,7 @@ export type SalesOrderSummary = {
   survey_notes?: string | null;
   rejection_reason?: string | null;
   created_at: string | null;
+  site_photos?: SitePhoto[];
   plant: {
     id: number;
     code: string;
@@ -229,6 +244,7 @@ export type DriverDeliverySummary = {
   departure_time?: string | null;
   arrival_time?: string | null;
   notes?: string | null;
+  site_photos?: SitePhoto[];
   plant: { code: string; name: string; phone: string | null } | null;
   items: {
     id: number;

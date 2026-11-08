@@ -47,3 +47,5 @@ export type { SafeImageProps } from './SafeImage';
 
 export { ConfirmModal } from './ConfirmModal';
 export type { ConfirmModalProps } from './ConfirmModal';
+
+export { SitePhotoCapture } from './SitePhotoCapture';

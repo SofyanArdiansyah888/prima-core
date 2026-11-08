@@ -169,13 +169,16 @@
 
     <table class="header-table">
         <tr>
-            <td style="width: 60%;">
+            <td style="width: 62px; vertical-align: middle; padding-right: 10px;">
+                <img src="{{ \App\Support\PrintLogo::dataUri() }}" alt="Logo PKM" style="width: 56px; height: auto;">
+            </td>
+            <td style="width: 52%; vertical-align: middle;">
                 <div class="company-name">PT PRIMA KARYA MANUNGGAL</div>
                 <div class="company-sub">Semen Tonasa Group &bull; SIG</div>
                 <div class="company-desc">NPWP: 01.122.344.5-801.000 &bull; Pengusaha Kena Pajak (PKP)</div>
                 <div class="company-desc">Biringere, Pangkep, Sulawesi Selatan | Telp: (0410) 21012</div>
             </td>
-            <td class="doc-title" style="width: 40%;">
+            <td class="doc-title" style="width: 38%;">
                 <h1>Faktur Tagihan &amp; Pajak</h1>
                 <div class="doc-code">INV-PKM/{{ $order->code }}</div>
                 <div style="margin-top: 4px;">

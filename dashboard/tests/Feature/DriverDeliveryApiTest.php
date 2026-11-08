@@ -3,6 +3,9 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Modules\BatchingPlant\Models\BatchingPlant;
 use Modules\Branch\Models\Branch;
 use Modules\Customer\Models\Customer;
@@ -17,12 +20,16 @@ use Tests\TestCase;
 
 class DriverDeliveryApiTest extends TestCase
 {
-    use \Illuminate\Foundation\Testing\RefreshDatabase;
+    use RefreshDatabase;
 
     private Branch $branch;
+
     private BatchingPlant $plant;
+
     private User $driver;
+
     private Customer $customer;
+
     private Product $product;
 
     protected function setUp(): void
@@ -194,5 +201,74 @@ class DriverDeliveryApiTest extends TestCase
         $this->assertSame('ON_DELIVERY', $refreshedOrder->status);
         $this->assertNotNull($refreshedOrder->delivered_at);
         $this->assertNull($refreshedOrder->customer_confirmed_at);
+    }
+
+    public function test_driver_can_upload_arrival_photo_and_other_driver_cannot(): void
+    {
+        Storage::fake('public');
+        $token = $this->driver->createToken('test')->plainTextToken;
+
+        $sj = SuratJalan::query()->create([
+            'code' => 'SJ-TEST-PHOTO',
+            'batching_plant_id' => $this->plant->id,
+            'driver_id' => $this->driver->id,
+            'vehicle_number' => 'DD 8912 PKM',
+            'vehicle_type' => 'MIXER_TRUCK_7M3',
+            'driver_name' => 'Pak Syamsuddin',
+            'driver_phone' => '081299990003',
+            'status' => 'ON_THE_WAY',
+        ]);
+        $order = Order::query()->create([
+            'customer_id' => $this->customer->id,
+            'code' => 'ORD-TEST-PHOTO',
+            'customer_name' => 'Pak Haji Andi',
+            'customer_phone' => '081399990002',
+            'customer_type' => 'B2C',
+            'project_title' => 'Dak Lantai 2',
+            'batching_plant_id' => $this->plant->id,
+            'delivery_address' => 'Jl. Pengayoman No 5',
+            'status' => 'ON_DELIVERY',
+            'total_price' => 5600000,
+            'payment_method' => 'MIDTRANS',
+            'payment_status' => 'PAID',
+        ]);
+        SuratJalanItem::query()->create([
+            'surat_jalan_id' => $sj->id,
+            'order_id' => $order->id,
+            'product_id' => $this->product->id,
+            'quantity_delivered' => 7.0,
+            'unit' => 'm³',
+            'destination_customer_name' => 'Pak Haji Andi',
+            'destination_address' => 'Jl. Pengayoman No 5',
+            'destination_lat' => -5.15,
+            'destination_lng' => 119.45,
+            'status' => 'ON_TRUCK',
+        ]);
+
+        $this->withHeader('Authorization', "Bearer {$token}")
+            ->post("/api/driver/v1/deliveries/{$sj->uuid}/photos", [
+                'photo' => UploadedFile::fake()->image('tiba.jpg'),
+                'lat' => -5.16,
+                'lng' => 119.45,
+            ], ['Accept' => 'application/json'])
+            ->assertCreated()
+            ->assertJsonPath('data.role', 'driver')
+            ->assertJsonPath('data.on_site', false);
+
+        $this->withHeader('Authorization', "Bearer {$token}")
+            ->getJson('/api/driver/v1/deliveries')
+            ->assertOk()
+            ->assertJsonCount(1, 'data.0.site_photos');
+
+        $other = User::query()->create([
+            'name' => 'Sopir Lain', 'email' => 'lain@pkm.test', 'phone' => '081277770000',
+            'password' => bcrypt('password'), 'role' => UserRole::Driver, 'is_active' => true,
+        ]);
+        $this->app['auth']->forgetGuards();
+        $this->withHeader('Authorization', 'Bearer '.$other->createToken('t')->plainTextToken)
+            ->post("/api/driver/v1/deliveries/{$sj->uuid}/photos", [
+                'photo' => UploadedFile::fake()->image('x.jpg'),
+            ], ['Accept' => 'application/json'])
+            ->assertForbidden();
     }
 }

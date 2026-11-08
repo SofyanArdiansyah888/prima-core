@@ -9,7 +9,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 use Modules\Order\Models\Order;
+use Modules\Order\Models\SitePhoto;
 use Modules\Order\Services\ApproveOrderSite;
+use Modules\Order\Services\StoreSitePhoto;
 use Modules\Shared\Enums\UserRole;
 
 class SalesOrderApiController extends Controller
@@ -145,11 +147,25 @@ class SalesOrderApiController extends Controller
             'batchingPlant.branch',
             'items.product',
             'approver',
+            'sitePhotos.user:id,name',
         ]);
 
         return response()->json([
             'data' => $this->transform($order),
         ]);
+    }
+
+    public function storePhoto(Request $request, Order $order, StoreSitePhoto $photos): JsonResponse
+    {
+        $order->loadMissing('batchingPlant');
+        $this->authorizeAccess($request->user(), $order);
+
+        $photo = $photos->store($request, $order, $request->user(), 'sales');
+
+        return response()->json([
+            'message' => 'Foto lokasi berhasil disimpan.',
+            'data' => $photo->toApi(),
+        ], 201);
     }
 
     public function approve(Request $request, Order $order, ApproveOrderSite $approveSite): JsonResponse
@@ -238,6 +254,9 @@ class SalesOrderApiController extends Controller
             'survey_notes' => $order->survey_notes,
             'rejection_reason' => $order->rejection_reason,
             'created_at' => $order->created_at?->toIso8601String(),
+            'site_photos' => $order->relationLoaded('sitePhotos')
+                ? $order->sitePhotos->map(fn (SitePhoto $p) => $p->toApi())->values()
+                : [],
             'plant' => $order->batchingPlant ? [
                 'id' => $order->batchingPlant->id,
                 'code' => $order->batchingPlant->code,

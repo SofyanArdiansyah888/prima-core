@@ -16,7 +16,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { getStaffUser, staffApi } from '../../data/staffApi';
 import type { DriverDeliverySummary, StaffUser } from '../../domain/types';
-import { Card, Screen } from '../../shared/ui';
+import { Card, Screen, SitePhotoCapture } from '../../shared/ui';
 import PkmLogo from '../../shared/ui/PkmLogo';
 
 const VEHICLE_LABEL: Record<string, string> = {
@@ -250,6 +250,23 @@ export default function DriverDeliveriesPage() {
                       )}
                     </div>
                   ))}
+                </div>
+
+                {/* Foto bukti tiba di lokasi */}
+                <div className="border-t border-slate-100 pt-2.5">
+                  <SitePhotoCapture
+                    title="Foto Tiba di Lokasi"
+                    stampLabel="SOPIR"
+                    reference={sj.code}
+                    photos={sj.site_photos ?? []}
+                    readOnly={sj.status === 'COMPLETED'}
+                    upload={async (input) => (await staffApi.uploadDriverPhoto(sj.uuid, input)).data}
+                    onUploaded={(photo) =>
+                      setDeliveries((prev) =>
+                        prev.map((d) => (d.uuid === sj.uuid ? { ...d, site_photos: [photo, ...(d.site_photos ?? [])] } : d)),
+                      )
+                    }
+                  />
                 </div>
 
                 {/* Action Buttons for Active SJ */}

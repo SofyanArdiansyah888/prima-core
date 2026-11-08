@@ -11,6 +11,7 @@ Route::prefix('driver/v1')->group(function () {
         Route::get('me', [DriverDeliveryApiController::class, 'me']);
         Route::post('logout', [DriverDeliveryApiController::class, 'logout']);
         Route::get('deliveries', [DriverDeliveryApiController::class, 'deliveries']);
+        Route::post('deliveries/{suratJalan}/photos', [DriverDeliveryApiController::class, 'storePhoto'])->middleware('throttle:30,1');
         Route::post('deliveries/{suratJalan}/complete', [DriverDeliveryApiController::class, 'complete']);
     });
 });

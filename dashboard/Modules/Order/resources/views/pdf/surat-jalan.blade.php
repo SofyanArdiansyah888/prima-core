@@ -204,11 +204,7 @@
     <table class="header-table">
         <tr>
             <td class="logo-box">
-                <div class="pkm-badge">
-                    <span style="font-size: 6px; display: block;">&star; PKM &star;</span>
-                    <strong style="font-size: 9px; display: block; margin: 1px 0;">PKM</strong>
-                    <span style="font-size: 5px; display: block;">SEMEN TONASA</span>
-                </div>
+                <img src="{{ \App\Support\PrintLogo::dataUri() }}" alt="Logo PKM" style="width: 54px; height: auto;">
             </td>
             <td class="pkm-title">
                 PT. PRIMA KARYA MANUNGGAL

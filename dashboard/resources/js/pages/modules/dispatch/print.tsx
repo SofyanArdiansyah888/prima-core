@@ -126,11 +126,7 @@ export default function DispatchPrint({ suratJalan }: { suratJalan: SuratJalanDe
                     <div className="flex items-center justify-between border-b-2 border-black pb-3">
                         {/* Logo PKM Bulat & Teks Perusahaan */}
                         <div className="flex items-center gap-3">
-                            <div className="size-14 rounded-full border-2 border-black flex flex-col items-center justify-center text-center p-1 font-bold leading-none shrink-0">
-                                <span className="text-[6px] tracking-tight">&star; PKM &star;</span>
-                                <span className="text-[11px] font-black tracking-tighter my-0.5">PKM</span>
-                                <span className="text-[5px] uppercase tracking-tighter">Semen Tonasa</span>
-                            </div>
+                            <img src="/logo-pkm-print.png" alt="Logo PT Prima Karya Manunggal" className="size-14 shrink-0 object-contain" />
                             <div>
                                 <h1 className="text-lg md:text-xl font-black tracking-wide text-black uppercase">
                                     PT. PRIMA KARYA MANUNGGAL

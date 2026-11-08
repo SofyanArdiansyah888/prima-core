@@ -18,7 +18,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { staffApi } from '../../data/staffApi';
 import { formatRupiah } from '../../domain/format';
 import type { SalesOrderSummary } from '../../domain/types';
-import { Card, Screen } from '../../shared/ui';
+import { Card, Screen, SitePhotoCapture } from '../../shared/ui';
 
 const STATUS_LABEL: Record<string, string> = {
   PENDING_APPROVAL: 'Perlu Survei',
@@ -41,8 +41,9 @@ function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): nu
   return Math.round(R * c * 100) / 100;
 }
 
+/** Rute Google Maps dari lokasi HP saat ini ke titik proyek (sama seperti aplikasi sopir). */
 function googleMapsUrl(lat: number, lng: number): string {
-  return `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+  return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`;
 }
 
 function escapeHtml(value: string): string {
@@ -157,7 +158,7 @@ export default function SalesOrderDetailPage() {
           + `<b>Lokasi Proyek Customer</b><br>`
           + `<span>${pinAddress}</span><br>`
           + `<span style="font-family:monospace;color:#475569">${lat.toFixed(6)}, ${lng.toFixed(6)}</span><br>`
-          + `<a href="${googleMapsUrl(lat, lng)}" target="_blank" rel="noreferrer" style="display:inline-block;margin-top:6px;font-weight:700;color:#059669">Buka di Google Maps ↗</a>`
+          + `<a href="${googleMapsUrl(lat, lng)}" target="_blank" rel="noreferrer" style="display:inline-block;margin-top:6px;font-weight:700;color:#2563eb">Rute ke Lokasi (Google Maps) ↗</a>`
           + `</div>`,
       );
 
@@ -342,12 +343,28 @@ export default function SalesOrderDetailPage() {
             href={googleMapsUrl(lat, lng)}
             target="_blank"
             rel="noreferrer"
-            className="flex items-center justify-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50 py-2 text-[11px] font-bold text-emerald-700 hover:bg-emerald-100"
+            className="flex items-center justify-center gap-1.5 rounded-xl border border-blue-300 bg-blue-50 py-2.5 text-xs font-bold text-blue-700 hover:bg-blue-100 active:scale-[0.98] transition-all"
           >
-            <span>Buka Lokasi di Google Maps ↗</span>
-            <span className="font-mono font-medium text-emerald-600">({lat.toFixed(5)}, {lng.toFixed(5)})</span>
+            <IonIcon icon={navigateOutline} className="text-base text-blue-600" />
+            <span>Rute ke Lokasi Proyek (Google Maps)</span>
           </a>
+          <p className="text-center font-mono text-[10px] text-slate-400">Koordinat: {lat.toFixed(6)}, {lng.toFixed(6)}</p>
         </div>
+
+        {/* Foto bukti survei di lokasi */}
+        <Card className="p-3 border border-slate-200 shadow-xs">
+          <SitePhotoCapture
+            title="Foto Survei di Lokasi"
+            stampLabel="SALES"
+            reference={order.code}
+            photos={order.site_photos ?? []}
+            readOnly={order.status !== 'PENDING_APPROVAL'}
+            upload={async (input) => (await staffApi.uploadSalesPhoto(order.uuid, input)).data}
+            onUploaded={(photo) =>
+              setOrder((prev) => (prev ? { ...prev, site_photos: [photo, ...(prev.site_photos ?? [])] } : prev))
+            }
+          />
+        </Card>
 
         {/* Adjustment Form */}
         <div className="space-y-3 text-xs">

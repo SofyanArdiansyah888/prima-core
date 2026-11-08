@@ -100,4 +100,9 @@ class SuratJalan extends Model
     {
         return $this->hasMany(SuratJalanItem::class);
     }
+
+    public function sitePhotos(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(\Modules\Order\Models\SitePhoto::class)->latest('id');
+    }
 }

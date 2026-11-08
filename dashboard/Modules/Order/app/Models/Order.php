@@ -150,6 +150,11 @@ class Order extends Model
         return $this->belongsTo(User::class, 'approved_by_id');
     }
 
+    public function sitePhotos(): HasMany
+    {
+        return $this->hasMany(SitePhoto::class)->latest('id');
+    }
+
     public function items(): HasMany
     {
         return $this->hasMany(OrderItem::class);

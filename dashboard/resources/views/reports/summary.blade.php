@@ -115,6 +115,9 @@
     <div class="header">
         <table style="width: 100%;">
             <tr>
+                <td style="width: 58px; vertical-align: top; padding-right: 10px;">
+                    <img src="{{ \App\Support\PrintLogo::dataUri() }}" alt="Logo PKM" style="width: 50px; height: auto;">
+                </td>
                 <td>
                     <div class="company-name">PT PRIMA KARYA MANUNGGAL</div>
                     <div class="company-sub">Semen Tonasa Ready Mix & Distribusi Semen Curah/Sak</div>

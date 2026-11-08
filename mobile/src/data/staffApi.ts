@@ -1,4 +1,4 @@
-import type { DriverDeliverySummary, SalesOrderSummary, StaffUser } from '../domain/types';
+import type { DriverDeliverySummary, SalesOrderSummary, SitePhoto, StaffUser } from '../domain/types';
 
 // Fallback sama dengan api.ts: build tanpa VITE_API_URL (mis. APK) tetap menembak server produksi.
 const API_URL = ((import.meta.env.VITE_API_URL as string | undefined) || 'https://pkm.orcaid.cloud').replace(/\/+$/, '');
@@ -37,9 +37,11 @@ export function setStaffUser(user: StaffUser | null): void {
 
 async function staffRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const token = getStaffToken();
+  const isForm = typeof FormData !== 'undefined' && options.body instanceof FormData;
   const headers: Record<string, string> = {
     Accept: 'application/json',
-    'Content-Type': 'application/json',
+    // FormData: biarkan browser mengisi Content-Type multipart beserta boundary
+    ...(isForm ? {} : { 'Content-Type': 'application/json' }),
     ...(options.headers as Record<string, string>),
   };
 
@@ -64,7 +66,37 @@ async function staffRequest<T>(endpoint: string, options: RequestInit = {}): Pro
   return body as T;
 }
 
+export type SitePhotoUpload = {
+  photo: Blob;
+  lat?: number | null;
+  lng?: number | null;
+  accuracy?: number | null;
+};
+
+function photoForm(input: SitePhotoUpload): FormData {
+  const form = new FormData();
+  form.append('photo', input.photo, `lokasi-${Date.now()}.jpg`);
+  if (input.lat != null && input.lng != null) {
+    form.append('lat', String(input.lat));
+    form.append('lng', String(input.lng));
+  }
+  if (input.accuracy != null) form.append('accuracy', String(Math.round(input.accuracy)));
+  return form;
+}
+
 export const staffApi = {
+  uploadSalesPhoto(orderUuid: string, input: SitePhotoUpload) {
+    return staffRequest<{ message: string; data: SitePhoto }>(`/api/sales/v1/orders/${orderUuid}/photos`, {
+      method: 'POST',
+      body: photoForm(input),
+    });
+  },
+  uploadDriverPhoto(suratJalanUuid: string, input: SitePhotoUpload) {
+    return staffRequest<{ message: string; data: SitePhoto }>(`/api/driver/v1/deliveries/${suratJalanUuid}/photos`, {
+      method: 'POST',
+      body: photoForm(input),
+    });
+  },
   async loginStaff(payload: { login: string; password: string }): Promise<{ token: string; user: StaffUser }> {
     const res = await staffRequest<{ token: string; user: StaffUser }>('/api/staff/v1/login', {
       method: 'POST',

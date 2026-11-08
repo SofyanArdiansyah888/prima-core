@@ -10,6 +10,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 use Modules\Dispatch\Models\SuratJalan;
+use Modules\Order\Models\SitePhoto;
+use Modules\Order\Services\StoreSitePhoto;
 use Modules\Shared\Enums\UserRole;
 use Modules\Shared\Support\PhoneNumber;
 
@@ -111,6 +113,7 @@ class DriverDeliveryApiController extends Controller
                 'batchingPlant:id,uuid,code,name,phone,whatsapp,lat,lng',
                 'items.product:id,uuid,code,name,unit',
                 'items.order:id,uuid,code,customer_name,customer_phone,delivery_address,delivery_lat,delivery_lng',
+                'sitePhotos.user:id,name',
             ])
             ->where(function ($q) use ($user) {
                 $q->where('driver_id', $user->id);
@@ -135,6 +138,33 @@ class DriverDeliveryApiController extends Controller
                 'total' => $deliveries->total(),
             ],
         ]);
+    }
+
+    public function storePhoto(Request $request, SuratJalan $suratJalan, StoreSitePhoto $photos): JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+
+        $isDriver = $suratJalan->driver_id === $user->id || ($user->phone && $suratJalan->driver_phone === $user->phone);
+        if (! $isDriver) {
+            abort(403, 'Surat jalan ini tidak ditugaskan kepada Anda.');
+        }
+
+        $item = $suratJalan->items()->with('order')->first();
+        $photo = $photos->store(
+            $request,
+            $item?->order,
+            $user,
+            'driver',
+            $suratJalan,
+            $item?->destination_lat !== null ? (float) $item->destination_lat : null,
+            $item?->destination_lng !== null ? (float) $item->destination_lng : null,
+        );
+
+        return response()->json([
+            'message' => 'Foto lokasi berhasil disimpan.',
+            'data' => $photo->toApi(),
+        ], 201);
     }
 
     public function complete(Request $request, SuratJalan $suratJalan): JsonResponse
@@ -207,6 +237,9 @@ class DriverDeliveryApiController extends Controller
             'tare_weight_kg' => (float) $sj->tare_weight_kg,
             'net_weight_kg' => (float) $sj->net_weight_kg,
             'notes' => $sj->notes,
+            'site_photos' => $sj->relationLoaded('sitePhotos')
+                ? $sj->sitePhotos->map(fn (SitePhoto $p) => $p->toApi())->values()
+                : [],
             'plant' => $sj->batchingPlant ? [
                 'code' => $sj->batchingPlant->code,
                 'name' => $sj->batchingPlant->name,
