@@ -16,6 +16,7 @@ use Modules\Order\Models\Order;
 use Modules\Order\Services\CustomerOrderService;
 use Modules\Order\Services\MidtransPaymentService;
 use Modules\Order\Services\OrderSalesContacts;
+use Modules\Shared\Support\PhoneNumber;
 
 class CustomerOrderController extends Controller
 {
@@ -352,7 +353,9 @@ class CustomerOrderController extends Controller
             'plant' => $order->batchingPlant ? [
                 'code' => $order->batchingPlant->code,
                 'name' => $order->batchingPlant->name,
-                'phone' => $order->batchingPlant->phone,
+                'phone' => $order->batchingPlant->whatsapp
+                    ? PhoneNumber::toLocal($order->batchingPlant->whatsapp)
+                    : $order->batchingPlant->phone,
                 'whatsapp' => $order->batchingPlant->whatsapp,
             ] : null,
             'sales_contacts' => $salesContacts,

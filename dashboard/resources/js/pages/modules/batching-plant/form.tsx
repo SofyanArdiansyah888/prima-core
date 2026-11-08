@@ -137,22 +137,8 @@ export default function PlantForm({
 
                                 <div className="grid gap-4 sm:grid-cols-2">
                                     <div className="space-y-1.5">
-                                        <Label htmlFor="phone" className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                                            Telepon Plant
-                                        </Label>
-                                        <Input
-                                            id="phone"
-                                            name="phone"
-                                            defaultValue={plant?.phone ?? ''}
-                                            placeholder="Contoh: 0411-987654"
-                                            className="h-10 border-slate-200 font-mono text-sm focus-visible:ring-emerald-500/20 focus-visible:border-emerald-600 dark:border-slate-800"
-                                        />
-                                        <InputError message={errors.phone} />
-                                    </div>
-
-                                    <div className="space-y-1.5">
                                         <Label htmlFor="whatsapp" className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                                            WhatsApp Dispatcher
+                                            Nomor WhatsApp Sales Plant
                                         </Label>
                                         <Input
                                             id="whatsapp"
@@ -163,7 +149,7 @@ export default function PlantForm({
                                             className="h-10 border-slate-200 font-mono text-sm focus-visible:ring-emerald-500/20 focus-visible:border-emerald-600 dark:border-slate-800"
                                         />
                                         <p className="text-xs text-slate-500">
-                                            Dipakai tombol WhatsApp pada kartu Bantuan & Dispatcher Plant di detail pesanan mobile.
+                                            Satu nomor untuk plant ini: menerima notifikasi pesanan baru (survei lokasi) dan dipakai tombol WhatsApp & telepon di aplikasi mobile.
                                         </p>
                                         <InputError message={errors.whatsapp} />
                                     </div>

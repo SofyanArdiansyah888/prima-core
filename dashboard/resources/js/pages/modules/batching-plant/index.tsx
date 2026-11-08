@@ -213,7 +213,7 @@ export default function PlantIndex({
                                         <td className="px-5 py-3.5">
                                             <div className="font-semibold text-slate-900 dark:text-white">{p.name}</div>
                                             <div className="mt-0.5 font-mono text-[11px] text-slate-500">
-                                                {p.whatsapp ? `WA ${p.whatsapp}` : 'WhatsApp belum diisi'}
+                                                {p.whatsapp ? `WA Sales ${p.whatsapp}` : 'WhatsApp sales belum diisi'}
                                             </div>
                                         </td>
                                         <td className="px-5 py-3.5 text-xs text-slate-600 dark:text-slate-300">

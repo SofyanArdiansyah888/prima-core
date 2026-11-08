@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 use Modules\Dispatch\Models\SuratJalan;
 use Modules\Shared\Enums\UserRole;
+use Modules\Shared\Support\PhoneNumber;
 
 class DriverDeliveryApiController extends Controller
 {
@@ -209,7 +210,9 @@ class DriverDeliveryApiController extends Controller
             'plant' => $sj->batchingPlant ? [
                 'code' => $sj->batchingPlant->code,
                 'name' => $sj->batchingPlant->name,
-                'phone' => $sj->batchingPlant->phone,
+                'phone' => $sj->batchingPlant->whatsapp
+                    ? PhoneNumber::toLocal($sj->batchingPlant->whatsapp)
+                    : $sj->batchingPlant->phone,
             ] : null,
             'items' => $sj->items->map(fn ($item) => [
                 'id' => $item->id,

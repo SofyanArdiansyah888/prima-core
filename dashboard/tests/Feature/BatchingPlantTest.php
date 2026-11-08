@@ -2,8 +2,8 @@
 
 namespace Tests\Feature;
 
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\BatchingPlant\Models\BatchingPlant;
 use Modules\Branch\Models\Branch;
 use Tests\TestCase;
@@ -46,5 +46,33 @@ class BatchingPlantTest extends TestCase
         $plant->refresh();
         $this->assertEquals('Plant Test Diperbarui', $plant->name);
         $this->assertEquals($branch->id, $plant->branch_id);
+    }
+
+    public function test_single_whatsapp_number_also_becomes_plant_phone(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $branch = Branch::query()->firstOrCreate(
+            ['code' => 'SULSEL'],
+            ['name' => 'Cabang Sulawesi Selatan', 'is_active' => true]
+        );
+        $plant = BatchingPlant::query()->create([
+            'branch_id' => $branch->id,
+            'code' => 'SULSEL-BP-98',
+            'name' => 'Plant WA',
+            'phone' => '0411-987654',
+            'status' => 'OPERATIONAL',
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($admin)->put("/master/batching-plants/{$plant->uuid}", [
+            'name' => 'Plant WA',
+            'whatsapp' => '081234567890',
+            'status' => 'OPERATIONAL',
+            'is_active' => true,
+        ])->assertRedirect('/master/batching-plants');
+
+        $plant->refresh();
+        $this->assertSame('6281234567890', $plant->whatsapp);
+        $this->assertSame('081234567890', $plant->phone);
     }
 }
