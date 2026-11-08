@@ -10,7 +10,6 @@ import {
   documentTextOutline,
   downloadOutline,
   folderOutline,
-  printOutline,
   qrCodeOutline,
   searchOutline,
   shareSocialOutline,
@@ -173,10 +172,6 @@ export default function DigitalDocsPage() {
       navigator.clipboard?.writeText(window.location.href);
       triggerToast(`Tautan dokumen resmi pesanan ${activeOrder.code} disalin ke papan klip.`, 'success');
     }
-  };
-
-  const handlePrint = () => {
-    window.print();
   };
 
   return (
@@ -349,14 +344,6 @@ export default function DigitalDocsPage() {
                   title="Bagikan"
                 >
                   <IonIcon icon={shareSocialOutline} className="text-base" />
-                </button>
-                <button
-                  type="button"
-                  onClick={handlePrint}
-                  className="flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 py-2.5 px-3.5 text-xs font-bold text-slate-700 shadow-xs transition-all cursor-pointer"
-                  title="Cetak Dokumen"
-                >
-                  <IonIcon icon={printOutline} className="text-base" />
                 </button>
               </div>
 
