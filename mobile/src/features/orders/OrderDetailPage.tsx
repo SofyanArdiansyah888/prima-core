@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { IonIcon, type RefresherEventDetail } from '@ionic/react';
 import {
+  cameraOutline,
   alertCircleOutline,
   businessOutline,
   callOutline,
@@ -26,6 +27,7 @@ import { formatDate, formatQty, formatRupiah } from '../../domain/format';
 import { isOrderPriceVisible, orderStatusTone, paymentStatusLabel } from '../../domain/rules';
 import type { PaymentOption } from '../../domain/types';
 import { PaymentMethodSheet } from './PaymentMethodSheet';
+import { DeliveryDetailSheet } from './DeliveryDetailSheet';
 import { STATUS_LABELS, STATUS_STEPS, type CustomerOrder } from '../../domain/types';
 import { Card, ErrorText, Eyebrow, NavBar, OrderDetailSkeleton, Screen, StatusBadge, StickyBar, SyncIcon } from '../../shared/ui';
 import { openSnapPayment } from '../../lib/midtrans';
@@ -218,9 +220,17 @@ export default function OrderDetailPage() {
     return 'UNKNOWN';
   };
   const normalizedStatus = normalizeStatus(order?.status);
-  const currentIndex = normalizedStatus !== 'UNKNOWN' && normalizedStatus !== 'CANCELLED'
+  const deliverySjs = (order?.surat_jalans ?? []).filter((sj) => sj.status !== 'CANCELLED' && sj.status !== 'RETURNED');
+  // Sopir sudah konfirmasi serah terima semua pengiriman → tahap pengiriman selesai, tinggal konfirmasi pelanggan
+  const driverDelivered =
+    order?.status === 'ON_DELIVERY' &&
+    (Boolean(order?.can_confirm_complete) || (deliverySjs.length > 0 && deliverySjs.every((sj) => sj.status === 'COMPLETED')));
+  const currentIndex = driverDelivered
+    ? STATUS_STEPS.indexOf('COMPLETED')
+    : normalizedStatus !== 'UNKNOWN' && normalizedStatus !== 'CANCELLED'
     ? STATUS_STEPS.indexOf(normalizedStatus)
     : -1;
+  const [deliverySheetOpen, setDeliverySheetOpen] = useState(false);
   const isCompleted = order?.status === 'COMPLETED';
   const isCancelled = order?.status === 'CANCELLED';
   const isPendingApproval = order?.status === 'PENDING_APPROVAL';
@@ -300,6 +310,12 @@ export default function OrderDetailPage() {
         ) : null
       }
     >
+      <DeliveryDetailSheet
+        isOpen={deliverySheetOpen}
+        suratJalans={order?.surat_jalans ?? []}
+        onClose={() => setDeliverySheetOpen(false)}
+      />
+
       <PaymentMethodSheet
         isOpen={methodSheetOpen}
         loading={methodLoading}
@@ -517,9 +533,14 @@ export default function OrderDetailPage() {
                       PENDING_APPROVAL: 'Tim sales plant memverifikasi akses jalan proyek untuk armada mixer',
                       CONFIRMED: 'Order disetujui (ACC). Menunggu pembayaran atau antrean produksi',
                       PROCESSING: 'Batching plant memproses produksi beton sesuai formula & SPK',
-                      ON_DELIVERY: 'Truk mixer dalam perjalanan mengantarkan beton ke proyek',
-                      COMPLETED: 'Pengecoran selesai, e-POD & Surat Jalan tervalidasi',
+                      ON_DELIVERY: driverDelivered
+                        ? 'Material telah diserahterimakan & dikonfirmasi oleh sopir'
+                        : 'Truk mixer dalam perjalanan mengantarkan beton ke proyek',
+                      COMPLETED: driverDelivered
+                        ? 'Mohon konfirmasi penerimaan melalui tombol di bawah layar'
+                        : 'Pengecoran selesai, e-POD & Surat Jalan tervalidasi',
                     };
+                    const showDeliveryAction = step === 'ON_DELIVERY' && isPassed && (order.surat_jalans?.length ?? 0) > 0;
 
                     return (
                       <div key={step} className="relative flex items-start gap-3 pl-0.5 text-xs">
@@ -548,7 +569,7 @@ export default function OrderDetailPage() {
                             </span>
                             {isCurrent && (
                               <span className="rounded bg-[#ea580c]/10 text-[#ea580c] border border-[#ea580c]/20 px-1.5 py-0.2 text-[9px] font-extrabold uppercase">
-                                Berlangsung
+                                {driverDelivered && step === 'COMPLETED' ? 'Menunggu Konfirmasi' : 'Berlangsung'}
                               </span>
                             )}
                             {isPassed && !isCurrent && (
@@ -560,6 +581,16 @@ export default function OrderDetailPage() {
                           <p className={`mt-0.5 text-[11px] leading-tight ${isPassed ? 'text-slate-500' : 'text-slate-400'}`}>
                             {stepSubtext[step]}
                           </p>
+                          {showDeliveryAction ? (
+                            <button
+                              type="button"
+                              onClick={() => setDeliverySheetOpen(true)}
+                              className="mt-1.5 inline-flex items-center gap-1 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1 text-[11px] font-bold text-blue-700 hover:bg-blue-100 cursor-pointer"
+                            >
+                              <IonIcon icon={cameraOutline} className="text-xs" />
+                              <span>Lihat Detail & Foto Sopir</span>
+                            </button>
+                          ) : null}
                         </div>
                       </div>
                     );

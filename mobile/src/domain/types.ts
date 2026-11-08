@@ -107,6 +107,7 @@ export type OrderSuratJalan = {
   departure_time?: string | null;
   arrival_time?: string | null;
   created_at?: string | null;
+  site_photos?: SitePhoto[];
   items: {
     product_name?: string | null;
     quantity: number;

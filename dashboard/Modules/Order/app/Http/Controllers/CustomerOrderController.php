@@ -84,6 +84,7 @@ class CustomerOrderController extends Controller
             'workOrders.product',
             'workOrders.assignedUser',
             'suratJalanItems.suratJalan.batchingPlant',
+            'suratJalanItems.suratJalan.sitePhotos.user:id,name',
             'suratJalanItems.product',
         ]);
 
@@ -103,6 +104,7 @@ class CustomerOrderController extends Controller
             'workOrders.product',
             'workOrders.assignedUser',
             'suratJalanItems.suratJalan.batchingPlant',
+            'suratJalanItems.suratJalan.sitePhotos.user:id,name',
             'suratJalanItems.product',
         ]);
 
@@ -157,6 +159,7 @@ class CustomerOrderController extends Controller
             'workOrders.product',
             'workOrders.assignedUser',
             'suratJalanItems.suratJalan.batchingPlant',
+            'suratJalanItems.suratJalan.sitePhotos.user:id,name',
             'suratJalanItems.product',
         ]);
 
@@ -264,6 +267,7 @@ class CustomerOrderController extends Controller
             'workOrders.product',
             'workOrders.assignedUser',
             'suratJalanItems.suratJalan.batchingPlant',
+            'suratJalanItems.suratJalan.sitePhotos.user:id,name',
             'suratJalanItems.product',
         ]);
 
@@ -441,6 +445,10 @@ class CustomerOrderController extends Controller
                 'departure_time' => $sj->departure_time?->toIso8601String(),
                 'arrival_time' => $sj->arrival_time?->toIso8601String(),
                 'created_at' => $sj->created_at?->toIso8601String(),
+                // Foto bukti tiba dari sopir (hanya dimuat di detail pesanan)
+                'site_photos' => $sj->relationLoaded('sitePhotos')
+                    ? $sj->sitePhotos->where('role', 'driver')->map(fn ($p) => $p->toApi())->values()
+                    : [],
                 'items' => $sj->items->where('order_id', $order->id)->map(fn ($item) => [
                     'product_name' => $item->product?->name,
                     'product_code' => $item->product?->code,

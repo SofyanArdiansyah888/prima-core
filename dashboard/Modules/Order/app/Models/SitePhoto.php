@@ -62,8 +62,16 @@ class SitePhoto extends Model
         return $this->belongsTo(User::class);
     }
 
+    /**
+     * URL publik foto. Dibangun dari host request (bukan APP_URL) agar tetap benar
+     * walau APP_URL server masih localhost; skema https dibaca dari proxy (trustProxies).
+     */
     public function url(): string
     {
+        if (request()->hasHeader('Host')) {
+            return rtrim(request()->getSchemeAndHttpHost(), '/').'/storage/'.ltrim($this->path, '/');
+        }
+
         return Storage::disk(self::DISK)->url($this->path);
     }
 

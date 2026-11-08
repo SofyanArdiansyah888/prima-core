@@ -260,6 +260,21 @@ class DriverDeliveryApiTest extends TestCase
             ->assertOk()
             ->assertJsonCount(1, 'data.0.site_photos');
 
+        // Pelanggan melihat foto sopir di detail pengiriman pesanannya
+        config(['app.url' => 'http://localhost:8000', 'filesystems.disks.public.url' => 'http://localhost:8000/storage']);
+        $this->app['auth']->forgetGuards();
+        $customerRes = $this->withHeader('Authorization', 'Bearer '.$this->customer->createToken('c')->plainTextToken)
+            ->getJson("https://pkm.example.test/api/customer/v1/orders/{$order->uuid}")
+            ->assertOk()
+            ->assertJsonPath('data.surat_jalans.0.code', 'SJ-TEST-PHOTO')
+            ->assertJsonCount(1, 'data.surat_jalans.0.site_photos');
+
+        // URL foto mengikuti domain request (https), bukan APP_URL server yang masih localhost
+        $this->assertStringStartsWith(
+            'https://pkm.example.test/storage/site-photos/',
+            $customerRes->json('data.surat_jalans.0.site_photos.0.url'),
+        );
+
         $other = User::query()->create([
             'name' => 'Sopir Lain', 'email' => 'lain@pkm.test', 'phone' => '081277770000',
             'password' => bcrypt('password'), 'role' => UserRole::Driver, 'is_active' => true,
