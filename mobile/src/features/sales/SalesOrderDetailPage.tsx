@@ -108,10 +108,17 @@ export default function SalesOrderDetailPage() {
     if (!mapContainerRef.current || !order) return;
 
     if (!mapInstanceRef.current) {
+      // Peta dikunci pada lokasi pesanan: tidak bisa digeser, zoom tetap berpusat di pin customer
       const map = L.map(mapContainerRef.current, {
         center: [lat, lng],
-        zoom: 14,
+        zoom: 15,
         zoomControl: true,
+        dragging: false,
+        touchZoom: 'center',
+        scrollWheelZoom: 'center',
+        doubleClickZoom: 'center',
+        boxZoom: false,
+        keyboard: false,
       });
 
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -165,8 +172,6 @@ export default function SalesOrderDetailPage() {
       polylineRef.current = polyline;
 
       // Fit bounds
-      const bounds = L.latLngBounds([[plantLat, plantLng], [lat, lng]]);
-      map.fitBounds(bounds, { padding: [30, 30] });
 
       mapInstanceRef.current = map;
     }

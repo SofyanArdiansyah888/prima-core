@@ -2,45 +2,35 @@
 
 namespace Modules\Order\Services;
 
-use App\Models\User;
 use Illuminate\Support\Collection;
 use Modules\Order\Models\Order;
-use Modules\Shared\Enums\UserRole;
+use Modules\Shared\Support\PhoneNumber;
 
 /**
- * Menentukan sales lapangan yang bertanggung jawab atas sebuah pesanan.
+ * Kontak sales untuk sebuah pesanan.
  *
- * Prioritas: sales aktif yang di-assign ke batching plant pesanan.
- * Fallback: sales aktif di cabang plant tersebut (sama dengan cakupan akses API sales).
+ * Untuk saat ini setiap batching plant memakai 1 nomor WhatsApp yang sekaligus
+ * menjadi nomor sales plant tersebut (kolom batching_plants.whatsapp).
  */
 class OrderSalesContacts
 {
     /**
-     * @return Collection<int, User>
+     * @return Collection<int, array{name: string, whatsapp: string}>
      */
     public function forOrder(Order $order): Collection
     {
-        if (! $order->batching_plant_id) {
+        $plant = $order->relationLoaded('batchingPlant')
+            ? $order->batchingPlant
+            : $order->batchingPlant()->first(['id', 'name', 'whatsapp']);
+
+        $whatsapp = PhoneNumber::toInternational((string) $plant?->whatsapp);
+        if ($whatsapp === '') {
             return collect();
         }
 
-        $base = fn () => User::query()
-            ->where('role', UserRole::Sales->value)
-            ->where('is_active', true)
-            ->whereNotNull('phone')
-            ->where('phone', '!=', '')
-            ->orderBy('name');
-
-        $assigned = $base()
-            ->whereHas('batchingPlants', fn ($q) => $q->whereKey($order->batching_plant_id))
-            ->get();
-
-        if ($assigned->isNotEmpty()) {
-            return $assigned;
-        }
-
-        $branchId = $order->batchingPlant()->value('branch_id');
-
-        return $branchId ? $base()->where('branch_id', $branchId)->get() : collect();
+        return collect([[
+            'name' => 'Sales '.$plant->name,
+            'whatsapp' => $whatsapp,
+        ]]);
     }
 }

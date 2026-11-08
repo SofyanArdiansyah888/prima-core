@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Testing\TestResponse;
@@ -10,7 +9,6 @@ use Modules\BatchingPlant\Models\BatchingPlant;
 use Modules\Branch\Models\Branch;
 use Modules\Customer\Models\Customer;
 use Modules\Product\Models\Product;
-use Modules\Shared\Enums\UserRole;
 use Modules\Shared\Jobs\SendWhatsappMessage;
 use Tests\TestCase;
 
@@ -22,19 +20,18 @@ class OrderSalesNotificationTest extends TestCase
 
     private BatchingPlant $plant;
 
-    private Branch $branch;
-
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->branch = Branch::query()->create(['code' => 'BR-SULSEL-01', 'name' => 'Sulawesi Selatan', 'is_active' => true]);
+        $branch = Branch::query()->create(['code' => 'BR-SULSEL-01', 'name' => 'Sulawesi Selatan', 'is_active' => true]);
         $this->plant = BatchingPlant::query()->create([
             'code' => 'BR-SULSEL-01-BP-01',
-            'branch_id' => $this->branch->id,
+            'branch_id' => $branch->id,
             'name' => 'Batching Plant Pangkep',
             'lat' => -4.783,
             'lng' => 119.557,
+            'whatsapp' => '6281299990001',
             'status' => 'OPERATIONAL',
             'is_active' => true,
         ]);
@@ -49,25 +46,7 @@ class OrderSalesNotificationTest extends TestCase
         ]);
     }
 
-    private function makeSales(string $email, string $phone, bool $assigned): User
-    {
-        $user = User::query()->create([
-            'name' => 'Sales '.$email,
-            'email' => $email,
-            'phone' => $phone,
-            'password' => bcrypt('password'),
-            'role' => UserRole::Sales,
-            'branch_id' => $this->branch->id,
-            'is_active' => true,
-        ]);
-        if ($assigned) {
-            $user->batchingPlants()->attach($this->plant->id);
-        }
-
-        return $user;
-    }
-
-    private function placeOrder(): TestResponse
+    private function placeOrder(int $quantity = 250): TestResponse
     {
         $token = Customer::query()->create([
             'name' => 'Pelanggan',
@@ -82,41 +61,38 @@ class OrderSalesNotificationTest extends TestCase
             'delivery_lat' => -4.805,
             'delivery_lng' => 119.561,
             'payment_method' => 'MIDTRANS',
-            'items' => [['product_uuid' => $this->cement->uuid, 'quantity' => 25]],
+            'items' => [['product_uuid' => $this->cement->uuid, 'quantity' => $quantity]],
         ]);
     }
 
-    public function test_new_order_notifies_sales_assigned_to_plant_via_whatsapp(): void
+    public function test_new_order_notifies_plant_whatsapp_as_sales_number(): void
     {
         Queue::fake();
-        $this->makeSales('assigned@pkm.test', '081299990001', assigned: true);
-        $this->makeSales('other@pkm.test', '081299990002', assigned: false);
 
         $res = $this->placeOrder()->assertCreated();
 
-        Queue::assertPushed(SendWhatsappMessage::class, fn ($job) => $job->phone === '081299990001'
+        Queue::assertPushed(SendWhatsappMessage::class, fn ($job) => $job->phone === '6281299990001'
             && str_contains($job->message, $res->json('data.code'))
             && str_contains($job->message, 'PERLU SURVEI LOKASI')
-            && str_contains($job->message, 'Semen Tonasa OPC — 25 Sak')
+            && str_contains($job->message, 'Halo Tim Sales *Batching Plant Pangkep*')
+            && str_contains($job->message, 'Semen Tonasa OPC — 250 Sak')
             && str_contains($job->message, 'google.com/maps/search/?api=1&query=')
             && str_contains($job->message, '/sales/orders/'));
-        Queue::assertNotPushed(SendWhatsappMessage::class, fn ($job) => $job->phone === '081299990002');
         // Pesan customer tidak boleh memuat harga sebelum di-ACC
         Queue::assertNotPushed(SendWhatsappMessage::class, fn ($job) => $job->phone === '081300000099'
             && str_contains($job->message, 'Rp'));
 
-        $res->assertJsonPath('data.sales_contacts.0.whatsapp', '6281299990001');
-        $this->assertCount(1, $res->json('data.sales_contacts'));
+        $res->assertJsonPath('data.sales_contacts.0.whatsapp', '6281299990001')
+            ->assertJsonPath('data.sales_contacts.0.name', 'Sales Batching Plant Pangkep');
     }
 
-    public function test_falls_back_to_branch_sales_when_none_assigned(): void
+    public function test_no_sales_notification_when_plant_has_no_whatsapp(): void
     {
         Queue::fake();
-        $this->makeSales('branch@pkm.test', '081299990003', assigned: false);
+        $this->plant->update(['whatsapp' => null]);
 
-        $this->placeOrder()->assertCreated()
-            ->assertJsonPath('data.sales_contacts.0.whatsapp', '6281299990003');
+        $this->placeOrder()->assertCreated()->assertJsonPath('data.sales_contacts', []);
 
-        Queue::assertPushed(SendWhatsappMessage::class, fn ($job) => $job->phone === '081299990003');
+        Queue::assertNotPushed(SendWhatsappMessage::class, fn ($job) => str_contains($job->message, 'PERLU SURVEI LOKASI'));
     }
 }

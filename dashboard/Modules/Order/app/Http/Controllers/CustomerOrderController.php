@@ -16,7 +16,6 @@ use Modules\Order\Models\Order;
 use Modules\Order\Services\CustomerOrderService;
 use Modules\Order\Services\MidtransPaymentService;
 use Modules\Order\Services\OrderSalesContacts;
-use Modules\Shared\Support\PhoneNumber;
 
 class CustomerOrderController extends Controller
 {
@@ -291,10 +290,7 @@ class CustomerOrderController extends Controller
     private function transform(Order $order, bool $withSalesContacts = false): array
     {
         $salesContacts = $withSalesContacts
-            ? app(OrderSalesContacts::class)->forOrder($order)->map(fn ($user) => [
-                'name' => $user->name,
-                'whatsapp' => PhoneNumber::toInternational((string) $user->phone),
-            ])->filter(fn ($c) => $c['whatsapp'] !== '')->values()->all()
+            ? app(OrderSalesContacts::class)->forOrder($order)->values()->all()
             : [];
 
         $workOrders = $order->relationLoaded('workOrders') ? $order->workOrders : collect();

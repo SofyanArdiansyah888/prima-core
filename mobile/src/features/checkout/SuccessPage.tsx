@@ -230,13 +230,13 @@ export default function SuccessPage() {
                 {salesContacts.map((sales) => (
                   <a
                     key={sales.whatsapp}
-                    href={`https://wa.me/${sales.whatsapp}?text=${encodeURIComponent(`Halo ${sales.name}, saya ingin menanyakan pesanan ${orderCode}`)}`}
+                    href={`https://wa.me/${sales.whatsapp}?text=${encodeURIComponent(`Halo Tim ${sales.name}, saya ingin menanyakan pesanan ${orderCode}`)}`}
                     target="_blank"
                     rel="noreferrer"
                     className="flex items-center justify-center gap-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 py-2 px-3 text-[11px] font-bold text-white shadow-2xs transition-colors"
                   >
                     <IonIcon icon={logoWhatsapp} className="text-sm" />
-                    <span>WhatsApp Sales · {sales.name}</span>
+                    <span>WhatsApp {sales.name}</span>
                   </a>
                 ))}
               </div>

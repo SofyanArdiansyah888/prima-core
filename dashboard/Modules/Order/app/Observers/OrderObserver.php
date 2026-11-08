@@ -54,8 +54,8 @@ class OrderObserver
                     return;
                 }
 
-                foreach ($this->salesContacts->forOrder($order) as $user) {
-                    $this->fonnte->send((string) $user->phone, $this->salesSurveyMessage($order, (string) $user->name));
+                foreach ($this->salesContacts->forOrder($order) as $contact) {
+                    $this->fonnte->send($contact['whatsapp'], $this->salesSurveyMessage($order));
                 }
             } catch (\Throwable $e) {
                 Log::warning('Gagal mengantri notifikasi WhatsApp ke sales: '.$e->getMessage());
@@ -63,14 +63,16 @@ class OrderObserver
         });
     }
 
-    private function salesSurveyMessage(Order $order, string $salesName): string
+    private function salesSurveyMessage(Order $order): string
     {
-        $salesName = trim((string) preg_replace('/\s*\(.*\)$/', '', $salesName)) ?: 'Tim Sales';
         $plantName = $order->batchingPlant?->name ?? 'Batching Plant';
         $createdAt = $order->created_at?->copy()->timezone('Asia/Makassar')->format('d/m/Y H:i').' WITA';
 
         $items = $order->items->map(function ($item): string {
-            $qty = rtrim(rtrim(number_format((float) $item->quantity, 2, ',', '.'), '0'), ',');
+            $q = (float) $item->quantity;
+            $qty = floor($q) === $q
+                ? number_format($q, 0, ',', '.')
+                : rtrim(number_format($q, 2, ',', '.'), '0');
 
             return '• '.($item->product?->name ?? 'Produk')." — {$qty} {$item->unit}";
         })->implode("\n");
@@ -84,8 +86,8 @@ class OrderObserver
         $lines = [
             '🔔 *PESANAN BARU — PERLU SURVEI LOKASI*',
             '',
-            "Halo Bapak/Ibu *{$salesName}*,",
-            "Ada pesanan baru untuk *{$plantName}* yang menunggu verifikasi lokasi dari Anda.",
+            "Halo Tim Sales *{$plantName}*,",
+            'Ada pesanan baru yang menunggu verifikasi lokasi dari Anda.',
             '',
             "📄 *No. Pesanan:* {$order->code}",
             "🗓️ *Masuk:* {$createdAt}",
