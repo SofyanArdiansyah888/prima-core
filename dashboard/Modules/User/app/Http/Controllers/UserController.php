@@ -79,6 +79,7 @@ class UserController extends Controller
             'branch_id' => $data['branch_id'] ?? null,
             'code' => $code,
             'is_active' => $data['is_active'] ?? true,
+            'has_full_plant_access' => $data['has_full_plant_access'] ?? false,
             'email_verified_at' => now(),
         ]);
 
@@ -112,6 +113,7 @@ class UserController extends Controller
             'role' => $data['role'],
             'branch_id' => $data['branch_id'] ?? null,
             'is_active' => $data['is_active'] ?? $user->is_active,
+            'has_full_plant_access' => $data['has_full_plant_access'] ?? $user->has_full_plant_access,
         ];
 
         if (! empty($data['password'])) {

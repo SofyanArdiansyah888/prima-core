@@ -52,7 +52,13 @@ class HandleInertiaRequests extends Middleware
                     'branch_id' => $user->branch_id,
                     'email_verified_at' => $user->email_verified_at,
                     'two_factor_enabled' => $user->two_factor_confirmed_at !== null,
+                    'has_full_plant_access' => $user->hasFullPlantAccess(),
                 ] : null,
+                // Batching plant yang boleh diakses (null = semua plant)
+                'plants' => $user && ! $user->hasFullPlantAccess()
+                    ? $user->batchingPlants()->orderBy('name')->get(['batching_plants.id', 'batching_plants.name'])
+                        ->map(fn ($p) => ['id' => $p->id, 'name' => $p->name])->values()
+                    : null,
             ],
             'flash' => [
                 'success' => $request->session()->get('success'),

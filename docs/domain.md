@@ -30,8 +30,20 @@ Generator: `Modules\Shared\Services\CodeGenerator` + tabel `document_sequences`.
 
 ## Role
 
-- `admin` — CRUD semua master; `branch_id` boleh null
-- `user` — login; `branch_id` wajib; plant scoped ke cabangnya
+- `admin` — super admin: CRUD semua master + transaksi **semua** batching plant; `branch_id` boleh null
+- `user` (Operator Plant) — login dashboard; `branch_id` wajib; hanya transaksi plant yang ditugaskan
+- `sales` — hanya aplikasi mobile (tidak bisa login dashboard); hanya pesanan plant yang ditugaskan
+- `driver` — hanya aplikasi mobile; hanya surat jalan miliknya
+
+## Pemisahan data per batching plant
+
+- Data transaksional (pesanan, SPK, surat jalan, laporan, dashboard) dibatasi ke plant di pivot `batching_plant_user`.
+- Akses semua plant: role `admin` **atau** user dengan `users.has_full_plant_access = true` (Master Users → "Akses semua batching plant").
+- User non-penuh tanpa plant: tidak melihat data transaksi sama sekali.
+- Implementasi: `User::hasFullPlantAccess()`, `User::accessiblePlantIds()`, `User::canAccessPlant()`;
+  scope `visibleTo($user)` dari trait `Modules\Shared\Concerns\ScopedByPlant` (Order, WorkOrder, SuratJalan, BatchingPlant);
+  cek per record `Modules\Shared\Concerns\AuthorizesPlantAccess::ensurePlantAccess()` (403).
+- Surat jalan: plant header harus boleh diakses, setiap pesanan harus dari plant yang sama, SPK harus milik pesanan tersebut.
 
 ## Status plant
 

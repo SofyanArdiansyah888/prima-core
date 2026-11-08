@@ -9,10 +9,11 @@ use Modules\BatchingPlant\Models\BatchingPlant;
 use Modules\Order\Models\Order;
 use Modules\Product\Models\Product;
 use Modules\Shared\Concerns\HasUuid;
+use Modules\Shared\Concerns\ScopedByPlant;
 
 class WorkOrder extends Model
 {
-    use HasUuid;
+    use HasUuid, ScopedByPlant;
 
     protected $fillable = [
         'uuid',

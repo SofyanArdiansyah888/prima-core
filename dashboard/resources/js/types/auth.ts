@@ -5,6 +5,9 @@ export type User = {
     avatar?: string;
     email_verified_at: string | null;
     two_factor_enabled?: boolean;
+    role?: 'admin' | 'user' | 'sales' | 'driver' | string;
+    branch_id?: number | null;
+    has_full_plant_access?: boolean;
     created_at: string;
     updated_at: string;
     [key: string]: unknown;
@@ -12,6 +15,8 @@ export type User = {
 
 export type Auth = {
     user: User;
+    /** Plant yang boleh diakses; null = semua plant (admin / akses penuh). */
+    plants?: { id: number; name: string }[] | null;
 };
 
 export type Passkey = {

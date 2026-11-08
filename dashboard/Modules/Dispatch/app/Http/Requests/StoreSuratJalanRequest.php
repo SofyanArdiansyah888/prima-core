@@ -73,8 +73,47 @@ class StoreSuratJalanRequest extends FormRequest
                 }
             }
 
+            $this->validatePlantAccess($validator, $items);
             $this->validateRemainingQuantities($validator, $items);
         });
+    }
+
+    /**
+     * Pemisahan data per batching plant: plant surat jalan harus boleh diakses user,
+     * setiap pesanan harus dari plant yang sama, dan SPK harus milik pesanan tersebut.
+     *
+     * @param  array<int, array<string, mixed>>  $items
+     */
+    private function validatePlantAccess($validator, array $items): void
+    {
+        $user = $this->user();
+        $plantId = (int) $this->input('batching_plant_id');
+
+        if (! $user->canAccessPlant($plantId)) {
+            $validator->errors()->add('batching_plant_id', 'Anda tidak memiliki akses ke batching plant ini.');
+
+            return;
+        }
+
+        foreach ($items as $index => $item) {
+            $order = Order::query()->find($item['order_id'] ?? null, ['id', 'code', 'batching_plant_id']);
+            if (! $order) {
+                continue;
+            }
+
+            if ((int) $order->batching_plant_id !== $plantId) {
+                $validator->errors()->add("items.{$index}.order_id", "Pesanan {$order->code} bukan milik batching plant surat jalan ini.");
+
+                continue;
+            }
+
+            if (! empty($item['work_order_id'])) {
+                $belongs = WorkOrder::query()->whereKey($item['work_order_id'])->where('order_id', $order->id)->exists();
+                if (! $belongs) {
+                    $validator->errors()->add("items.{$index}.work_order_id", "SPK tidak sesuai dengan pesanan {$order->code}.");
+                }
+            }
+        }
     }
 
     /**

@@ -74,6 +74,8 @@ class MobileTransactionFlowTest extends TestCase
             'branch_id' => $branch->id,
             'phone' => '081241129902',
         ]);
+        // Sales hanya mengakses pesanan plant yang ditugaskan
+        $this->sales->batchingPlants()->attach($this->plant->id);
 
         $this->driver = User::factory()->create([
             'role' => UserRole::Driver,
@@ -345,7 +347,11 @@ class MobileTransactionFlowTest extends TestCase
             'status' => 'SCHEDULED',
         ]);
 
-        $this->actingAs($this->sales)->post(route('orders.cancel', $order), ['cancellation_reason' => 'x'])->assertForbidden();
+        // Operator plant (bukan admin) tidak boleh membatalkan, walau pesanan ada di plant-nya
+        $operator = User::factory()->create(['role' => UserRole::User, 'branch_id' => $this->plant->branch_id]);
+        $operator->batchingPlants()->attach($this->plant->id);
+        $this->actingAs($operator)->post(route('orders.cancel', $order), ['cancellation_reason' => 'x'])->assertForbidden();
+        $this->app['auth']->forgetGuards();
 
         $this->actingAs($this->admin)
             ->put(route('orders.update', $order), ['status' => 'CANCELLED', 'payment_status' => 'PAID'])

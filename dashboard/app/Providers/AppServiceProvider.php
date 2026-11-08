@@ -2,12 +2,16 @@
 
 namespace App\Providers;
 
+use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
+use Illuminate\Validation\ValidationException;
 use Laravel\Fortify\Fortify;
+use Modules\Shared\Http\Middleware\EnsureDashboardRole;
 use Modules\Shared\Services\CodeGenerator;
 
 class AppServiceProvider extends ServiceProvider
@@ -22,14 +26,21 @@ class AppServiceProvider extends ServiceProvider
         $this->configureDefaults();
 
         Fortify::authenticateUsing(function ($request) {
-            $user = \App\Models\User::query()
+            $user = User::query()
                 ->where(Fortify::username(), $request->{Fortify::username()})
                 ->first();
 
             if ($user
                 && $user->is_active
-                && \Illuminate\Support\Facades\Hash::check($request->password, $user->password)
+                && Hash::check($request->password, $user->password)
             ) {
+                // Dashboard hanya untuk admin & operator plant; sales/sopir memakai aplikasi mobile.
+                if ($user->isSales() || $user->isDriver()) {
+                    throw ValidationException::withMessages([
+                        Fortify::username() => EnsureDashboardRole::MESSAGE,
+                    ]);
+                }
+
                 return $user;
             }
 

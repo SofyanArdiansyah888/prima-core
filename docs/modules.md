@@ -28,6 +28,8 @@
 - Model auth: `App\Models\User` (Fortify)
 - Pages: `resources/js/pages/modules/user/{index,form}.tsx`
 - Sync: `batching_plant_ids[]` → pivot `batching_plant_user`
+- `has_full_plant_access` → akses transaksi semua batching plant (admin selalu penuh); lihat `docs/domain.md` → Pemisahan data per batching plant (test: `tests/Feature/PlantAccessTest.php`)
+- Login dashboard ditolak untuk sales & supir (`AppServiceProvider` + middleware `EnsureDashboardRole`)
 - API login staf mobile (sales & supir): `/api/staff/v1/{login,me,logout}` → `StaffAuthApiController` (test: `tests/Feature/StaffMobileLoginTest.php`)
 
 ## Customer

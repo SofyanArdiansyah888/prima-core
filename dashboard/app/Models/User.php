@@ -6,6 +6,7 @@ use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
@@ -46,9 +47,15 @@ class User extends Authenticatable implements PasskeyUser
         'password',
         'role',
         'is_active',
+        'has_full_plant_access',
         'branch_id',
         'email_verified_at',
     ];
+
+    /** @var array<int, int>|null Cache id plant yang boleh diakses (null = semua). */
+    private ?array $plantIdsCache = null;
+
+    private bool $plantIdsResolved = false;
 
     protected $hidden = [
         'password',
@@ -65,7 +72,42 @@ class User extends Authenticatable implements PasskeyUser
             'two_factor_confirmed_at' => 'datetime',
             'role' => UserRole::class,
             'is_active' => 'boolean',
+            'has_full_plant_access' => 'boolean',
         ];
+    }
+
+    /**
+     * Admin (super admin) atau user dengan saklar "Akses semua batching plant".
+     */
+    public function hasFullPlantAccess(): bool
+    {
+        return $this->isAdmin() || (bool) $this->has_full_plant_access;
+    }
+
+    /**
+     * Id batching plant yang boleh diakses; `null` berarti semua plant.
+     *
+     * @return array<int, int>|null
+     */
+    public function accessiblePlantIds(): ?array
+    {
+        if ($this->hasFullPlantAccess()) {
+            return null;
+        }
+
+        if (! $this->plantIdsResolved) {
+            $this->plantIdsCache = $this->batchingPlants()->pluck('batching_plants.id')->map(fn ($id) => (int) $id)->all();
+            $this->plantIdsResolved = true;
+        }
+
+        return $this->plantIdsCache;
+    }
+
+    public function canAccessPlant(?int $plantId): bool
+    {
+        $ids = $this->accessiblePlantIds();
+
+        return $ids === null || ($plantId !== null && in_array($plantId, $ids, true));
     }
 
     public function isAdmin(): bool
@@ -93,7 +135,7 @@ class User extends Authenticatable implements PasskeyUser
         return $this->belongsToMany(BatchingPlant::class)->withTimestamps();
     }
 
-    public function suratJalans(): \Illuminate\Database\Eloquent\Relations\HasMany
+    public function suratJalans(): HasMany
     {
         return $this->hasMany(SuratJalan::class, 'driver_id');
     }

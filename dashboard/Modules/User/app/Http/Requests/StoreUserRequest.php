@@ -30,6 +30,7 @@ class StoreUserRequest extends FormRequest
             ],
             'code' => ['nullable', 'string', 'max:32', 'regex:/^EMP-[A-Z0-9]{2,6}-[0-9]{9}$/', Rule::unique('users', 'code')],
             'is_active' => ['sometimes', 'boolean'],
+            'has_full_plant_access' => ['sometimes', 'boolean'],
             'batching_plant_ids' => ['array'],
             'batching_plant_ids.*' => ['integer', 'exists:batching_plants,id'],
         ];

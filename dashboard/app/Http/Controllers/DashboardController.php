@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 use Modules\BatchingPlant\Models\BatchingPlant;
@@ -15,9 +16,14 @@ use Modules\WorkOrder\Models\WorkOrder;
 
 class DashboardController extends Controller
 {
-    public function __invoke(): Response
+    public function __invoke(Request $request): Response
     {
+        // Pemisahan data per batching plant (admin / akses penuh: semua plant)
+        $user = $request->user();
+        $plantIds = $user->accessiblePlantIds();
+
         $plants = BatchingPlant::query()
+            ->visibleTo($user)
             ->where('is_active', true)
             ->whereNotNull('lat')
             ->whereNotNull('lng')
@@ -29,6 +35,7 @@ class DashboardController extends Controller
                 'suratJalan.batchingPlant:id,code,name,lat,lng',
                 'product:id,code,name,category,unit',
             ])
+            ->whereHas('suratJalan', fn ($q) => $q->visibleTo($user))
             ->whereNotNull('destination_lat')
             ->whereNotNull('destination_lng')
             ->orderBy('id', 'desc')
@@ -62,18 +69,20 @@ class DashboardController extends Controller
 
         // Recent orders (5 latest)
         $recentOrders = Order::query()
+            ->visibleTo($user)
             ->with(['batchingPlant:id,name,code'])
             ->select(['id', 'uuid', 'code', 'customer_name', 'customer_type', 'project_title',
-                      'status', 'payment_status', 'total_price', 'batching_plant_id', 'created_at'])
+                'status', 'payment_status', 'total_price', 'batching_plant_id', 'created_at'])
             ->orderByDesc('id')
             ->limit(5)
             ->get();
 
         // Recent dispatches (5 latest)
         $recentDispatches = SuratJalan::query()
+            ->visibleTo($user)
             ->with(['batchingPlant:id,name,code', 'items.product:id,name,unit'])
             ->select(['id', 'uuid', 'code', 'vehicle_number', 'driver_name', 'status',
-                      'net_weight_kg', 'batching_plant_id', 'created_at'])
+                'net_weight_kg', 'batching_plant_id', 'created_at'])
             ->orderByDesc('id')
             ->limit(5)
             ->get()
@@ -88,29 +97,37 @@ class DashboardController extends Controller
                     'net_weight_kg' => $sj->net_weight_kg,
                     'plant_name' => $sj->batchingPlant?->name,
                     'created_at' => $sj->created_at,
-                    'customers' => $sj->items->map(fn($i) => $i->destination_customer_name ?? '')->unique()->values(),
+                    'customers' => $sj->items->map(fn ($i) => $i->destination_customer_name ?? '')->unique()->values(),
                 ];
             });
 
         // Status breakdowns
         $orderStatusBreakdown = Order::query()
+            ->visibleTo($user)
             ->selectRaw('status, COUNT(*) as count')
             ->groupBy('status')
             ->pluck('count', 'status');
 
         $dispatchStatusBreakdown = SuratJalan::query()
+            ->visibleTo($user)
             ->selectRaw('status, COUNT(*) as count')
             ->groupBy('status')
             ->pluck('count', 'status');
 
         return Inertia::render('dashboard', [
             'stats' => [
-                'branches' => Branch::query()->where('is_active', true)->count(),
-                'plants' => BatchingPlant::query()->where('is_active', true)->count(),
-                'users' => User::query()->where('is_active', true)->count(),
-                'orders' => Order::query()->count(),
-                'workOrders' => WorkOrder::query()->count(),
-                'dispatches' => SuratJalan::query()->count(),
+                'branches' => Branch::query()
+                    ->where('is_active', true)
+                    ->when($plantIds !== null, fn ($q) => $q->whereHas('batchingPlants', fn ($p) => $p->whereIn('batching_plants.id', $plantIds ?: [0])))
+                    ->count(),
+                'plants' => BatchingPlant::query()->visibleTo($user)->where('is_active', true)->count(),
+                'users' => User::query()
+                    ->where('is_active', true)
+                    ->when($plantIds !== null, fn ($q) => $q->whereHas('batchingPlants', fn ($p) => $p->whereIn('batching_plants.id', $plantIds ?: [0])))
+                    ->count(),
+                'orders' => Order::query()->visibleTo($user)->count(),
+                'workOrders' => WorkOrder::query()->visibleTo($user)->count(),
+                'dispatches' => SuratJalan::query()->visibleTo($user)->count(),
                 'products' => Product::query()->where('is_active', true)->count(),
                 // Status breakdowns
                 'ordersConfirmed' => $orderStatusBreakdown->get('CONFIRMED', 0),

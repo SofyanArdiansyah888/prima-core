@@ -116,8 +116,12 @@ class ReportController extends Controller
         }
         $plantId = $request->integer('batching_plant_id') ?: null;
 
+        // Pemisahan data per batching plant
+        abort_if($plantId && ! $request->user()->canAccessPlant($plantId), 403, 'Anda tidak memiliki akses ke batching plant ini.');
+
         $plants = BatchingPlant::query()
-            ->orderBy('code')
+            ->visibleTo($request->user())
+            ->orderBy('name')
             ->get(['id', 'code', 'name'])
             ->map(fn (BatchingPlant $plant) => [
                 'id' => $plant->id,
@@ -149,6 +153,7 @@ class ReportController extends Controller
     private function salesData(CarbonInterface $from, CarbonInterface $to, ?int $plantId): array
     {
         $orders = Order::query()
+            ->visibleTo(auth()->user())
             ->with([
                 'batchingPlant:id,code,name',
                 'items.product:id,code,name,unit',
@@ -214,6 +219,7 @@ class ReportController extends Controller
     private function productionData(CarbonInterface $from, CarbonInterface $to, ?int $plantId): array
     {
         $workOrders = WorkOrder::query()
+            ->visibleTo(auth()->user())
             ->with([
                 'batchingPlant:id,code,name',
                 'product:id,code,name,unit',
@@ -303,6 +309,7 @@ class ReportController extends Controller
     private function dispatchData(CarbonInterface $from, CarbonInterface $to, ?int $plantId): array
     {
         $letters = SuratJalan::query()
+            ->visibleTo(auth()->user())
             ->with([
                 'batchingPlant:id,code,name',
                 'items.product:id,code,name,unit',

@@ -10,11 +10,15 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Modules\Branch\Models\Branch;
 use Modules\DeliveryRate\Models\PlantDeliveryRate;
 use Modules\Shared\Concerns\HasUuid;
+use Modules\Shared\Concerns\ScopedByPlant;
 use Modules\Shared\Enums\PlantStatus;
 
 class BatchingPlant extends Model
 {
-    use HasUuid;
+    use HasUuid, ScopedByPlant;
+
+    /** Kolom plant untuk ScopedByPlant: plant itu sendiri. */
+    protected string $plantColumn = 'id';
 
     protected $fillable = [
         'uuid',

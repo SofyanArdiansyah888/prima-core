@@ -17,19 +17,24 @@ use Modules\Dispatch\Models\SuratJalanItem;
 use Modules\Order\Models\Order;
 use Modules\Order\Models\OrderItem;
 use Modules\Product\Models\Product;
+use Modules\Shared\Concerns\AuthorizesPlantAccess;
 use Modules\Shared\Enums\UserRole;
 use Modules\Shared\Services\CodeGenerator;
 use Modules\WorkOrder\Models\WorkOrder;
 
 class DispatchController extends Controller
 {
+    use AuthorizesPlantAccess;
+
     public function index(Request $request): Response
     {
         $search = $request->string('search')->trim()->toString();
         $status = $request->string('status')->trim()->toString();
         $plantId = $request->input('batching_plant_id');
 
+        $user = $request->user();
         $filtered = fn () => SuratJalan::query()
+            ->visibleTo($user)
             ->when($search !== '', function ($q) use ($search) {
                 $q->where(function ($inner) use ($search) {
                     $inner->where('code', 'like', "%{$search}%")
@@ -59,7 +64,7 @@ class DispatchController extends Controller
         return Inertia::render('modules/dispatch/index', [
             'suratJalans' => $suratJalans,
             'counts' => $filtered()->selectRaw('status, count(*) as total')->groupBy('status')->pluck('total', 'status'),
-            'plants' => BatchingPlant::query()->where('is_active', true)->orderBy('code')->get(['id', 'uuid', 'code', 'name']),
+            'plants' => BatchingPlant::query()->visibleTo($user)->where('is_active', true)->orderBy('name')->get(['id', 'uuid', 'code', 'name']),
             'statuses' => [
                 ['value' => 'ON_THE_WAY', 'label' => 'Dalam Perjalanan'],
                 ['value' => 'COMPLETED', 'label' => 'Pengantaran Selesai'],
@@ -75,10 +80,13 @@ class DispatchController extends Controller
 
     public function create(Request $request): Response
     {
+        $user = $request->user();
         $plantId = $request->input('batching_plant_id');
+        $plants = BatchingPlant::query()->visibleTo($user)->where('is_active', true)->orderBy('name')->get(['id', 'uuid', 'code', 'name', 'branch_id']);
 
         // Hanya pesanan LUNAS dengan SPK aktif dan masih ada sisa volume yang belum dikirim
         $activeOrders = Order::query()
+            ->visibleTo($user)
             ->readyForProduction()
             ->whereHas('workOrders', fn ($q) => $q->whereRaw('dispatched_quantity < target_quantity'))
             ->whereHas('items', fn ($q) => $q->whereColumn('fulfilled_quantity', '<', 'quantity'))
@@ -91,10 +99,12 @@ class DispatchController extends Controller
             ->get();
 
         return Inertia::render('modules/dispatch/form', [
-            'plants' => BatchingPlant::query()->where('is_active', true)->orderBy('code')->get(['id', 'uuid', 'code', 'name', 'branch_id']),
+            'plants' => $plants,
             'drivers' => User::query()
                 ->where('role', UserRole::Driver)
                 ->where('is_active', true)
+                // Supir hanya dari cabang plant yang boleh diakses (kecuali akses penuh)
+                ->when($user->accessiblePlantIds() !== null, fn ($q) => $q->whereIn('branch_id', $plants->pluck('branch_id')->filter()->unique()->values()->all() ?: [0]))
                 ->orderBy('name')
                 ->get(['id', 'name', 'phone', 'branch_id']),
             'activeOrders' => $activeOrders,
@@ -186,6 +196,8 @@ class DispatchController extends Controller
 
     public function show(SuratJalan $suratJalan): Response
     {
+        $this->ensurePlantAccess($suratJalan->batching_plant_id);
+
         $suratJalan->load([
             'batchingPlant.branch',
             'driver',
@@ -201,6 +213,8 @@ class DispatchController extends Controller
 
     public function printView(SuratJalan $suratJalan): Response
     {
+        $this->ensurePlantAccess($suratJalan->batching_plant_id);
+
         $suratJalan->load([
             'batchingPlant.branch',
             'driver',
@@ -216,6 +230,8 @@ class DispatchController extends Controller
 
     public function updateStatus(UpdateSuratJalanStatusRequest $request, SuratJalan $suratJalan): RedirectResponse
     {
+        $this->ensurePlantAccess($suratJalan->batching_plant_id);
+
         $data = $request->validated();
         $status = $data['status'];
         $previousStatus = $suratJalan->status;

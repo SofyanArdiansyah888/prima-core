@@ -45,6 +45,20 @@ class StoreWorkOrderRequest extends FormRequest
                 return;
             }
 
+            // Pemisahan data per batching plant
+            $user = $this->user();
+            $order = Order::query()->find($this->input('order_id'));
+            if (! $user->canAccessPlant($order?->batching_plant_id)) {
+                $validator->errors()->add('order_id', 'Pesanan ini milik batching plant lain.');
+
+                return;
+            }
+            if (! $user->canAccessPlant((int) $this->input('batching_plant_id'))) {
+                $validator->errors()->add('batching_plant_id', 'Anda tidak memiliki akses ke batching plant ini.');
+
+                return;
+            }
+
             $orderItem = OrderItem::query()
                 ->where('order_id', $this->input('order_id'))
                 ->where('product_id', $this->input('product_id'))

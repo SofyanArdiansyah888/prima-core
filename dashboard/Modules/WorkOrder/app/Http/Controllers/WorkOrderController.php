@@ -11,19 +11,24 @@ use Inertia\Response;
 use Modules\BatchingPlant\Models\BatchingPlant;
 use Modules\Order\Models\Order;
 use Modules\Product\Models\Product;
+use Modules\Shared\Concerns\AuthorizesPlantAccess;
 use Modules\Shared\Services\CodeGenerator;
 use Modules\WorkOrder\Http\Requests\StoreWorkOrderRequest;
 use Modules\WorkOrder\Models\WorkOrder;
 
 class WorkOrderController extends Controller
 {
+    use AuthorizesPlantAccess;
+
     public function index(Request $request): Response
     {
         $search = $request->string('search')->trim()->toString();
         $status = $request->string('status')->trim()->toString();
         $plantId = $request->input('batching_plant_id');
 
+        $user = $request->user();
         $filtered = fn () => WorkOrder::query()
+            ->visibleTo($user)
             ->when($search !== '', function ($q) use ($search) {
                 $q->where(function ($inner) use ($search) {
                     $inner->where('code', 'like', "%{$search}%")
@@ -52,7 +57,7 @@ class WorkOrderController extends Controller
         return Inertia::render('modules/work-order/index', [
             'workOrders' => $workOrders,
             'counts' => $filtered()->selectRaw('status, count(*) as total')->groupBy('status')->pluck('total', 'status'),
-            'plants' => BatchingPlant::query()->where('is_active', true)->orderBy('code')->get(['id', 'uuid', 'code', 'name']),
+            'plants' => BatchingPlant::query()->visibleTo($user)->where('is_active', true)->orderBy('name')->get(['id', 'uuid', 'code', 'name']),
             'statuses' => [
                 ['value' => 'SCHEDULED', 'label' => 'Terjadwal'],
                 ['value' => 'IN_PRODUCTION', 'label' => 'Sedang Produksi / Batching'],
@@ -70,11 +75,13 @@ class WorkOrderController extends Controller
 
     public function create(Request $request): Response|RedirectResponse
     {
+        $user = $request->user();
         $orderId = $request->input('order_id');
         $selectedOrder = null;
 
         if ($orderId) {
             $selectedOrder = Order::with(['items.product', 'batchingPlant'])->find($orderId);
+            $this->ensurePlantAccess($selectedOrder?->batching_plant_id);
 
             if ($reason = Order::productionBlockReason($selectedOrder)) {
                 return back()->with('error', $reason);
@@ -90,13 +97,22 @@ class WorkOrderController extends Controller
             'selectedOrder' => $selectedOrder,
             // Hanya pesanan LUNAS yang belum punya SPK aktif
             'orders' => Order::query()
+                ->visibleTo($user)
                 ->readyForProduction()
                 ->whereDoesntHave('workOrders', fn ($q) => $q->where('status', '!=', 'CANCELLED'))
                 ->with(['items.product', 'batchingPlant'])
                 ->orderByDesc('id')
                 ->get(),
-            'plants' => BatchingPlant::query()->where('is_active', true)->orderBy('code')->get(['id', 'uuid', 'code', 'name']),
-            'users' => User::query()->where('is_active', true)->orderBy('name')->get(['id', 'name', 'code', 'role']),
+            'plants' => BatchingPlant::query()->visibleTo($user)->where('is_active', true)->orderBy('name')->get(['id', 'uuid', 'code', 'name']),
+            // Operator: hanya user yang bertugas di plant yang sama (kecuali akses penuh)
+            'users' => User::query()
+                ->where('is_active', true)
+                ->when($user->accessiblePlantIds() !== null, fn ($q) => $q->whereHas(
+                    'batchingPlants',
+                    fn ($p) => $p->whereIn('batching_plants.id', $user->accessiblePlantIds() ?: [0])
+                ))
+                ->orderBy('name')
+                ->get(['id', 'name', 'code', 'role']),
         ]);
     }
 
@@ -127,6 +143,8 @@ class WorkOrderController extends Controller
 
     public function show(WorkOrder $workOrder): Response
     {
+        $this->ensurePlantAccess($workOrder->batching_plant_id);
+
         $workOrder->load([
             'order.items.product',
             'product',
@@ -141,6 +159,8 @@ class WorkOrderController extends Controller
 
     public function destroy(WorkOrder $workOrder): RedirectResponse
     {
+        $this->ensurePlantAccess($workOrder->batching_plant_id);
+
         if ((float) $workOrder->dispatched_quantity > 0) {
             return back()->with('error', 'SPK tidak dapat dihapus karena sudah memiliki ritase pengiriman Surat Jalan.');
         }

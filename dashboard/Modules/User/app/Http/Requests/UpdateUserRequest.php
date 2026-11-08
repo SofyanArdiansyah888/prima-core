@@ -31,6 +31,7 @@ class UpdateUserRequest extends FormRequest
                 'exists:branches,id',
             ],
             'is_active' => ['sometimes', 'boolean'],
+            'has_full_plant_access' => ['sometimes', 'boolean'],
             'batching_plant_ids' => ['array'],
             'batching_plant_ids.*' => ['integer', 'exists:batching_plants,id'],
         ];

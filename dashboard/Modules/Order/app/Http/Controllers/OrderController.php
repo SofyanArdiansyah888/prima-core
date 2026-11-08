@@ -13,9 +13,12 @@ use Modules\Order\Models\Order;
 use Modules\Order\Services\ApproveOrderSite;
 use Modules\Order\Services\CancelOrder;
 use Modules\Order\Services\MidtransPaymentService;
+use Modules\Shared\Concerns\AuthorizesPlantAccess;
 
 class OrderController extends Controller
 {
+    use AuthorizesPlantAccess;
+
     public function index(Request $request, MidtransPaymentService $midtrans): Response
     {
         $search = $request->string('search')->trim()->toString();
@@ -23,7 +26,9 @@ class OrderController extends Controller
         $plantId = $request->input('batching_plant_id');
 
         // Filter pencarian & plant (tanpa status) — dipakai juga untuk hitungan chip status
+        $user = $request->user();
         $filtered = fn () => Order::query()
+            ->visibleTo($user)
             ->when($search !== '', function ($q) use ($search) {
                 $q->where(function ($inner) use ($search) {
                     $inner->where('code', 'like', "%{$search}%")
@@ -55,7 +60,7 @@ class OrderController extends Controller
         return Inertia::render('modules/order/index', [
             'orders' => $orders,
             'counts' => $filtered()->selectRaw('status, count(*) as total')->groupBy('status')->pluck('total', 'status'),
-            'plants' => BatchingPlant::query()->where('is_active', true)->orderBy('code')->get(['id', 'uuid', 'code', 'name']),
+            'plants' => BatchingPlant::query()->visibleTo($user)->where('is_active', true)->orderBy('name')->get(['id', 'uuid', 'code', 'name']),
             'statuses' => [
                 ['value' => 'PENDING_APPROVAL', 'label' => 'Menunggu Verifikasi Tempat'],
                 ['value' => 'CONFIRMED', 'label' => 'Dikonfirmasi / Siap Bayar'],
@@ -86,6 +91,8 @@ class OrderController extends Controller
 
     public function show(Order $order, MidtransPaymentService $midtrans): Response
     {
+        $this->ensurePlantAccess($order->batching_plant_id);
+
         if ($order->payment_method === 'MIDTRANS' && $order->payment_status === 'PENDING') {
             $order = $midtrans->checkPaymentStatus($order);
         }
@@ -106,6 +113,8 @@ class OrderController extends Controller
 
     public function approve(Request $request, Order $order, ApproveOrderSite $approveSite): RedirectResponse
     {
+        $this->ensurePlantAccess($order->batching_plant_id);
+
         if ($order->status !== 'PENDING_APPROVAL') {
             return back()->with('error', 'Hanya pesanan berstatus Menunggu Verifikasi Tempat yang dapat disetujui.');
         }
@@ -124,6 +133,8 @@ class OrderController extends Controller
 
     public function reject(Request $request, Order $order): RedirectResponse
     {
+        $this->ensurePlantAccess($order->batching_plant_id);
+
         if ($order->status !== 'PENDING_APPROVAL') {
             return back()->with('error', 'Hanya pesanan berstatus Menunggu Verifikasi Tempat yang dapat ditolak.');
         }
@@ -142,6 +153,8 @@ class OrderController extends Controller
 
     public function syncPayment(Order $order, MidtransPaymentService $midtrans): RedirectResponse
     {
+        $this->ensurePlantAccess($order->batching_plant_id);
+
         $order = $midtrans->checkPaymentStatus($order);
         $statusLabel = $order->payment_status === 'PAID' ? 'LUNAS (Terverifikasi Midtrans)' : $order->payment_status;
 
@@ -155,6 +168,7 @@ class OrderController extends Controller
     public function update(UpdateOrderRequest $request, Order $order): RedirectResponse
     {
         abort_unless($request->user()?->isAdmin(), 403, 'Hanya admin yang dapat mengubah data pembayaran pesanan.');
+        $this->ensurePlantAccess($order->batching_plant_id);
 
         $data = $request->validated();
 
@@ -179,6 +193,7 @@ class OrderController extends Controller
     public function cancel(Request $request, Order $order, CancelOrder $cancelOrder): RedirectResponse
     {
         abort_unless($request->user()?->isAdmin(), 403, 'Hanya admin yang dapat membatalkan pesanan.');
+        $this->ensurePlantAccess($order->batching_plant_id);
 
         $validated = $request->validate([
             'cancellation_reason' => ['required', 'string', 'max:1000'],
@@ -199,6 +214,8 @@ class OrderController extends Controller
 
     public function destroy(Order $order): RedirectResponse
     {
+        $this->ensurePlantAccess($order->batching_plant_id);
+
         return back()->with('error', 'Gunakan tombol Batalkan Pesanan (admin) agar alasan dan refund tercatat.');
     }
 }

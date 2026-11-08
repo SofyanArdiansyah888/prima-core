@@ -8,11 +8,13 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Modules\BatchingPlant\Models\BatchingPlant;
 use Modules\Order\Models\Order;
+use Modules\Order\Models\SitePhoto;
 use Modules\Shared\Concerns\HasUuid;
+use Modules\Shared\Concerns\ScopedByPlant;
 
 class SuratJalan extends Model
 {
-    use HasUuid;
+    use HasUuid, ScopedByPlant;
 
     /** Ritase yang masih di jalan / belum diserahterimakan. */
     public const ACTIVE_STATUSES = ['PREPARED', 'DEPARTED', 'ON_THE_WAY', 'ARRIVED', 'UNLOADING'];
@@ -101,8 +103,8 @@ class SuratJalan extends Model
         return $this->hasMany(SuratJalanItem::class);
     }
 
-    public function sitePhotos(): \Illuminate\Database\Eloquent\Relations\HasMany
+    public function sitePhotos(): HasMany
     {
-        return $this->hasMany(\Modules\Order\Models\SitePhoto::class)->latest('id');
+        return $this->hasMany(SitePhoto::class)->latest('id');
     }
 }

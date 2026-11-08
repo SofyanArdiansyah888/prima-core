@@ -21,6 +21,7 @@ type User = {
     role: string;
     branch_id: number | null;
     is_active: boolean;
+    has_full_plant_access?: boolean;
     batching_plant_ids?: number[];
 };
 
@@ -39,6 +40,8 @@ export default function UserForm({
     const [role, setRole] = useState(user?.role ?? 'user');
     const [branchId, setBranchId] = useState<string>(user?.branch_id ? String(user.branch_id) : '');
     const [selectedPlants, setSelectedPlants] = useState<number[]>(user?.batching_plant_ids ?? []);
+    const [fullAccess, setFullAccess] = useState<boolean>(user?.has_full_plant_access ?? false);
+    const [isActive, setIsActive] = useState<boolean>(user?.is_active ?? true);
 
     const filteredPlants = useMemo(
         () => plants.filter((p) => !branchId || String(p.branch_id) === branchId),
@@ -238,6 +241,7 @@ export default function UserForm({
                                             )}
                                             {filteredPlants.map((p) => {
                                                 const checked = selectedPlants.includes(p.id);
+
                                                 return (
                                                     <div
                                                         key={p.id}
@@ -271,14 +275,38 @@ export default function UserForm({
                                     </div>
                                 </div>
 
+                                {/* Akses data semua batching plant */}
+                                {role === 'admin' ? (
+                                    <p className="rounded-lg border border-emerald-200 bg-emerald-50/60 p-3.5 text-xs text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-300">
+                                        Admin selalu dapat mengakses data transaksi seluruh batching plant.
+                                    </p>
+                                ) : role === 'user' || role === 'sales' ? (
+                                    <div className="flex items-center gap-3 rounded-lg border border-slate-200/80 bg-slate-50/50 p-3.5 dark:border-slate-800 dark:bg-slate-800/40">
+                                        <Checkbox
+                                            id="has_full_plant_access"
+                                            checked={fullAccess}
+                                            onCheckedChange={(v) => setFullAccess(v === true)}
+                                        />
+                                        <input type="hidden" name="has_full_plant_access" value={fullAccess ? '1' : '0'} />
+                                        <div className="grid gap-0.5">
+                                            <Label htmlFor="has_full_plant_access" className="cursor-pointer text-sm font-semibold text-slate-900 dark:text-white">
+                                                Akses semua batching plant
+                                            </Label>
+                                            <p className="text-xs text-slate-500 dark:text-slate-400">
+                                                Jika aktif, user dapat melihat & memproses transaksi seluruh plant. Jika tidak, hanya plant yang dipilih di atas.
+                                            </p>
+                                        </div>
+                                    </div>
+                                ) : null}
+
                                 {/* Active Status */}
                                 <div className="flex items-center gap-3 rounded-lg border border-slate-200/80 bg-slate-50/50 p-3.5 dark:border-slate-800 dark:bg-slate-800/40">
                                     <Checkbox
                                         id="is_active"
-                                        name="is_active"
-                                        value="1"
-                                        defaultChecked={user?.is_active ?? true}
+                                        checked={isActive}
+                                        onCheckedChange={(v) => setIsActive(v === true)}
                                     />
+                                    <input type="hidden" name="is_active" value={isActive ? '1' : '0'} />
                                     <div className="grid gap-0.5">
                                         <Label htmlFor="is_active" className="cursor-pointer text-sm font-semibold text-slate-900 dark:text-white">
                                             Status Akun Aktif

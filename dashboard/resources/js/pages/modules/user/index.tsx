@@ -15,8 +15,16 @@ type UserRow = {
     email: string;
     role: string;
     is_active: boolean;
+    has_full_plant_access?: boolean;
     branch?: { code: string; name: string };
     batching_plants: { id: number; code: string; name: string }[];
+};
+
+const ROLE_BADGE: Record<string, { label: string; className: string }> = {
+    admin: { label: 'Administrator', className: 'border border-emerald-500/30 bg-emerald-500/10 text-emerald-800 dark:text-emerald-300' },
+    user: { label: 'Operator Plant', className: 'border border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-300' },
+    sales: { label: 'Sales Lapangan', className: 'border border-amber-500/30 bg-amber-500/10 text-amber-800 dark:text-amber-300' },
+    driver: { label: 'Supir Armada', className: 'border border-slate-400/30 bg-slate-500/10 text-slate-700 dark:text-slate-300' },
 };
 
 type Paginated<T> = {
@@ -46,16 +54,34 @@ export default function UserIndex({
     };
 
     useEffect(() => {
-        if (flash?.success) toast.success(flash.success);
-        if (flash?.error) toast.error(flash.error);
+        if (flash?.success) {
+toast.success(flash.success);
+}
+
+        if (flash?.error) {
+toast.error(flash.error);
+}
     }, [flash?.success, flash?.error]);
 
     const handleFilter = (e?: React.FormEvent) => {
-        if (e) e.preventDefault();
+        if (e) {
+e.preventDefault();
+}
+
         const params: Record<string, string> = {};
-        if (search) params.search = search;
-        if (role) params.role = role;
-        if (branchId) params.branch_id = branchId;
+
+        if (search) {
+params.search = search;
+}
+
+        if (role) {
+params.role = role;
+}
+
+        if (branchId) {
+params.branch_id = branchId;
+}
+
         router.get('/master/users', params, { preserveState: true });
     };
 
@@ -204,12 +230,10 @@ export default function UserIndex({
                                         <td className="px-5 py-3.5">
                                             <span
                                                 className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-                                                    u.role === 'admin'
-                                                        ? 'border border-emerald-500/30 bg-emerald-500/10 text-emerald-800 dark:text-emerald-300'
-                                                        : 'border border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-300'
+                                                    (ROLE_BADGE[u.role] ?? ROLE_BADGE.user).className
                                                 }`}
                                             >
-                                                {u.role === 'admin' ? 'Administrator' : 'Operator Plant'}
+                                                {(ROLE_BADGE[u.role] ?? { label: u.role }).label}
                                             </span>
                                         </td>
                                         <td className="px-5 py-3.5 text-xs text-slate-600 dark:text-slate-300">
@@ -222,7 +246,11 @@ export default function UserIndex({
                                             )}
                                         </td>
                                         <td className="px-5 py-3.5">
-                                            {u.batching_plants?.length > 0 ? (
+                                            {u.role === 'admin' || u.has_full_plant_access ? (
+                                                <span className="inline-flex items-center rounded border border-emerald-300 bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300">
+                                                    Semua plant
+                                                </span>
+                                            ) : u.batching_plants?.length > 0 ? (
                                                 <div className="flex flex-wrap gap-1 max-w-xs">
                                                     {u.batching_plants.map((p) => (
                                                         <span
@@ -322,7 +350,9 @@ export default function UserIndex({
                 <ConfirmModal
                     open={Boolean(deleteTarget)}
                     onOpenChange={(open) => {
-                        if (!open) setDeleteTarget(null);
+                        if (!open) {
+setDeleteTarget(null);
+}
                     }}
                     title="Hapus Pengguna"
                     description={`Apakah Anda yakin ingin menghapus user "${deleteTarget?.name}" (${deleteTarget?.code ?? deleteTarget?.email})? User yang sudah terpakai dalam transaksi penugasan SPK tidak dapat dihapus.`}

@@ -1,4 +1,4 @@
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import {
     Building2,
     Factory,
@@ -29,6 +29,7 @@ import {
 import { useCurrentUrl } from '@/hooks/use-current-url';
 import { dashboard } from '@/routes';
 import type { NavItem } from '@/types';
+import type { Auth } from '@/types/auth';
 
 const overviewItems: NavItem[] = [
     {
@@ -125,6 +126,7 @@ function NavSection({ label, items }: { label?: string; items: NavItem[] }) {
             <SidebarMenu className="space-y-0.5">
                 {items.map((item) => {
                     const active = isCurrentUrl(item.href);
+
                     return (
                         <SidebarMenuItem key={item.title}>
                             <SidebarMenuButton
@@ -162,6 +164,9 @@ function NavSection({ label, items }: { label?: string; items: NavItem[] }) {
 }
 
 export function AppSidebar() {
+    const { auth } = usePage<{ auth: Auth }>().props;
+    const isAdmin = auth?.user?.role === 'admin';
+
     return (
         <Sidebar collapsible="icon" variant="inset" className="bg-[#0c1d37] text-white">
             {/* Top PKM Brand Color Strip */}
@@ -187,7 +192,7 @@ export function AppSidebar() {
                 <NavSection items={overviewItems} />
                 <NavSection label="Operasional & Distribusi" items={operationsNavItems} />
                 <NavSection label="Laporan" items={reportNavItems} />
-                <NavSection label="Master Data" items={masterNavItems} />
+                {isAdmin && <NavSection label="Master Data" items={masterNavItems} />}
             </SidebarContent>
 
             <SidebarFooter className="border-t border-white/10 pt-2">

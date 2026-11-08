@@ -50,3 +50,5 @@ composer run dev       # atau: docker compose up -d
 - Kode bisnis immutable setelah create; generate via `CodeGenerator`
 - Plant assign ke user harus sama `branch_id`
 - Hanya role `admin` yang akses `/master/*`
+- Data transaksional wajib dibatasi per batching plant: query list pakai `->visibleTo($user)`, record pakai `ensurePlantAccess()` (lihat `docs/domain.md`)
+- Sales & sopir tidak boleh login dashboard (hanya aplikasi mobile)

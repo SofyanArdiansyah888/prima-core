@@ -112,14 +112,13 @@ class SalesOrderApiController extends Controller
         $user = $request->user();
         $tab = $request->string('tab', 'pending')->toString();
 
+        // Sales hanya melihat pesanan batching plant yang ditugaskan kepadanya
         $query = Order::query()
+            ->visibleTo($user)
             ->with([
                 'batchingPlant:id,uuid,code,name,phone,whatsapp,lat,lng',
                 'items.product:id,uuid,code,name,unit',
-            ])
-            ->when($user->branch_id, function ($q) use ($user) {
-                $q->whereHas('batchingPlant', fn ($bp) => $bp->where('branch_id', $user->branch_id));
-            });
+            ]);
 
         if ($tab === 'pending') {
             $query->where('status', 'PENDING_APPROVAL');
@@ -224,8 +223,8 @@ class SalesOrderApiController extends Controller
 
     private function authorizeAccess(User $user, Order $order): void
     {
-        if ($user->branch_id && $order->batchingPlant && $order->batchingPlant->branch_id !== $user->branch_id) {
-            abort(403, 'Anda tidak memiliki hak akses untuk pesanan di luar cabang Anda.');
+        if (! $user->canAccessPlant($order->batching_plant_id)) {
+            abort(403, 'Pesanan ini milik batching plant yang tidak ditugaskan kepada Anda.');
         }
     }
 

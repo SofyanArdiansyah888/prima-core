@@ -13,13 +13,14 @@ use Modules\Customer\Models\Customer;
 use Modules\Dispatch\Models\SuratJalanItem;
 use Modules\Order\Observers\OrderObserver;
 use Modules\Shared\Concerns\HasUuid;
+use Modules\Shared\Concerns\ScopedByPlant;
 use Modules\WorkOrder\Models\WorkOrder;
 
 #[ObservedBy([OrderObserver::class])]
 
 class Order extends Model
 {
-    use HasUuid;
+    use HasUuid, ScopedByPlant;
 
     protected $fillable = [
         'uuid',
