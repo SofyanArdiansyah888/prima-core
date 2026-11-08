@@ -91,7 +91,9 @@ class OrderWhatsappMessagesTest extends TestCase
         $approved = last($this->customerMessages());
         $this->assertStringContainsString('*Pesanan Disetujui*', $approved);
         $this->assertStringContainsString('Akses jalan lebar', $approved);
-        $this->assertStringContainsString('Total Tagihan', $approved);
+        $this->assertStringContainsString('*Total Tagihan:* Rp', $approved);
+        $this->assertStringNotContainsString('PPN', $approved);
+        $this->assertStringNotContainsString('Ongkos kirim:', $approved);
         $this->assertStringContainsString('selesaikan pembayaran', $approved);
 
         $order->update(['payment_status' => 'PAID', 'paid_at' => now(), 'midtrans_payment_type' => 'qris']);

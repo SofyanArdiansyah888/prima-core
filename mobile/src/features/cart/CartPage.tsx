@@ -162,7 +162,7 @@ export default function CartPage() {
             </div>
             <div className="flex items-start gap-2 text-slate-500 text-[11px] leading-relaxed">
               <IonIcon icon={informationCircleOutline} className="text-base text-slate-400 shrink-0 mt-0.5" />
-              <span>Ongkos kirim dan PPN 11% akan dihitung otomatis oleh server pada tahap penentuan alamat proyek berikutnya.</span>
+              <span>Total tagihan (sudah termasuk pajak dan ongkos kirim) diinformasikan setelah lokasi proyek diverifikasi tim sales.</span>
             </div>
           </div>
 

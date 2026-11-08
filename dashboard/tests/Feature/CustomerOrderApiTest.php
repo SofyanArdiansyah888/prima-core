@@ -10,6 +10,7 @@ use Modules\Customer\Models\Customer;
 use Modules\Order\Models\Order;
 use Modules\Product\Models\Product;
 use Modules\Shared\Services\FonnteService;
+use Modules\WorkOrder\Models\WorkOrder;
 use RuntimeException;
 use Tests\TestCase;
 
@@ -223,8 +224,9 @@ class CustomerOrderApiTest extends TestCase
         ]);
 
         $quote->assertOk();
-        $this->assertEquals(4500, $quote->json('data.admin_fee'));
-        $expectedTotal = round(1560000 + (float) $quote->json('data.delivery_fee') + (float) $quote->json('data.ppn') + 4500, 2);
+        // Biaya layanan pembayaran baru dihitung saat metode pembayaran dipilih
+        $this->assertEquals(0, $quote->json('data.admin_fee'));
+        $expectedTotal = round(1560000 + (float) $quote->json('data.delivery_fee') + (float) $quote->json('data.ppn'), 2);
         $this->assertEquals($expectedTotal, $quote->json('data.total_price'));
 
         $orderRes = $this->withToken($token)->postJson('/api/customer/v1/orders', [
@@ -239,7 +241,7 @@ class CustomerOrderApiTest extends TestCase
         ]);
 
         $orderRes->assertCreated();
-        $this->assertEquals(4500, $orderRes->json('data.admin_fee'));
+        $this->assertEquals(0, $orderRes->json('data.admin_fee'));
         $this->assertSame('PENDING_APPROVAL', $orderRes->json('data.status'));
         $this->assertNull($orderRes->json('data.snap_token'));
 
@@ -259,6 +261,8 @@ class CustomerOrderApiTest extends TestCase
         $payRes = $this->withToken($token)->postJson('/api/customer/v1/orders/'.$uuid.'/pay');
         $payRes->assertOk();
         $this->assertNotEmpty($payRes->json('data.snap_token'));
+        // Klien lama tanpa pilih metode → biaya flat MIDTRANS_ADMIN_FEE
+        $this->assertEqualsWithDelta(4500, (float) $payRes->json('data.admin_fee'), 1);
 
         // Test document download: SPK returns 404 if not created yet
         $this->withToken($token)
@@ -272,7 +276,7 @@ class CustomerOrderApiTest extends TestCase
             ->assertHeader('content-type', 'application/pdf');
 
         // Create WorkOrder to verify SPK download
-        \Modules\WorkOrder\Models\WorkOrder::query()->create([
+        WorkOrder::query()->create([
             'order_id' => $order->id,
             'code' => 'WO-TEST-001',
             'product_id' => $cement->id,
@@ -316,10 +320,10 @@ class CustomerOrderApiTest extends TestCase
         ['cement' => $cement] = $this->seedCatalog();
         $token = $this->customerToken();
 
-        $fonnte = \Mockery::mock(\Modules\Shared\Services\FonnteService::class);
-        $fonnte->shouldReceive('deliver')->andThrow(new \RuntimeException('Fonnte menolak pengiriman: device disconnected'));
-        $fonnte->shouldReceive('sendNow')->andThrow(new \RuntimeException('Token Fonnte kosong.'));
-        $this->app->instance(\Modules\Shared\Services\FonnteService::class, $fonnte);
+        $fonnte = \Mockery::mock(FonnteService::class);
+        $fonnte->shouldReceive('deliver')->andThrow(new RuntimeException('Fonnte menolak pengiriman: device disconnected'));
+        $fonnte->shouldReceive('sendNow')->andThrow(new RuntimeException('Token Fonnte kosong.'));
+        $this->app->instance(FonnteService::class, $fonnte);
 
         $orderRes = $this->withToken($token)->postJson('/api/customer/v1/orders', [
             'project_title' => 'Pembangunan Gudang Semen',

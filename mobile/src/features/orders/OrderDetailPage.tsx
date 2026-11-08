@@ -24,6 +24,8 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { api } from '../../data/api';
 import { formatDate, formatQty, formatRupiah } from '../../domain/format';
 import { isOrderPriceVisible, orderStatusTone, paymentStatusLabel } from '../../domain/rules';
+import type { PaymentOption } from '../../domain/types';
+import { PaymentMethodSheet } from './PaymentMethodSheet';
 import { STATUS_LABELS, STATUS_STEPS, type CustomerOrder } from '../../domain/types';
 import { Card, ErrorText, Eyebrow, NavBar, OrderDetailSkeleton, Screen, StatusBadge, StickyBar, SyncIcon } from '../../shared/ui';
 import { openSnapPayment } from '../../lib/midtrans';
@@ -126,11 +128,35 @@ export default function OrderDetailPage() {
     setTimeout(() => setCopiedCode(false), 2000);
   };
 
+  const [methodSheetOpen, setMethodSheetOpen] = useState(false);
+  const [methodOptions, setMethodOptions] = useState<PaymentOption[]>([]);
+  const [methodLoading, setMethodLoading] = useState(false);
+  const [methodError, setMethodError] = useState('');
+
+  // Langkah 1: pilih metode pembayaran (total menyesuaikan biaya layanan metode)
   const handlePay = async () => {
     if (!order) return;
-    setPaying(true);
+    setMethodSheetOpen(true);
+    setMethodError('');
+    setMethodLoading(true);
     try {
-      const res = await api.payOrder(order.uuid);
+      const res = await api.paymentOptions(order.uuid);
+      setMethodOptions(res.data.options);
+    } catch (err) {
+      setMethodError(err instanceof Error ? err.message : 'Gagal memuat metode pembayaran.');
+    } finally {
+      setMethodLoading(false);
+    }
+  };
+
+  // Langkah 2: buat transaksi Midtrans untuk metode terpilih lalu buka Snap
+  const payWithChannel = async (channel: string) => {
+    if (!order) return;
+    setPaying(true);
+    setMethodError('');
+    try {
+      const res = await api.payOrder(order.uuid, channel);
+      setMethodSheetOpen(false);
       const updatedOrder = res.data;
       setOrder(updatedOrder);
       if (updatedOrder.snap_token) {
@@ -161,7 +187,7 @@ export default function OrderDetailPage() {
         );
       }
     } catch (err) {
-      triggerToast(err instanceof Error ? err.message : 'Gagal membuka pembayaran Midtrans.', 'error');
+      setMethodError(err instanceof Error ? err.message : 'Gagal membuka pembayaran Midtrans.');
     } finally {
       setPaying(false);
     }
@@ -267,13 +293,24 @@ export default function OrderDetailPage() {
                 className="w-full rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 py-3 text-xs font-black text-white shadow-md transition-all cursor-pointer flex items-center justify-center gap-2"
               >
                 <IonIcon icon={walletOutline} className="text-base" />
-                <span>{paying ? 'Menghubungkan Midtrans…' : `Bayar Sekarang (${formatRupiah(order.total_price)})`}</span>
+                <span>{paying ? 'Menghubungkan Midtrans…' : 'Pilih Metode & Bayar Sekarang'}</span>
               </button>
             )}
           </StickyBar>
         ) : null
       }
     >
+      <PaymentMethodSheet
+        isOpen={methodSheetOpen}
+        loading={methodLoading}
+        options={methodOptions}
+        selected={order?.payment_channel ?? null}
+        submitting={paying}
+        error={methodError}
+        onSelect={(code) => void payWithChannel(code)}
+        onClose={() => setMethodSheetOpen(false)}
+      />
+
       {/* Toast Notification */}
       <div
         className={`fixed top-24 left-1/2 z-[60] w-[92%] max-w-sm -translate-x-1/2 rounded-2xl border border-slate-700 bg-[#0c1d37] px-4 py-3 text-xs text-white shadow-2xl transition-all duration-300 sm:text-sm ${
@@ -562,12 +599,7 @@ export default function OrderDetailPage() {
                       <p className="text-[12px] font-bold leading-snug text-slate-900">{item.name || item.code}</p>
                       <p className="mt-0.5 text-[10px] leading-tight text-slate-500">
                         <span className="font-mono font-semibold text-[#0c1d37]">{formatQty(item.quantity)} {item.unit}</span>
-                        {showPrice && (
-                          <>
-                            <span className="mx-1">·</span>
-                            <span className="font-mono">@ {formatRupiah(item.unit_price)}</span>
-                          </>
-                        )}
+
                       </p>
                       {item.notes ? (
                         <p className="mt-1 inline-block rounded bg-amber-50 px-1.5 py-0.5 text-[10px] leading-tight text-amber-800">
@@ -575,14 +607,7 @@ export default function OrderDetailPage() {
                         </p>
                       ) : null}
                     </div>
-                    {showPrice && (
-                      <div className="shrink-0 text-right">
-                        <span className="block text-[9px] leading-none text-slate-400">Subtotal</span>
-                        <span className="font-mono text-[11px] font-bold leading-tight text-slate-900">
-                          {formatRupiah(item.subtotal)}
-                        </span>
-                      </div>
-                    )}
+
                   </div>
                 ))}
               </div>
@@ -611,32 +636,21 @@ export default function OrderDetailPage() {
                   <span>Metode</span>
                   <span className="font-bold text-slate-900">{order.payment_method === 'MIDTRANS' ? 'Midtrans' : order.payment_method_label}</span>
                 </div>
-                {showPrice ? (<>
-                <div className="flex justify-between gap-3 text-slate-600">
-                  <span>Subtotal</span>
-                  <span className="font-mono font-medium text-slate-800">{formatRupiah(order.subtotal)}</span>
-                </div>
-                {Number(order.delivery_fee) > 0 && (
-                  <div className="flex justify-between gap-3 text-slate-600">
-                    <span>Ongkir ({order.distance_km || 0} km)</span>
-                    <span className="font-mono font-medium text-slate-800">{formatRupiah(order.delivery_fee)}</span>
+                {showPrice ? (
+                <div className="border-t border-slate-200 pt-2">
+                  <div className="flex justify-between gap-3 text-[12px] font-extrabold text-[#0c1d37]">
+                    <span>Total Tagihan</span>
+                    <span className="font-mono">{formatRupiah(order.total_price)}</span>
                   </div>
-                )}
-                <div className="flex justify-between gap-3 text-slate-600">
-                  <span>PPN 11%</span>
-                  <span className="font-mono font-medium text-slate-800">{formatRupiah(order.ppn)}</span>
+                  <p className="mt-0.5 text-[10px] text-slate-400">
+                    {order.payment_channel_label
+                      ? `Sudah termasuk pajak, ongkos kirim, dan biaya layanan ${order.payment_channel_label}.`
+                      : canPay
+                      ? 'Sudah termasuk pajak dan ongkos kirim. Biaya layanan pembayaran menyesuaikan metode yang dipilih.'
+                      : 'Sudah termasuk pajak dan ongkos kirim.'}
+                  </p>
                 </div>
-                {Number(order.admin_fee) > 0 && (
-                  <div className="flex justify-between gap-3 text-slate-600">
-                    <span>Biaya layanan</span>
-                    <span className="font-mono font-medium text-slate-800">{formatRupiah(order.admin_fee)}</span>
-                  </div>
-                )}
-                <div className="flex justify-between gap-3 border-t border-slate-200 pt-2 text-[12px] font-extrabold text-[#0c1d37]">
-                  <span>Total</span>
-                  <span className="font-mono">{formatRupiah(order.total_price)}</span>
-                </div>
-                </>) : (
+                ) : (
                 <div className="flex justify-between gap-3 text-slate-600">
                   <span>Harga</span>
                   <span className="font-bold text-amber-700">Setelah verifikasi sales</span>
@@ -665,7 +679,7 @@ export default function OrderDetailPage() {
                     className="w-full flex items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 py-2.5 px-4 text-xs font-black text-white shadow-xs transition-all cursor-pointer"
                   >
                     <IonIcon icon={walletOutline} className="text-sm" />
-                    <span>{paying ? 'Menghubungkan Midtrans…' : 'Bayar Sekarang via Midtrans'}</span>
+                    <span>{paying ? 'Menghubungkan Midtrans…' : 'Pilih Metode & Bayar Sekarang'}</span>
                   </button>
 
                   <button

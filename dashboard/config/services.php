@@ -51,7 +51,29 @@ return [
         'client_key' => env('MIDTRANS_CLIENT_KEY', 'SB-Mid-client-test'),
         'merchant_id' => env('MIDTRANS_MERCHANT_ID', ''),
         'is_production' => (bool) env('MIDTRANS_IS_PRODUCTION', false),
+        // Biaya layanan flat untuk klien lama yang membayar tanpa memilih metode.
         'admin_fee' => (float) env('MIDTRANS_ADMIN_FEE', 4500),
+
+        /*
+         * Biaya layanan per metode pembayaran (dibebankan ke pelanggan).
+         * percent = persen dari nominal, fixed = rupiah tetap. Sesuaikan dengan tarif kontrak Midtrans.
+         * snap = kode enabled_payments Midtrans Snap. Atur metode aktif via MIDTRANS_CHANNELS (koma).
+         */
+        'enabled_channels' => array_values(array_filter(array_map('trim', explode(',', (string) env(
+            'MIDTRANS_CHANNELS',
+            'qris,gopay,shopeepay,bca_va,bni_va,bri_va,mandiri_va,permata_va,credit_card',
+        ))))),
+        'payment_channels' => [
+            'qris' => ['label' => 'QRIS', 'group' => 'QRIS & E-Wallet', 'snap' => ['other_qris'], 'percent' => 0.7, 'fixed' => 0],
+            'gopay' => ['label' => 'GoPay', 'group' => 'QRIS & E-Wallet', 'snap' => ['gopay'], 'percent' => 2.0, 'fixed' => 0],
+            'shopeepay' => ['label' => 'ShopeePay', 'group' => 'QRIS & E-Wallet', 'snap' => ['shopeepay'], 'percent' => 2.0, 'fixed' => 0],
+            'bca_va' => ['label' => 'BCA Virtual Account', 'group' => 'Virtual Account', 'snap' => ['bca_va'], 'percent' => 0, 'fixed' => 4000],
+            'bni_va' => ['label' => 'BNI Virtual Account', 'group' => 'Virtual Account', 'snap' => ['bni_va'], 'percent' => 0, 'fixed' => 4000],
+            'bri_va' => ['label' => 'BRI Virtual Account', 'group' => 'Virtual Account', 'snap' => ['bri_va'], 'percent' => 0, 'fixed' => 4000],
+            'mandiri_va' => ['label' => 'Mandiri Bill Payment', 'group' => 'Virtual Account', 'snap' => ['echannel'], 'percent' => 0, 'fixed' => 4000],
+            'permata_va' => ['label' => 'Permata Virtual Account', 'group' => 'Virtual Account', 'snap' => ['permata_va'], 'percent' => 0, 'fixed' => 4000],
+            'credit_card' => ['label' => 'Kartu Kredit / Debit Online', 'group' => 'Kartu', 'snap' => ['credit_card'], 'percent' => 2.9, 'fixed' => 2000],
+        ],
     ],
 
 ];

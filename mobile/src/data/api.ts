@@ -1,4 +1,4 @@
-import type { CatalogCategory, Customer, CustomerOrder, HomeBanner, Product, Quote } from '../domain/types';
+import type { CatalogCategory, Customer, CustomerOrder, HomeBanner, PaymentOption, Product, Quote } from '../domain/types';
 
 const rawApiUrl = (import.meta.env.VITE_API_URL as string | undefined) || 'https://pkm.orcaid.cloud';
 const API_URL = rawApiUrl.replace(/\/+$/, '');
@@ -146,10 +146,13 @@ export const api = {
       body: JSON.stringify(payload),
     });
   },
-  payOrder(uuid: string, refresh = false) {
+  paymentOptions(uuid: string) {
+    return request<{ data: { selected: string | null; options: PaymentOption[] } }>(`/orders/${uuid}/payment-options`);
+  },
+  payOrder(uuid: string, channel?: string, refresh = false) {
     return request<{ data: CustomerOrder }>(`/orders/${uuid}/pay`, {
       method: 'POST',
-      body: JSON.stringify({ refresh }),
+      body: JSON.stringify({ refresh, channel }),
     });
   },
   syncPayment(uuid: string) {

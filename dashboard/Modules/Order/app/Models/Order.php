@@ -41,6 +41,7 @@ class Order extends Model
         'ppn',
         'total_price',
         'payment_method',
+        'payment_channel',
         'payment_status',
         'snap_token',
         'snap_redirect_url',

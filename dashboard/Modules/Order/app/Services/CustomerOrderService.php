@@ -97,8 +97,8 @@ class CustomerOrderService
             $resolved['quantity'],
         );
 
-        $adminFee = (float) config('services.midtrans.admin_fee', 4500);
-        $totals = OrderTotals::fromLineAmounts($resolved['line_amounts'], (float) $fee['delivery_fee'], $adminFee);
+        // Biaya layanan pembayaran baru dihitung saat pelanggan memilih metode pembayaran (PaymentFeeCalculator).
+        $totals = OrderTotals::fromLineAmounts($resolved['line_amounts'], (float) $fee['delivery_fee'], 0.0);
 
         return [
             'category' => $resolved['category'],

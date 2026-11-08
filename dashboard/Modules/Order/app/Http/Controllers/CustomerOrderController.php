@@ -7,6 +7,7 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Modules\Customer\Models\Customer;
 use Modules\Dispatch\Models\SuratJalan;
@@ -16,6 +17,7 @@ use Modules\Order\Models\Order;
 use Modules\Order\Services\CustomerOrderService;
 use Modules\Order\Services\MidtransPaymentService;
 use Modules\Order\Services\OrderSalesContacts;
+use Modules\Order\Services\PaymentFeeCalculator;
 use Modules\Shared\Support\PhoneNumber;
 
 class CustomerOrderController extends Controller
@@ -109,9 +111,68 @@ class CustomerOrderController extends Controller
         ]);
     }
 
-    public function pay(Request $request, Order $order, MidtransPaymentService $midtrans): JsonResponse
+    public function paymentOptions(Request $request, Order $order, PaymentFeeCalculator $fees): JsonResponse
     {
         $this->owned($request, $order);
+        $this->assertPayable($order);
+
+        return response()->json([
+            'data' => [
+                'selected' => $order->payment_channel,
+                'options' => $fees->options($order),
+            ],
+        ]);
+    }
+
+    public function pay(Request $request, Order $order, MidtransPaymentService $midtrans, PaymentFeeCalculator $fees): JsonResponse
+    {
+        $this->owned($request, $order);
+
+        $request->validate([
+            'channel' => ['nullable', 'string', Rule::in(array_keys($fees->channels()))],
+        ], [
+            'channel.in' => 'Metode pembayaran tidak tersedia.',
+        ]);
+
+        $this->assertPayable($order);
+
+        $forceRefresh = $request->boolean('refresh', false);
+        $channel = $request->input('channel') ?: $order->payment_channel;
+        $enabledPayments = null;
+
+        if ($channel && $fees->channel($channel)) {
+            // Nominal & metode berubah → token Snap lama tidak berlaku lagi.
+            $forceRefresh = $fees->apply($order, $channel) || $forceRefresh;
+            $enabledPayments = $fees->channel($channel)['snap'];
+        } elseif ((float) $order->admin_fee <= 0) {
+            // Klien lama (tanpa pilih metode): pakai biaya flat.
+            $legacy = $fees->quote($fees->baseAmount($order), 0, (float) config('services.midtrans.admin_fee', 4500));
+            $order->update($legacy);
+            $forceRefresh = true;
+        }
+
+        $order->load([
+            'batchingPlant:id,code,name,phone,whatsapp',
+            'items.product:id,uuid,code,name,unit,category',
+            'workOrders.product',
+            'workOrders.assignedUser',
+            'suratJalanItems.suratJalan.batchingPlant',
+            'suratJalanItems.product',
+        ]);
+
+        $result = $midtrans->createSnapTransaction($order, $forceRefresh, $enabledPayments);
+
+        return response()->json([
+            'data' => array_merge($this->transform($order), [
+                'snap_token' => $result['token'],
+                'snap_redirect_url' => $result['redirect_url'],
+                'midtrans_client_key' => $result['client_key'],
+            ]),
+        ]);
+    }
+
+    private function assertPayable(Order $order): void
+    {
 
         if ($order->status === 'PENDING_APPROVAL') {
             throw ValidationException::withMessages([
@@ -130,26 +191,6 @@ class CustomerOrderController extends Controller
                 'order' => 'Pesanan ini sudah lunas.',
             ]);
         }
-
-        $order->load([
-            'batchingPlant:id,code,name,phone,whatsapp',
-            'items.product:id,uuid,code,name,unit,category',
-            'workOrders.product',
-            'workOrders.assignedUser',
-            'suratJalanItems.suratJalan.batchingPlant',
-            'suratJalanItems.product',
-        ]);
-
-        $forceRefresh = $request->boolean('refresh', false);
-        $result = $midtrans->createSnapTransaction($order, $forceRefresh);
-
-        return response()->json([
-            'data' => array_merge($this->transform($order), [
-                'snap_token' => $result['token'],
-                'snap_redirect_url' => $result['redirect_url'],
-                'midtrans_client_key' => $result['client_key'],
-            ]),
-        ]);
     }
 
     public function webhook(Request $request, MidtransPaymentService $midtrans): JsonResponse
@@ -327,6 +368,8 @@ class CustomerOrderController extends Controller
             'total_price' => (float) $order->total_price,
             'payment_method' => $order->payment_method,
             'payment_method_label' => $this->paymentLabel($order->payment_method),
+            'payment_channel' => $order->payment_channel,
+            'payment_channel_label' => app(PaymentFeeCalculator::class)->label($order->payment_channel),
             'payment_status' => $order->payment_status,
             'refund_amount' => $order->refund_amount !== null ? (float) $order->refund_amount : null,
             'refunded_at' => $order->refunded_at?->toIso8601String(),

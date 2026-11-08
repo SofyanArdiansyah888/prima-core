@@ -366,20 +366,18 @@ class OrderWhatsappMessages
      */
     private function costBreakdown(Order $order): array
     {
-        $lines = [
-            '💰 *Rincian Biaya*',
-            '• Subtotal material: '.$this->money($order->subtotal),
-        ];
-        if ((float) $order->delivery_fee > 0) {
-            $lines[] = '• Ongkos kirim: '.$this->money($order->delivery_fee);
-        }
-        $lines[] = '• PPN 11%: '.$this->money($order->ppn);
-        if ((float) $order->admin_fee > 0) {
-            $lines[] = '• Biaya layanan: '.$this->money($order->admin_fee);
-        }
-        $lines[] = '*Total Tagihan: '.$this->money($order->total_price).'*';
+        // Customer hanya melihat total (tanpa rincian PPN, ongkir, biaya layanan).
+        $awaitingMethod = $order->payment_method === 'MIDTRANS'
+            && $order->payment_channel === null
+            && (float) $order->admin_fee <= 0
+            && in_array($order->payment_status, ['PENDING', 'FAILED'], true);
 
-        return $lines;
+        return [
+            '💰 *Total Tagihan:* '.$this->money($order->total_price),
+            $awaitingMethod
+                ? '_Sudah termasuk pajak dan ongkos kirim. Biaya layanan pembayaran menyesuaikan metode yang Anda pilih di aplikasi._'
+                : '_Sudah termasuk pajak dan ongkos kirim._',
+        ];
     }
 
     /**
@@ -440,6 +438,13 @@ class OrderWhatsappMessages
 
     private function paymentMethod(Order $order): string
     {
+        $channelLabel = $order->payment_channel
+            ? config("services.midtrans.payment_channels.{$order->payment_channel}.label")
+            : null;
+        if ($order->payment_method === 'MIDTRANS' && $channelLabel) {
+            return "Midtrans ({$channelLabel})";
+        }
+
         $type = $order->midtrans_payment_type ? ' ('.strtoupper(str_replace('_', ' ', (string) $order->midtrans_payment_type)).')' : '';
 
         return match ($order->payment_method) {

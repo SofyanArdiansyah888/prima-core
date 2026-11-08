@@ -2,6 +2,7 @@
 
 namespace Modules\Order\Services;
 
+use Carbon\Carbon;
 use Exception;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -10,8 +11,11 @@ use Modules\Order\Models\Order;
 class MidtransPaymentService
 {
     private string $serverKey;
+
     private string $clientKey;
+
     private bool $isProduction;
+
     private string $snapBaseUrl;
 
     public function __construct()
@@ -39,7 +43,10 @@ class MidtransPaymentService
      *
      * @return array{token: string, redirect_url: string, client_key: string}
      */
-    public function createSnapTransaction(Order $order, bool $forceRefresh = false): array
+    /**
+     * @param  list<string>|null  $enabledPayments  kode enabled_payments Snap; null = semua metode
+     */
+    public function createSnapTransaction(Order $order, bool $forceRefresh = false, ?array $enabledPayments = null): array
     {
         if (! $forceRefresh && ! empty($order->snap_token) && ! empty($order->snap_redirect_url)) {
             return [
@@ -50,7 +57,7 @@ class MidtransPaymentService
         }
 
         $grossAmount = (int) round((float) $order->total_price);
-        $orderId = $order->code . '-' . substr(str_replace('-', '', $order->uuid), 0, 6) . '-' . time();
+        $orderId = $order->code.'-'.substr(str_replace('-', '', $order->uuid), 0, 6).'-'.time();
 
         // Build line items
         $items = [];
@@ -61,7 +68,7 @@ class MidtransPaymentService
             $unit = $item->unit ?? 'satuan';
             $qty = (float) $item->quantity;
             $items[] = [
-                'id' => substr($item->product?->code ?? 'ITEM-' . $item->id, 0, 50),
+                'id' => substr($item->product?->code ?? 'ITEM-'.$item->id, 0, 50),
                 'price' => (int) round((float) $item->subtotal),
                 'quantity' => 1,
                 'name' => substr("{$productName} ({$qty} {$unit})", 0, 50),
@@ -121,11 +128,18 @@ class MidtransPaymentService
             'usage_limit' => 5,
         ];
 
+        if ($enabledPayments) {
+            $payload['enabled_payments'] = array_values($enabledPayments);
+            if (in_array('credit_card', $enabledPayments, true)) {
+                $payload['credit_card'] = ['secure' => true];
+            }
+        }
+
         try {
             $httpClient = Http::withHeaders([
                 'Accept' => 'application/json',
                 'Content-Type' => 'application/json',
-                'Authorization' => 'Basic ' . base64_encode($this->serverKey . ':'),
+                'Authorization' => 'Basic '.base64_encode($this->serverKey.':'),
             ]);
 
             if (! $this->isProduction) {
@@ -155,14 +169,14 @@ class MidtransPaymentService
                 ];
             }
 
-            Log::error('Midtrans Snap API Error: ' . $response->body(), [
+            Log::error('Midtrans Snap API Error: '.$response->body(), [
                 'order_id' => $order->id,
                 'status' => $response->status(),
                 'payload' => $payload,
             ]);
 
             // Fallback for offline / demo mode
-            $mockToken = 'SNAP-MOCK-' . $order->code . '-' . substr(md5(uniqid()), 0, 8);
+            $mockToken = 'SNAP-MOCK-'.$order->code.'-'.substr(md5(uniqid()), 0, 8);
             $mockRedirect = "https://app.sandbox.midtrans.com/snap/v2/vtweb/{$mockToken}";
 
             $currentPayload = is_array($order->payment_payload) ? $order->payment_payload : [];
@@ -180,11 +194,11 @@ class MidtransPaymentService
                 'client_key' => $this->clientKey,
             ];
         } catch (\Throwable $e) {
-            Log::error('Midtrans Exception: ' . $e->getMessage(), [
+            Log::error('Midtrans Exception: '.$e->getMessage(), [
                 'order_id' => $order->id,
             ]);
 
-            $mockToken = 'SNAP-MOCK-' . $order->code . '-' . substr(md5(uniqid()), 0, 8);
+            $mockToken = 'SNAP-MOCK-'.$order->code.'-'.substr(md5(uniqid()), 0, 8);
             $mockRedirect = "https://app.sandbox.midtrans.com/snap/v2/vtweb/{$mockToken}";
 
             $currentPayload = is_array($order->payment_payload) ? $order->payment_payload : [];
@@ -228,8 +242,8 @@ class MidtransPaymentService
         if ($createdAtTs) {
             $orderIdCandidates[] = "{$base}-{$createdAtTs}";
             for ($offset = 1; $offset <= 5; $offset++) {
-                $orderIdCandidates[] = "{$base}-" . ($createdAtTs + $offset);
-                $orderIdCandidates[] = "{$base}-" . ($createdAtTs - $offset);
+                $orderIdCandidates[] = "{$base}-".($createdAtTs + $offset);
+                $orderIdCandidates[] = "{$base}-".($createdAtTs - $offset);
             }
         }
         $orderIdCandidates[] = $order->code;
@@ -237,7 +251,7 @@ class MidtransPaymentService
         $httpClient = Http::withHeaders([
             'Accept' => 'application/json',
             'Content-Type' => 'application/json',
-            'Authorization' => 'Basic ' . base64_encode($this->serverKey . ':'),
+            'Authorization' => 'Basic '.base64_encode($this->serverKey.':'),
         ]);
 
         if (! $this->isProduction) {
@@ -258,7 +272,7 @@ class MidtransPaymentService
                     }
                 }
             } catch (\Throwable $e) {
-                Log::warning("Gagal cek status Midtrans untuk {$candidateId}: " . $e->getMessage());
+                Log::warning("Gagal cek status Midtrans untuk {$candidateId}: ".$e->getMessage());
             }
         }
 
@@ -291,11 +305,11 @@ class MidtransPaymentService
                 $newPaymentStatus = 'PENDING';
             } elseif ($fraudStatus === 'accept') {
                 $newPaymentStatus = 'PAID';
-                $paidAt = $paidAt ?: ($settlementTime ? \Carbon\Carbon::parse($settlementTime) : now());
+                $paidAt = $paidAt ?: ($settlementTime ? Carbon::parse($settlementTime) : now());
             }
         } elseif ($transactionStatus === 'settlement') {
             $newPaymentStatus = 'PAID';
-            $paidAt = $paidAt ?: ($settlementTime ? \Carbon\Carbon::parse($settlementTime) : now());
+            $paidAt = $paidAt ?: ($settlementTime ? Carbon::parse($settlementTime) : now());
         } elseif ($transactionStatus === 'pending') {
             $newPaymentStatus = 'PENDING';
         } elseif (in_array($transactionStatus, ['deny', 'cancel', 'expire', 'refund', 'partial_refund'])) {
@@ -331,7 +345,7 @@ class MidtransPaymentService
         $signatureKey = (string) ($payload['signature_key'] ?? '');
 
         // Verify SHA512 signature
-        $expectedSignature = hash('sha512', $orderId . $statusCode . $grossAmount . $this->serverKey);
+        $expectedSignature = hash('sha512', $orderId.$statusCode.$grossAmount.$this->serverKey);
         $signatureValid = hash_equals($expectedSignature, $signatureKey);
 
         /** @var Order|null $order */
@@ -366,7 +380,7 @@ class MidtransPaymentService
                 'payload' => $payload,
                 'expected' => $expectedSignature,
             ]);
-            throw new Exception("Signature key Midtrans tidak valid.");
+            throw new Exception('Signature key Midtrans tidak valid.');
         }
 
         return $this->applyTransactionStatus($order, $payload);

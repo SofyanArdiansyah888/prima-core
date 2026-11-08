@@ -116,6 +116,13 @@ export type OrderSuratJalan = {
   }[];
 };
 
+export type PaymentOption = {
+  code: string;
+  label: string;
+  group: string;
+  total: number;
+};
+
 export type SalesContact = {
   name: string;
   whatsapp: string;
@@ -136,6 +143,8 @@ export type CustomerOrder = {
   total_price: number;
   payment_method: string;
   payment_method_label: string;
+  payment_channel?: string | null;
+  payment_channel_label?: string | null;
   payment_status: string;
   snap_token?: string | null;
   snap_redirect_url?: string | null;
