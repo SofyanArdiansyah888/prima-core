@@ -211,8 +211,7 @@
     </table>
 
     <div class="spec-box">
-        <strong>Spesifikasi Mutu &amp; Formula Batching:</strong><br>
-        Kode Resep Formula: <span style="font-family: monospace; font-weight: bold; color: #7e22ce;">{{ $workOrder->batch_recipe_code ?? 'TONASA-STD' }}</span> &bull; 
+        <strong>Spesifikasi Mutu:</strong><br>
         Target Slump Pengujian: <strong>{{ $workOrder->slump_target ?? '12 ± 2 cm' }}</strong> &bull;
         Standar Mutu: SNI 2847 / SNI 6880 Ready-Mix Concrete.
         @if($workOrder->production_notes)

@@ -115,13 +115,6 @@ export default function WorkOrderShow({ workOrder }: { workOrder: WorkOrderDetai
                                 </div>
 
                                 <div>
-                                    <span className="text-xs text-slate-400">Kode Resep Mix Design:</span>
-                                    <p className="font-mono text-sm font-semibold text-purple-700 dark:text-purple-300">
-                                        {workOrder.batch_recipe_code || 'STANDAR-TONASA'}
-                                    </p>
-                                </div>
-
-                                <div>
                                     <span className="text-xs text-slate-400">Target Slump Pengujian:</span>
                                     <p className="font-semibold text-slate-900 dark:text-white">
                                         {workOrder.slump_target || '12 ± 2 cm'}

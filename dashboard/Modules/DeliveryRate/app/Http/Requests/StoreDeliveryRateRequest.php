@@ -19,9 +19,9 @@ class StoreDeliveryRateRequest extends FormRequest
             'product_category' => ['nullable', 'string', Rule::exists('product_categories', 'slug')->where('is_active', true)],
             'min_distance_km' => ['required', 'numeric', 'min:0'],
             'max_distance_km' => ['required', 'numeric', 'gt:min_distance_km'],
-            'rate_type' => ['required', 'string', 'in:PER_UNIT_PER_KM,FLAT_PER_TRIP,TIER_RADIUS'],
+            'rate_type' => ['required', 'string', 'in:FLAT_PER_TRIP'],
             'base_fee' => ['required', 'numeric', 'min:0'],
-            'cost_per_km_unit' => ['required', 'numeric', 'min:0'],
+            'cost_per_km_unit' => ['nullable', 'numeric', 'min:0'],
             'min_charge' => ['required', 'numeric', 'min:0'],
             'notes' => ['nullable', 'string'],
             'is_active' => ['nullable', 'boolean'],
@@ -33,5 +33,11 @@ class StoreDeliveryRateRequest extends FormRequest
         if ($this->input('product_category') === '') {
             $this->merge(['product_category' => null]);
         }
+
+        // Metode tarif disederhanakan: semua tarif disimpan sebagai FLAT per rit.
+        $this->merge([
+            'rate_type' => 'FLAT_PER_TRIP',
+            'cost_per_km_unit' => $this->filled('cost_per_km_unit') ? $this->input('cost_per_km_unit') : 0,
+        ]);
     }
 }

@@ -7,6 +7,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
 use Modules\BatchingPlant\Models\BatchingPlant;
 use Modules\Branch\Models\Branch;
+use Modules\DeliveryRate\Models\PlantDeliveryRate;
 use Modules\Order\Models\Order;
 use Modules\Order\Models\OrderItem;
 use Modules\Product\Models\Product;
@@ -133,5 +134,40 @@ class DispatchQuantityValidationTest extends TestCase
             ->assertInertia(fn ($page) => $page
                 ->has('activeOrders', 1)
                 ->where('activeOrders.0.code', 'SO-PAID'));
+    }
+
+    public function test_spk_form_lists_only_paid_orders_without_active_spk(): void
+    {
+        $fresh = $this->paidOrder('SO-FRESH', 3);
+        $this->paidOrder('SO-UNPAID-2', 3, 'PENDING');
+        $hasSpk = $this->paidOrder('SO-HAS-SPK', 3);
+        $this->spk($hasSpk, 3)->assertSessionHasNoErrors();
+
+        $this->actingAs($this->admin)->get(route('work-orders.create'))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->has('orders', 1)
+                ->where('orders.0.code', 'SO-FRESH'));
+
+        // Membuka form langsung untuk pesanan yang sudah punya SPK → dialihkan
+        $this->actingAs($this->admin)->get(route('work-orders.create', ['order_id' => $hasSpk->id]))
+            ->assertRedirect(route('work-orders.index'));
+    }
+
+    public function test_delivery_rate_is_always_saved_as_flat(): void
+    {
+        $this->actingAs($this->admin)->post('/master/delivery-rates', [
+            'batching_plant_id' => $this->plant->id,
+            'min_distance_km' => 0,
+            'max_distance_km' => 10,
+            'rate_type' => 'PER_UNIT_PER_KM',
+            'base_fee' => 150000,
+            'min_charge' => 250000,
+            'is_active' => true,
+        ])->assertSessionHasNoErrors();
+
+        $rate = PlantDeliveryRate::query()->firstOrFail();
+        $this->assertSame('FLAT_PER_TRIP', $rate->rate_type);
+        $this->assertEquals(0, (float) $rate->cost_per_km_unit);
     }
 }

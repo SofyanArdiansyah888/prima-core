@@ -95,7 +95,7 @@ export default function DeliveryRateIndex({
                             <option value="">Semua Batching Plant</option>
                             {plants.map((p) => (
                                 <option key={p.id} value={p.id}>
-                                    {p.name} ({p.code})
+                                    {p.name}
                                 </option>
                             ))}
                         </select>
@@ -114,9 +114,7 @@ export default function DeliveryRateIndex({
                                 <tr>
                                     <th className="px-5 py-3.5">Batching Plant</th>
                                     <th className="px-5 py-3.5">Zona Radius Jarak</th>
-                                    <th className="px-5 py-3.5">Metode Tarif</th>
-                                    <th className="px-5 py-3.5">Biaya Dasar (Base Fee)</th>
-                                    <th className="px-5 py-3.5">Tarif / Km / Unit</th>
+                                    <th className="px-5 py-3.5">Tarif Flat / Rit</th>
                                     <th className="px-5 py-3.5">Min Charge</th>
                                     <th className="px-5 py-3.5 text-right">Aksi</th>
                                 </tr>
@@ -124,7 +122,7 @@ export default function DeliveryRateIndex({
                             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                                 {rates.data.length === 0 && (
                                     <tr>
-                                        <td colSpan={7} className="px-6 py-12 text-center">
+                                        <td colSpan={5} className="px-6 py-12 text-center">
                                             <div className="mx-auto flex max-w-xs flex-col items-center justify-center text-center">
                                                 <div className="flex size-10 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800">
                                                     <Route className="size-5 text-slate-400" />
@@ -153,16 +151,8 @@ export default function DeliveryRateIndex({
                                                 {Number(r.min_distance_km)} - {Number(r.max_distance_km)} Km
                                             </span>
                                         </td>
-                                        <td className="px-5 py-3.5">
-                                            <span className="inline-flex items-center rounded-md border border-slate-200 px-2 py-0.5 text-xs font-semibold text-slate-700 dark:border-slate-700 dark:text-slate-300">
-                                                {r.rate_type}
-                                            </span>
-                                        </td>
                                         <td className="px-5 py-3.5 font-semibold text-slate-900 dark:text-white">
                                             Rp {Number(r.base_fee).toLocaleString('id-ID', { maximumFractionDigits: 0 })}
-                                        </td>
-                                        <td className="px-5 py-3.5 text-slate-700 dark:text-slate-300">
-                                            Rp {Number(r.cost_per_km_unit).toLocaleString('id-ID', { maximumFractionDigits: 0 })}
                                         </td>
                                         <td className="px-5 py-3.5 text-slate-700 dark:text-slate-300">
                                             Rp {Number(r.min_charge).toLocaleString('id-ID', { maximumFractionDigits: 0 })}

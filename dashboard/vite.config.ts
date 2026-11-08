@@ -5,8 +5,12 @@ import react from '@vitejs/plugin-react';
 import laravel from 'laravel-vite-plugin';
 import { bunny } from 'laravel-vite-plugin/fonts';
 import { defineConfig } from 'vite';
+import { BUILD_ID, buildVersionPlugin } from './build-version';
 
 export default defineConfig({
+    define: {
+        __BUILD_ID__: JSON.stringify(BUILD_ID),
+    },
     plugins: [
         laravel({
             input: ['resources/css/app.css', 'resources/js/app.tsx'],
@@ -27,6 +31,8 @@ export default defineConfig({
         wayfinder({
             formVariants: true,
         }),
+        // Ditulis ke public/build/version.json → deteksi update otomatis di browser
+        buildVersionPlugin(),
     ],
     server: {
         watch: {

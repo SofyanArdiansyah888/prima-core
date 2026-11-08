@@ -30,6 +30,8 @@ import '@ionic/react/css/flex-utils.css';
 import '@ionic/react/css/display.css';
 import '../theme/variables.css';
 
+import { UpdateNotice } from '../shared/ui/UpdateNotice';
+
 setupIonicReact();
 
 export default function App() {
@@ -59,6 +61,7 @@ export default function App() {
         </CartProvider>
       </AuthProvider>
       </IonApp>
+      <UpdateNotice />
     </div>
   );
 }

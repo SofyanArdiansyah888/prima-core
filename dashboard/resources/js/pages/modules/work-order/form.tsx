@@ -49,7 +49,7 @@ export default function WorkOrderForm({
     plants?: Plant[];
     users?: User[];
 }) {
-    const defaultOrder = selectedOrder ?? orders[0];
+    const defaultOrder = selectedOrder;
     const defaultProduct = defaultOrder?.items?.[0];
 
     const { data, setData, post, processing, errors } = useForm({
@@ -60,7 +60,6 @@ export default function WorkOrderForm({
         scheduled_date: new Date().toISOString().split('T')[0],
         scheduled_time_slot: '',
         target_quantity: (defaultProduct ? Number(defaultProduct.quantity) - Number(defaultProduct.fulfilled_quantity) : '') as unknown as number,
-        batch_recipe_code: '',
         slump_target: defaultProduct?.product?.slump ?? '',
         production_notes: '',
     });
@@ -102,7 +101,7 @@ export default function WorkOrderForm({
                             Terbitkan Surat Perintah Kerja (SPK Produksi)
                         </h1>
                         <p className="text-xs text-slate-500">
-                            Jadwalkan batching plant dan formula campuran mutu beton berdasarkan sales order customer.
+                            Jadwalkan produksi batching untuk pesanan yang sudah lunas.
                         </p>
                     </div>
                 </div>
@@ -125,12 +124,20 @@ export default function WorkOrderForm({
                                     onChange={(e) => handleOrderChange(Number(e.target.value))}
                                     className="mt-1.5 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 dark:border-slate-800 dark:bg-slate-900 dark:text-white"
                                 >
+                                    <option value="">— Pilih pesanan —</option>
                                     {(orders ?? []).map((o) => (
                                         <option key={o.id} value={o.id}>
                                             {o.code} — {o.customer_name} ({o.project_title})
                                         </option>
                                     ))}
                                 </select>
+                                {(orders ?? []).length === 0 ? (
+                                    <p className="mt-1.5 text-xs text-amber-700">
+                                        Tidak ada pesanan lunas yang menunggu SPK. Pesanan yang sudah punya SPK tidak ditampilkan.
+                                    </p>
+                                ) : (
+                                    <p className="mt-1.5 text-xs text-slate-500">Hanya pesanan yang sudah lunas dan belum dibuatkan SPK.</p>
+                                )}
                                 {errors.order_id && <p className="mt-1 text-xs text-rose-600">{errors.order_id}</p>}
                             </div>
 
@@ -144,7 +151,7 @@ export default function WorkOrderForm({
                                 >
                                     {(plants ?? []).map((p) => (
                                         <option key={p.id} value={p.id}>
-                                            {p.name} ({p.code})
+                                            {p.name}
                                         </option>
                                     ))}
                                 </select>
@@ -201,17 +208,6 @@ export default function WorkOrderForm({
                                     onChange={(e) => setData('scheduled_time_slot', e.target.value)}
                                     placeholder="Contoh: 08:00 - 12:00 WITA"
                                     className="mt-1.5"
-                                />
-                            </div>
-
-                            <div>
-                                <Label htmlFor="batch_recipe_code">Kode Resep Mix Design (Batch Recipe)</Label>
-                                <Input
-                                    id="batch_recipe_code"
-                                    value={data.batch_recipe_code}
-                                    onChange={(e) => setData('batch_recipe_code', e.target.value)}
-                                    placeholder="Contoh: MIX-K300-TONASA-PCC"
-                                    className="mt-1.5 font-mono"
                                 />
                             </div>
 

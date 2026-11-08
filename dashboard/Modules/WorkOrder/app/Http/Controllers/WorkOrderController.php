@@ -13,7 +13,6 @@ use Modules\Order\Models\Order;
 use Modules\Product\Models\Product;
 use Modules\Shared\Services\CodeGenerator;
 use Modules\WorkOrder\Http\Requests\StoreWorkOrderRequest;
-use Modules\WorkOrder\Http\Requests\UpdateWorkOrderStatusRequest;
 use Modules\WorkOrder\Models\WorkOrder;
 
 class WorkOrderController extends Controller
@@ -80,11 +79,22 @@ class WorkOrderController extends Controller
             if ($reason = Order::productionBlockReason($selectedOrder)) {
                 return back()->with('error', $reason);
             }
+
+            if ($selectedOrder->workOrders()->where('status', '!=', 'CANCELLED')->exists()) {
+                return redirect()->route('work-orders.index')
+                    ->with('error', "Pesanan {$selectedOrder->code} sudah memiliki SPK.");
+            }
         }
 
         return Inertia::render('modules/work-order/form', [
             'selectedOrder' => $selectedOrder,
-            'orders' => Order::query()->readyForProduction()->with(['items.product', 'batchingPlant'])->orderByDesc('id')->get(),
+            // Hanya pesanan LUNAS yang belum punya SPK aktif
+            'orders' => Order::query()
+                ->readyForProduction()
+                ->whereDoesntHave('workOrders', fn ($q) => $q->where('status', '!=', 'CANCELLED'))
+                ->with(['items.product', 'batchingPlant'])
+                ->orderByDesc('id')
+                ->get(),
             'plants' => BatchingPlant::query()->where('is_active', true)->orderBy('code')->get(['id', 'uuid', 'code', 'name']),
             'users' => User::query()->where('is_active', true)->orderBy('name')->get(['id', 'name', 'code', 'role']),
         ]);

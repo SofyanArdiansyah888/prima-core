@@ -25,12 +25,10 @@ export default function DeliveryRateForm({
     rate,
     plants,
     categories,
-    rateTypes,
 }: {
     rate: PlantRate | null;
     plants: { id: number; uuid: string; code: string; name: string }[];
     categories: { value: string; label: string }[];
-    rateTypes: { value: string; label: string }[];
 }) {
     const isEdit = Boolean(rate);
 
@@ -39,7 +37,7 @@ export default function DeliveryRateForm({
         product_category: rate?.product_category ?? '',
         min_distance_km: rate?.min_distance_km ?? 0,
         max_distance_km: rate?.max_distance_km ?? '',
-        rate_type: rate?.rate_type ?? 'PER_UNIT_PER_KM',
+        rate_type: 'FLAT_PER_TRIP',
         base_fee: rate?.base_fee ?? '',
         cost_per_km_unit: rate?.cost_per_km_unit ?? '',
         min_charge: rate?.min_charge ?? '',
@@ -97,7 +95,7 @@ export default function DeliveryRateForm({
                                 >
                                     {plants.map((p) => (
                                         <option key={p.id} value={p.id}>
-                                            {p.name} ({p.code})
+                                            {p.name}
                                         </option>
                                     ))}
                                 </select>
@@ -148,24 +146,8 @@ export default function DeliveryRateForm({
                                 {errors.max_distance_km && <p className="mt-1 text-xs text-rose-600">{errors.max_distance_km}</p>}
                             </div>
 
-                            <div className="sm:col-span-2">
-                                <Label htmlFor="rate_type">Metode Kalkulasi Tarif *</Label>
-                                <select
-                                    id="rate_type"
-                                    value={data.rate_type}
-                                    onChange={(e) => setData('rate_type', e.target.value)}
-                                    className="mt-1.5 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 dark:border-slate-800 dark:bg-slate-900 dark:text-white"
-                                >
-                                    {rateTypes.map((t) => (
-                                        <option key={t.value} value={t.value}>
-                                            {t.label}
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
-
                             <div>
-                                <Label htmlFor="base_fee">Biaya Dasar (Base Fee Rp) *</Label>
+                                <Label htmlFor="base_fee">Tarif Flat per Rit (Rp) *</Label>
                                 <Input
                                     id="base_fee"
                                     type="number"
@@ -175,18 +157,6 @@ export default function DeliveryRateForm({
                                     className="mt-1.5"
                                 />
                                 {errors.base_fee && <p className="mt-1 text-xs text-rose-600">{errors.base_fee}</p>}
-                            </div>
-
-                            <div>
-                                <Label htmlFor="cost_per_km_unit">Tarif Tambahan / Km / Unit (Rp)</Label>
-                                <Input
-                                    id="cost_per_km_unit"
-                                    type="number"
-                                    value={data.cost_per_km_unit}
-                                    onChange={(e) => setData('cost_per_km_unit', Number(e.target.value))}
-                                    placeholder="Contoh: 12000"
-                                    className="mt-1.5"
-                                />
                             </div>
 
                             <div>
