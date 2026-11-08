@@ -96,7 +96,10 @@ class OrderSalesNotificationTest extends TestCase
 
         Queue::assertPushed(SendWhatsappMessage::class, fn ($job) => $job->phone === '081299990001'
             && str_contains($job->message, $res->json('data.code'))
-            && str_contains($job->message, 'verifikasi lokasi'));
+            && str_contains($job->message, 'PERLU SURVEI LOKASI')
+            && str_contains($job->message, 'Semen Tonasa OPC — 25 Sak')
+            && str_contains($job->message, 'google.com/maps/search/?api=1&query=')
+            && str_contains($job->message, '/sales/orders/'));
         Queue::assertNotPushed(SendWhatsappMessage::class, fn ($job) => $job->phone === '081299990002');
         // Pesan customer tidak boleh memuat harga sebelum di-ACC
         Queue::assertNotPushed(SendWhatsappMessage::class, fn ($job) => $job->phone === '081300000099'

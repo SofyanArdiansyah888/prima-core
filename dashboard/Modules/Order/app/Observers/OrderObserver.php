@@ -2,6 +2,7 @@
 
 namespace Modules\Order\Observers;
 
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Modules\Order\Models\Order;
 use Modules\Order\Services\OrderSalesContacts;
@@ -36,31 +37,99 @@ class OrderObserver
         }
     }
 
+    /**
+     * Notifikasi WA ke sales plant untuk survei lokasi pesanan baru dari aplikasi customer.
+     * Dijalankan setelah transaksi commit agar item pesanan sudah tersimpan.
+     */
     private function notifySales(Order $order): void
     {
-        try {
-            $sales = $this->salesContacts->forOrder($order);
-            if ($sales->isEmpty()) {
-                return;
-            }
-
-            $plantName = $order->batchingPlant()->value('name') ?? '-';
-            $maps = $order->delivery_lat !== null && $order->delivery_lng !== null
-                ? "\nPeta: https://maps.google.com/?q={$order->delivery_lat},{$order->delivery_lng}"
-                : '';
-            $message = "Pesanan baru {$order->code} perlu verifikasi lokasi.\n"
-                ."Customer: {$order->customer_name} ({$order->customer_phone})\n"
-                ."Proyek: {$order->project_title}\n"
-                ."Alamat: {$order->delivery_address}{$maps}\n"
-                ."Plant: {$plantName}\n"
-                .'Silakan cek dan ACC di aplikasi sales.';
-
-            foreach ($sales as $user) {
-                $this->fonnte->send((string) $user->phone, $message);
-            }
-        } catch (\Throwable $e) {
-            Log::warning('Gagal mengantri notifikasi WhatsApp ke sales: '.$e->getMessage());
+        if ($order->status !== 'PENDING_APPROVAL') {
+            return;
         }
+
+        DB::afterCommit(function () use ($order): void {
+            try {
+                $order = $order->fresh(['items.product', 'batchingPlant']);
+                if (! $order) {
+                    return;
+                }
+
+                foreach ($this->salesContacts->forOrder($order) as $user) {
+                    $this->fonnte->send((string) $user->phone, $this->salesSurveyMessage($order, (string) $user->name));
+                }
+            } catch (\Throwable $e) {
+                Log::warning('Gagal mengantri notifikasi WhatsApp ke sales: '.$e->getMessage());
+            }
+        });
+    }
+
+    private function salesSurveyMessage(Order $order, string $salesName): string
+    {
+        $salesName = trim((string) preg_replace('/\s*\(.*\)$/', '', $salesName)) ?: 'Tim Sales';
+        $plantName = $order->batchingPlant?->name ?? 'Batching Plant';
+        $createdAt = $order->created_at?->copy()->timezone('Asia/Makassar')->format('d/m/Y H:i').' WITA';
+
+        $items = $order->items->map(function ($item): string {
+            $qty = rtrim(rtrim(number_format((float) $item->quantity, 2, ',', '.'), '0'), ',');
+
+            return '• '.($item->product?->name ?? 'Produk')." — {$qty} {$item->unit}";
+        })->implode("\n");
+
+        $hasCoords = $order->delivery_lat !== null && $order->delivery_lng !== null;
+        $mapsUrl = $hasCoords
+            ? "https://www.google.com/maps/search/?api=1&query={$order->delivery_lat},{$order->delivery_lng}"
+            : null;
+        $appUrl = rtrim((string) config('services.mobile_app.url'), '/')."/sales/orders/{$order->uuid}";
+
+        $lines = [
+            '🔔 *PESANAN BARU — PERLU SURVEI LOKASI*',
+            '',
+            "Halo Bapak/Ibu *{$salesName}*,",
+            "Ada pesanan baru untuk *{$plantName}* yang menunggu verifikasi lokasi dari Anda.",
+            '',
+            "📄 *No. Pesanan:* {$order->code}",
+            "🗓️ *Masuk:* {$createdAt}",
+            "👤 *Pelanggan:* {$order->customer_name}",
+        ];
+        if ($order->customer_phone) {
+            $lines[] = "📞 *Kontak:* {$order->customer_phone}";
+        }
+        $lines[] = "🏗️ *Proyek:* {$order->project_title}";
+
+        if ($items !== '') {
+            $lines[] = '';
+            $lines[] = '📦 *Material:*';
+            $lines[] = $items;
+        }
+
+        $lines[] = '';
+        $lines[] = '📍 *Lokasi Pengantaran:*';
+        $lines[] = (string) $order->delivery_address;
+        if ($mapsUrl) {
+            $lines[] = "🗺️ {$mapsUrl}";
+        }
+        if ((float) $order->distance_km > 0) {
+            $lines[] = '📏 Jarak dari plant: '.number_format((float) $order->distance_km, 1, ',', '.').' km';
+        }
+
+        if (filled($order->notes)) {
+            $lines[] = '';
+            $lines[] = "📝 *Catatan Pelanggan:* {$order->notes}";
+        }
+
+        array_push(
+            $lines,
+            '',
+            '✅ *Mohon segera:*',
+            '1. Survei akses jalan & area bongkar truk mixer',
+            '2. Setujui atau tolak pesanan melalui aplikasi sales:',
+            $appUrl,
+            '',
+            'Terima kasih atas respons cepatnya 🙏',
+            '_PT Prima Karya Manunggal — Semen Tonasa Group_',
+        );
+
+        return implode("\n", $lines);
     }
 
     public function updated(Order $order): void

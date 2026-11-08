@@ -35,6 +35,10 @@ return [
         ],
     ],
 
+    'mobile_app' => [
+        'url' => env('MOBILE_APP_URL', 'https://mobile-pkm.orcaid.cloud'),
+    ],
+
     'fonnte' => [
         'driver' => env('FONNTE_DRIVER'),
         'token' => env('FONNTE_TOKEN'),
