@@ -722,6 +722,24 @@ export default function OrderDetailPage() {
               ) : (
                 <p className="text-xs font-medium text-slate-400">Nomor dispatcher plant belum diisi.</p>
               )}
+
+              {order.sales_contacts && order.sales_contacts.length > 0 ? (
+                <div className="space-y-2 border-t border-slate-100 pt-3">
+                  <p className="text-[11px] font-bold text-[#0c1d37]">Sales Lapangan</p>
+                  {order.sales_contacts.map((sales) => (
+                    <a
+                      key={sales.whatsapp}
+                      href={`https://wa.me/${sales.whatsapp}?text=${encodeURIComponent(`Halo ${sales.name}, saya ingin menanyakan pesanan ${order.code}`)}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex items-center justify-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 py-2.5 px-3 text-xs font-bold text-white shadow-2xs transition-colors"
+                    >
+                      <IonIcon icon={logoWhatsapp} className="text-sm" />
+                      <span>WhatsApp Sales · {sales.name}</span>
+                    </a>
+                  ))}
+                </div>
+              ) : null}
             </Card>
           </motion.div>
         ) : null}

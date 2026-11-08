@@ -41,6 +41,14 @@ function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): nu
   return Math.round(R * c * 100) / 100;
 }
 
+function googleMapsUrl(lat: number, lng: number): string {
+  return `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+}
+
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch] ?? ch);
+}
+
 export default function SalesOrderDetailPage() {
   const { uuid } = useParams<{ uuid: string }>();
   const navigate = useNavigate();
@@ -123,26 +131,28 @@ export default function SalesOrderDetailPage() {
         .bindPopup(`<b>${order.plant?.name || 'Batching Plant'}</b><br>Titik Asal Armada`)
         .addTo(map);
 
-      // Draggable Truck Mixer Pin
+      // Pin lokasi customer (terkunci, tidak bisa digeser)
       const truckIcon = L.divIcon({
         className: 'truck-pin',
-        html: `<div style="background-color: #d91424; color: white; border-radius: 9999px; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; font-size: 16px; border: 2px solid white; box-shadow: 0 3px 8px rgba(0,0,0,0.5); cursor: move;">🚚</div>`,
+        html: `<div style="background-color: #d91424; color: white; border-radius: 9999px; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; font-size: 16px; border: 2px solid white; box-shadow: 0 3px 8px rgba(0,0,0,0.5); cursor: pointer;">🚚</div>`,
         iconSize: [34, 34],
         iconAnchor: [17, 17],
       });
 
       const marker = L.marker([lat, lng], {
-        draggable: order.status === 'PENDING_APPROVAL',
+        draggable: false,
         icon: truckIcon,
       }).addTo(map);
 
-      marker.bindPopup('<b>Titik Bongkar Armada Truk</b><br>Geser ke jalan yang muat untuk truk mixer besar.');
-
-      marker.on('dragend', () => {
-        const pos = marker.getLatLng();
-        setLat(Number(pos.lat.toFixed(6)));
-        setLng(Number(pos.lng.toFixed(6)));
-      });
+      const pinAddress = escapeHtml(order.delivery_address || 'Alamat belum diisi');
+      marker.bindPopup(
+        `<div style="max-width:220px;font-size:12px;line-height:1.4">`
+          + `<b>Lokasi Proyek Customer</b><br>`
+          + `<span>${pinAddress}</span><br>`
+          + `<span style="font-family:monospace;color:#475569">${lat.toFixed(6)}, ${lng.toFixed(6)}</span><br>`
+          + `<a href="${googleMapsUrl(lat, lng)}" target="_blank" rel="noreferrer" style="display:inline-block;margin-top:6px;font-weight:700;color:#059669">Buka di Google Maps ↗</a>`
+          + `</div>`,
+      );
 
       markerRef.current = marker;
 
@@ -319,10 +329,19 @@ export default function SalesOrderDetailPage() {
             <div ref={mapContainerRef} className="w-full h-full z-0" />
             {order.status === 'PENDING_APPROVAL' && (
               <div className="pointer-events-none absolute left-2 right-2 top-2 z-[500] ml-10 rounded-lg border border-slate-200 bg-white/90 px-2.5 py-1 text-[10px] font-bold text-slate-800 shadow-xs backdrop-blur-xs">
-                📍 Geser pin merah (🚚) ke jalan yang muat untuk truk mixer. Ongkir dihitung ulang saat ACC.
+                📍 Ketuk pin merah (🚚) untuk melihat alamat lengkap & koordinat lokasi customer.
               </div>
             )}
           </div>
+          <a
+            href={googleMapsUrl(lat, lng)}
+            target="_blank"
+            rel="noreferrer"
+            className="flex items-center justify-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50 py-2 text-[11px] font-bold text-emerald-700 hover:bg-emerald-100"
+          >
+            <span>Buka Lokasi di Google Maps ↗</span>
+            <span className="font-mono font-medium text-emerald-600">({lat.toFixed(5)}, {lng.toFixed(5)})</span>
+          </a>
         </div>
 
         {/* Adjustment Form */}

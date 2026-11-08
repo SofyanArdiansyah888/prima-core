@@ -57,7 +57,7 @@ export default function CartPage() {
             </span>
           </div>
           <PrimaryButton type="button" onClick={() => navigate('/checkout')}>
-            <span>Lanjut ke Pengiriman</span>
+            <span>Lanjut Pesanan</span>
             <IonIcon icon={arrowForwardOutline} className="text-base" />
           </PrimaryButton>
         </StickyBar>

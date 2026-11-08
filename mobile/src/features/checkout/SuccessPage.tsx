@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { IonIcon } from '@ionic/react';
 import {
   businessOutline,
@@ -6,6 +6,7 @@ import {
   checkmarkCircleOutline,
   checkmarkOutline,
   copyOutline,
+  logoWhatsapp,
   shieldCheckmarkOutline,
   timeOutline,
   walletOutline,
@@ -14,6 +15,7 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { api } from '../../data/api';
 import { Card, PrimaryButton, QuietButton, Screen, StatusBadge } from '../../shared/ui';
 import { openSnapPayment } from '../../lib/midtrans';
+import type { SalesContact } from '../../domain/types';
 
 export default function SuccessPage() {
   const { code } = useParams();
@@ -33,6 +35,20 @@ export default function SuccessPage() {
   const orderCode = decodeURIComponent(code ?? '');
 
   const [copied, setCopied] = useState(false);
+  const [salesContacts, setSalesContacts] = useState<SalesContact[]>([]);
+
+  useEffect(() => {
+    if (!uuid) return;
+    let active = true;
+    api.order(uuid)
+      .then((res) => {
+        if (active) setSalesContacts(res.data.sales_contacts ?? []);
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [uuid]);
 
   const handleCopyCode = async () => {
     try {
@@ -209,6 +225,22 @@ export default function SuccessPage() {
             <p className="text-[10px] text-slate-600 leading-relaxed mt-0.5">
               Apabila Bapak/Ibu memerlukan koordinasi khusus terkait jadwal pengecoran atau spesifikasi mutu beton, tim layanan pelanggan Tonasa senantiasa siap membantu Anda.
             </p>
+            {salesContacts.length > 0 ? (
+              <div className="mt-2 space-y-1.5">
+                {salesContacts.map((sales) => (
+                  <a
+                    key={sales.whatsapp}
+                    href={`https://wa.me/${sales.whatsapp}?text=${encodeURIComponent(`Halo ${sales.name}, saya ingin menanyakan pesanan ${orderCode}`)}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center justify-center gap-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 py-2 px-3 text-[11px] font-bold text-white shadow-2xs transition-colors"
+                  >
+                    <IonIcon icon={logoWhatsapp} className="text-sm" />
+                    <span>WhatsApp Sales · {sales.name}</span>
+                  </a>
+                ))}
+              </div>
+            ) : null}
           </div>
         </div>
 

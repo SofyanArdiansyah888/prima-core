@@ -116,6 +116,11 @@ export type OrderSuratJalan = {
   }[];
 };
 
+export type SalesContact = {
+  name: string;
+  whatsapp: string;
+};
+
 export type CustomerOrder = {
   uuid: string;
   code: string;
@@ -155,6 +160,7 @@ export type CustomerOrder = {
   has_faktur: boolean;
   notes: string | null;
   plant: { code: string; name: string; phone: string | null; whatsapp: string | null } | null;
+  sales_contacts?: SalesContact[];
   items: OrderItem[];
   work_orders?: OrderWorkOrder[];
   surat_jalans?: OrderSuratJalan[];

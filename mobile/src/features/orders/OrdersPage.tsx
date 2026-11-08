@@ -349,7 +349,7 @@ export default function OrdersPage() {
                             {order.payment_status === 'PENDING' && order.status !== 'CANCELLED' && (
                               <span className="text-[10px] font-bold text-amber-600 flex items-center gap-1 mt-0.5">
                                 <IonIcon icon={timeOutline} className="text-xs text-amber-500" />
-                                <span>Menunggu Pembayaran</span>
+                                <span>{order.status === 'PENDING_APPROVAL' ? 'Menunggu Verifikasi Lokasi' : 'Menunggu Pembayaran'}</span>
                               </span>
                             )}
                           </div>
@@ -369,7 +369,7 @@ export default function OrdersPage() {
                       </div>
 
                       {/* QUICK ACTION BUTTONS */}
-                      <div className={`grid ${order.payment_status === 'PENDING' && order.status !== 'CANCELLED' ? 'grid-cols-2 divide-x divide-slate-100 bg-amber-50/40 border-t border-amber-100' : 'grid-cols-2 divide-x divide-slate-100 border-t border-slate-100 bg-white'} text-center text-xs`}>
+                      <div className={`grid ${order.can_pay ? 'grid-cols-2 divide-x divide-slate-100 bg-amber-50/40 border-t border-amber-100' : 'grid-cols-2 divide-x divide-slate-100 border-t border-slate-100 bg-white'} text-center text-xs`}>
                         <button
                           type="button"
                           onClick={() => navigate(`/tabs/docs?code=${order.code}`)}
@@ -378,7 +378,7 @@ export default function OrdersPage() {
                           <IonIcon icon={documentTextOutline} className="text-xs text-[#0c1d37]" />
                           <span>Dokumen</span>
                         </button>
-                        {order.payment_status === 'PENDING' && order.status !== 'CANCELLED' ? (
+                        {order.can_pay ? (
                           <button
                             type="button"
                             onClick={() => navigate(`/orders/${order.uuid}`)}
@@ -393,7 +393,7 @@ export default function OrdersPage() {
                             onClick={() => navigate(`/orders/${order.uuid}`)}
                             className="flex items-center justify-center gap-1.5 py-2.5 text-[11px] font-bold text-[#0c1d37] hover:bg-slate-50 transition-colors cursor-pointer"
                           >
-                            <span>Rincian</span>
+                            <span>{order.status === 'PENDING_APPROVAL' ? 'Lihat Pesanan' : 'Rincian'}</span>
                             <IonIcon icon={chevronForwardOutline} className="text-[10px]" />
                           </button>
                         )}

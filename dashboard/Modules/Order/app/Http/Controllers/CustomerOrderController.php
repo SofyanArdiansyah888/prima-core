@@ -15,6 +15,8 @@ use Modules\Order\Http\Requests\StoreCustomerOrderRequest;
 use Modules\Order\Models\Order;
 use Modules\Order\Services\CustomerOrderService;
 use Modules\Order\Services\MidtransPaymentService;
+use Modules\Order\Services\OrderSalesContacts;
+use Modules\Shared\Support\PhoneNumber;
 
 class CustomerOrderController extends Controller
 {
@@ -62,7 +64,7 @@ class CustomerOrderController extends Controller
         $order = $orders->place($this->customer($request), $request->validated());
 
         return response()->json([
-            'data' => $this->transform($order),
+            'data' => $this->transform($order, withSalesContacts: true),
         ], 201);
     }
 
@@ -84,7 +86,7 @@ class CustomerOrderController extends Controller
         ]);
 
         return response()->json([
-            'data' => $this->transform($order),
+            'data' => $this->transform($order, withSalesContacts: true),
         ]);
     }
 
@@ -286,8 +288,15 @@ class CustomerOrderController extends Controller
     /**
      * @return array<string, mixed>
      */
-    private function transform(Order $order): array
+    private function transform(Order $order, bool $withSalesContacts = false): array
     {
+        $salesContacts = $withSalesContacts
+            ? app(OrderSalesContacts::class)->forOrder($order)->map(fn ($user) => [
+                'name' => $user->name,
+                'whatsapp' => PhoneNumber::toInternational((string) $user->phone),
+            ])->filter(fn ($c) => $c['whatsapp'] !== '')->values()->all()
+            : [];
+
         $workOrders = $order->relationLoaded('workOrders') ? $order->workOrders : collect();
         $suratJalans = $order->relationLoaded('suratJalanItems')
             ? $order->suratJalanItems->map(fn ($sji) => $sji->suratJalan)->filter()->unique('id')->values()
@@ -350,6 +359,7 @@ class CustomerOrderController extends Controller
                 'phone' => $order->batchingPlant->phone,
                 'whatsapp' => $order->batchingPlant->whatsapp,
             ] : null,
+            'sales_contacts' => $salesContacts,
             'items' => $order->items->map(fn ($item) => [
                 'code' => $item->product?->code,
                 'name' => $item->product?->name,

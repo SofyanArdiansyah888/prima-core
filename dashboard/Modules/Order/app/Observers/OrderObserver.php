@@ -2,17 +2,26 @@
 
 namespace Modules\Order\Observers;
 
+use Illuminate\Support\Facades\Log;
 use Modules\Order\Models\Order;
+use Modules\Order\Services\OrderSalesContacts;
 use Modules\Shared\Services\FonnteService;
 
 class OrderObserver
 {
-    public function __construct(private FonnteService $fonnte) {}
+    public function __construct(
+        private FonnteService $fonnte,
+        private OrderSalesContacts $salesContacts,
+    ) {}
 
     public function created(Order $order): void
     {
+        $this->notifySales($order);
+
         try {
-            $message = "Pesanan {$order->code} berhasil dibuat. Status: {$this->label($order->status)}. Total Rp ".number_format((float) $order->total_price, 0, ',', '.');
+            $message = $order->status === 'PENDING_APPROVAL'
+                ? "Pesanan {$order->code} berhasil dibuat dan sedang menunggu verifikasi lokasi oleh tim sales. Rincian harga akan diinformasikan setelah pesanan disetujui."
+                : "Pesanan {$order->code} berhasil dibuat. Status: {$this->label($order->status)}.";
             $this->fonnte->send((string) $order->customer_phone, $message);
 
             $admin = config('services.fonnte.admin_phone');
@@ -23,7 +32,34 @@ class OrderObserver
                 }
             }
         } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::warning('Gagal mengantri notifikasi WhatsApp pesanan baru: '.$e->getMessage());
+            Log::warning('Gagal mengantri notifikasi WhatsApp pesanan baru: '.$e->getMessage());
+        }
+    }
+
+    private function notifySales(Order $order): void
+    {
+        try {
+            $sales = $this->salesContacts->forOrder($order);
+            if ($sales->isEmpty()) {
+                return;
+            }
+
+            $plantName = $order->batchingPlant()->value('name') ?? '-';
+            $maps = $order->delivery_lat !== null && $order->delivery_lng !== null
+                ? "\nPeta: https://maps.google.com/?q={$order->delivery_lat},{$order->delivery_lng}"
+                : '';
+            $message = "Pesanan baru {$order->code} perlu verifikasi lokasi.\n"
+                ."Customer: {$order->customer_name} ({$order->customer_phone})\n"
+                ."Proyek: {$order->project_title}\n"
+                ."Alamat: {$order->delivery_address}{$maps}\n"
+                ."Plant: {$plantName}\n"
+                .'Silakan cek dan ACC di aplikasi sales.';
+
+            foreach ($sales as $user) {
+                $this->fonnte->send((string) $user->phone, $message);
+            }
+        } catch (\Throwable $e) {
+            Log::warning('Gagal mengantri notifikasi WhatsApp ke sales: '.$e->getMessage());
         }
     }
 
@@ -39,7 +75,7 @@ class OrderObserver
                 "Status pesanan {$order->code} berubah menjadi {$this->label($order->status)}.",
             );
         } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::warning('Gagal mengantri notifikasi WhatsApp perubahan status: '.$e->getMessage());
+            Log::warning('Gagal mengantri notifikasi WhatsApp perubahan status: '.$e->getMessage());
         }
     }
 
