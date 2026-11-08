@@ -12,7 +12,6 @@ import {
   folderOutline,
   qrCodeOutline,
   searchOutline,
-  shareSocialOutline,
   shieldCheckmarkOutline,
 } from 'ionicons/icons';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -157,20 +156,6 @@ export default function DigitalDocsPage() {
       triggerToast(err instanceof Error ? err.message : 'Gagal mengunduh dokumen.', 'error');
     } finally {
       setIsDownloading(false);
-    }
-  };
-
-  const handleShare = () => {
-    if (!activeOrder) return;
-    if (navigator.share) {
-      void navigator.share({
-        title: `Dokumen Resmi ${activeOrder.code}`,
-        text: `Dokumen digital resmi pesanan ${activeOrder.code} - PT Prima Karya Manunggal (Semen Tonasa Group)`,
-        url: window.location.href,
-      });
-    } else {
-      navigator.clipboard?.writeText(window.location.href);
-      triggerToast(`Tautan dokumen resmi pesanan ${activeOrder.code} disalin ke papan klip.`, 'success');
     }
   };
 
@@ -336,14 +321,6 @@ export default function DigitalDocsPage() {
                 >
                   <IonIcon icon={downloadOutline} className="text-base" />
                   <span>{isDownloading ? 'Mengunduh...' : 'Unduh PDF Asli'}</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={handleShare}
-                  className="flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 py-2.5 px-3.5 text-xs font-bold text-slate-700 shadow-xs transition-all cursor-pointer"
-                  title="Bagikan"
-                >
-                  <IonIcon icon={shareSocialOutline} className="text-base" />
                 </button>
               </div>
 
