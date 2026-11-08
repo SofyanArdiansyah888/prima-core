@@ -59,16 +59,25 @@ class CustomerOtpService
         ]);
 
         $label = match ($purpose) {
-            'register' => 'daftar akun',
-            'reset' => 'atur ulang sandi',
-            default => 'masuk',
+            'register' => 'menyelesaikan pendaftaran akun',
+            'reset' => 'mengatur ulang kata sandi',
+            default => 'masuk ke akun Anda',
         };
 
         try {
-            $this->fonnte->sendNow(
-                $phone,
-                "Kode OTP Prima Sales Pro untuk {$label}: {$code}. Berlaku 5 menit.",
-            );
+            $this->fonnte->sendNow($phone, implode("\n", [
+                '🔐 *Kode Verifikasi Prima Sales Pro*',
+                '',
+                "Gunakan kode berikut untuk {$label}:",
+                '',
+                "*{$code}*",
+                '',
+                'Kode berlaku selama *5 menit*.',
+                '',
+                '⚠️ Demi keamanan akun Anda, jangan bagikan kode ini kepada siapa pun, termasuk pihak yang mengatasnamakan PT Prima Karya Manunggal.',
+                '',
+                '_Abaikan pesan ini jika Anda tidak merasa melakukan permintaan._',
+            ]));
         } catch (Throwable $exception) {
             $otp->delete();
             Log::error('OTP WhatsApp gagal dikirim.', [
