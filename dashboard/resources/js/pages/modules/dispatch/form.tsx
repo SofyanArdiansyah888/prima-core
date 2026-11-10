@@ -217,7 +217,14 @@ return;
             return;
         }
 
-        post('/dispatch/surat-jalan');
+        post('/dispatch/surat-jalan', {
+            // Beberapa error (akses plant, order belum lunas, SPK/produk tidak cocok) tidak punya
+            // field inline di form; tampilkan semuanya agar submit tidak terlihat "diam".
+            onError: (formErrors) => {
+                const messages = Array.from(new Set(Object.values(formErrors).filter(Boolean)));
+                toast.error(messages.length ? messages.join('\n') : 'Surat jalan gagal disimpan.');
+            },
+        });
     };
 
     return (
