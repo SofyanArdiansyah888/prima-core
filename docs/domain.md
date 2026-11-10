@@ -44,6 +44,7 @@ Generator: `Modules\Shared\Services\CodeGenerator` + tabel `document_sequences`.
   scope `visibleTo($user)` dari trait `Modules\Shared\Concerns\ScopedByPlant` (Order, WorkOrder, SuratJalan, BatchingPlant);
   cek per record `Modules\Shared\Concerns\AuthorizesPlantAccess::ensurePlantAccess()` (403).
 - Surat jalan: plant header harus boleh diakses, setiap pesanan harus dari plant yang sama, SPK harus milik pesanan tersebut.
+- Pelanggan (`customers`) tidak punya plant: `Customer::visibleTo($user)` menurunkan visibilitas dari pesanannya — staf terbatas hanya melihat pelanggan yang pernah memesan di plant miliknya, dan riwayat/statistik hanya dari pesanan plant tersebut. Aktif/nonaktif akun pelanggan hanya untuk akses semua plant.
 
 ## Status plant
 

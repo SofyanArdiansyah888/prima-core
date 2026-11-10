@@ -1,6 +1,7 @@
 import { Link, usePage } from '@inertiajs/react';
 import {
     Building2,
+    Contact,
     Factory,
     Image,
     LayoutGrid,
@@ -44,6 +45,11 @@ const operationsNavItems: NavItem[] = [
         title: 'Pesanan Pelanggan',
         href: '/sales/orders',
         icon: ShoppingCart,
+    },
+    {
+        title: 'Pelanggan',
+        href: '/sales/customers',
+        icon: Contact,
     },
     {
         title: 'Work Orders (SPK)',

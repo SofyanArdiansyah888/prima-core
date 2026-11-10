@@ -37,6 +37,7 @@
 - Path: `dashboard/Modules/Customer`
 - Model: `Modules\Customer\Models\Customer` (terpisah dari user staf)
 - API: `/api/customer/v1` — daftar dan lupa sandi lewat OTP WhatsApp (Fonnte), masuk, profil, katalog, quote ongkir, buat/lacak/batal pesanan B2C
+- Dashboard: `/sales/customers` (`CustomerController`, halaman `resources/js/pages/modules/customer/{index,show}.tsx`) — daftar, detail + riwayat pesanan, aktif/nonaktif akun (`PATCH /sales/customers/{uuid}/toggle-active`, admin/akses semua plant; menonaktifkan juga mencabut token mobile)
 - App: [`mobile/`](../mobile/) Ionic React + Tailwind
 - Seed lokal: `081300000001` / `password`
 
