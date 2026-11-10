@@ -36,6 +36,7 @@ class ClearTransactionsCommand extends Command
         $this->info('Membersihkan data transaksi non-master...');
 
         $tables = [
+            'site_photos',
             'surat_jalan_items',
             'surat_jalans',
             'work_orders',
