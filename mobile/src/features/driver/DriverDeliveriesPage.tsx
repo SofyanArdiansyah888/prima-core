@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { IonIcon } from '@ionic/react';
+import { useEffect, useRef, useState } from 'react';
+import { IonIcon, useIonViewWillEnter } from '@ionic/react';
 import {
   alertCircleOutline,
   callOutline,
@@ -56,13 +56,25 @@ export default function DriverDeliveriesPage() {
     }
   };
 
-  useEffect(() => {
+  // IonRouterOutlet menyimpan halaman yang pernah dibuka, jadi useEffect mount tidak jalan
+  // lagi setelah logout → login ulang. Cek sesi & muat data setiap kali halaman dimasuki.
+  useIonViewWillEnter(() => {
     const current = getStaffUser();
     if (!current || current.role !== 'driver') {
       navigate('/login', { replace: true });
       return;
     }
     setUser(current);
+    void fetchDeliveries();
+  }, [tab]);
+
+  // Ganti tab: muat ulang (render pertama sudah ditangani useIonViewWillEnter).
+  const tabInitialized = useRef(false);
+  useEffect(() => {
+    if (!tabInitialized.current) {
+      tabInitialized.current = true;
+      return;
+    }
     void fetchDeliveries();
   }, [tab]);
 
