@@ -7,6 +7,12 @@ import {
   locationOutline, 
   searchOutline 
 } from 'ionicons/icons';
+import {
+  GPS_MAP_MAX_ZOOM,
+  GPS_MAP_VIEW_ZOOM,
+  OSM_MAX_NATIVE_ZOOM,
+  getAccuratePosition,
+} from '../../shared/geo';
 
 export type DeliveryLocation = {
   lat: number;
@@ -21,6 +27,8 @@ interface DeliveryMapPickerProps {
   onChange: (loc: DeliveryLocation) => void;
   className?: string;
   mapHeightClassName?: string;
+  /** Saat peta dibuka, langsung pindahkan pin ke lokasi GPS perangkat (akurasi tinggi). */
+  autoLocate?: boolean;
 }
 
 export type SearchResultItem = {
@@ -157,9 +165,13 @@ export function DeliveryMapPicker({
   onChange,
   className = '',
   mapHeightClassName = 'h-64',
+  autoLocate = false,
 }: DeliveryMapPickerProps) {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
+  const accuracyCircleRef = useRef<L.Circle | null>(null);
+  /** User sudah menggeser peta sendiri → jangan timpa dengan hasil GPS otomatis. */
+  const userDraggedRef = useRef(false);
   const searchContainerRef = useRef<HTMLDivElement | null>(null);
 
   // Stable references to prevent infinite update cycles
@@ -185,6 +197,8 @@ export function DeliveryMapPicker({
   const [geocoding, setGeocoding] = useState(false);
   const [isMovingMap, setIsMovingMap] = useState(false);
   const [currentArea, setCurrentArea] = useState<string>('');
+  const [gpsAccuracy, setGpsAccuracy] = useState<number | null>(null);
+  const [gpsError, setGpsError] = useState('');
 
   // Close search dropdown on click outside
   useEffect(() => {
@@ -270,14 +284,21 @@ export function DeliveryMapPicker({
 
     const map = L.map(mapContainerRef.current, {
       center: [initialLat, initialLng],
-      zoom: 15,
+      zoom: GPS_MAP_VIEW_ZOOM,
+      maxZoom: GPS_MAP_MAX_ZOOM,
       zoomControl: false,
       attributionControl: false,
     });
 
+    // Tile OSM hanya s.d. z19; z20–21 memperbesar tile z19 agar pin bisa ditaruh lebih presisi.
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19,
+      maxZoom: GPS_MAP_MAX_ZOOM,
+      maxNativeZoom: OSM_MAX_NATIVE_ZOOM,
     }).addTo(map);
+
+    map.on('dragstart', () => {
+      userDraggedRef.current = true;
+    });
 
     map.on('movestart', () => {
       isUserDraggingRef.current = true;
@@ -307,6 +328,7 @@ export function DeliveryMapPicker({
     return () => {
       map.remove();
       mapInstanceRef.current = null;
+      accuracyCircleRef.current = null;
     };
   }, [fetchAddressFromCoords]);
 
@@ -316,13 +338,15 @@ export function DeliveryMapPicker({
     if (isUserDraggingRef.current) return;
 
     // Do nothing if the prop coordinates match what was just emitted by the map
+    // Toleransi ~0,1 m (sebelumnya ~11 m) agar perubahan kecil tetap diikuti peta.
+    const EPS = 0.000001;
     const last = lastEmittedCoordsRef.current;
-    if (Math.abs(last.lat - lat) < 0.0001 && Math.abs(last.lng - lng) < 0.0001) {
+    if (Math.abs(last.lat - lat) < EPS && Math.abs(last.lng - lng) < EPS) {
       return;
     }
 
     const center = mapInstanceRef.current.getCenter();
-    if (Math.abs(center.lat - lat) > 0.0001 || Math.abs(center.lng - lng) > 0.0001) {
+    if (Math.abs(center.lat - lat) > EPS || Math.abs(center.lng - lng) > EPS) {
       lastEmittedCoordsRef.current = { lat, lng };
       mapInstanceRef.current.setView([lat, lng], mapInstanceRef.current.getZoom(), { animate: false });
     }
@@ -332,7 +356,7 @@ export function DeliveryMapPicker({
     lastEmittedCoordsRef.current = { lat: item.lat, lng: item.lng };
 
     if (mapInstanceRef.current) {
-      mapInstanceRef.current.setView([item.lat, item.lng], 16, { animate: true });
+      mapInstanceRef.current.setView([item.lat, item.lng], GPS_MAP_VIEW_ZOOM, { animate: true });
     }
 
     setCurrentArea(item.name);
@@ -347,26 +371,54 @@ export function DeliveryMapPicker({
     });
   };
 
-  const handleLocateMe = () => {
-    if (!navigator.geolocation) return;
+  /**
+   * Pindahkan pin ke lokasi GPS perangkat. Menunggu fix akurasi tinggi (≤15 m,
+   * maks 12 dtk) lalu memakai hasil terbaik; lingkar biru = radius akurasi GPS.
+   */
+  const locateMe = useCallback(async (auto: boolean) => {
     setLocating(true);
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const { latitude, longitude } = pos.coords;
-        lastEmittedCoordsRef.current = { lat: latitude, lng: longitude };
+    setGpsError('');
+    const pos = await getAccuratePosition(15, 12000);
+    setLocating(false);
 
-        if (mapInstanceRef.current) {
-          mapInstanceRef.current.setView([latitude, longitude], 16, { animate: true });
-        }
-        void fetchAddressFromCoords(latitude, longitude);
-        setLocating(false);
-      },
-      () => {
-        setLocating(false);
-      },
-      { enableHighAccuracy: true, timeout: 8000 }
-    );
+    const map = mapInstanceRef.current;
+    if (!map) return; // komponen sudah ditutup
+    if (!pos) {
+      setGpsError('Lokasi GPS tidak didapat. Aktifkan GPS & izin lokasi, atau geser pin manual.');
+      return;
+    }
+    // GPS otomatis jangan menimpa titik yang sudah digeser user sendiri.
+    if (auto && userDraggedRef.current) return;
+
+    setGpsAccuracy(pos.accuracy);
+    if (!accuracyCircleRef.current) {
+      accuracyCircleRef.current = L.circle([pos.lat, pos.lng], {
+        radius: pos.accuracy,
+        color: '#2563eb',
+        weight: 1,
+        fillColor: '#3b82f6',
+        fillOpacity: 0.12,
+        interactive: false,
+      }).addTo(map);
+    } else {
+      accuracyCircleRef.current.setLatLng([pos.lat, pos.lng]).setRadius(pos.accuracy);
+    }
+
+    // Alamat diambil oleh listener 'moveend' setelah peta berpindah.
+    lastEmittedCoordsRef.current = { lat: pos.lat, lng: pos.lng };
+    map.setView([pos.lat, pos.lng], GPS_MAP_VIEW_ZOOM, { animate: !auto });
+  }, []);
+
+  const handleLocateMe = () => {
+    void locateMe(false);
   };
+
+  // Titik awal dari GPS customer bila belum ada alamat tersimpan.
+  useEffect(() => {
+    if (autoLocate) void locateMe(true);
+    // Hanya sekali saat peta dibuka.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div className={`space-y-3 ${className}`}>
@@ -523,14 +575,22 @@ export function DeliveryMapPicker({
                 ? 'Menggeser peta...'
                 : geocoding
                 ? 'Menentukan alamat...'
-                : currentArea || `${lat.toFixed(4)}, ${lng.toFixed(4)}`}
+                : currentArea || `${lat.toFixed(6)}, ${lng.toFixed(6)}`}
             </span>
           </div>
-          <span className="shrink-0 text-[10px] font-mono text-slate-400">
-            {lat.toFixed(4)}, {lng.toFixed(4)}
+          <span className="shrink-0 text-right text-[10px] font-mono text-slate-400 leading-tight">
+            {lat.toFixed(6)}, {lng.toFixed(6)}
+            {gpsAccuracy !== null && (
+              <span className="block font-sans font-semibold text-blue-600">GPS ±{Math.round(gpsAccuracy)} m</span>
+            )}
           </span>
         </div>
       </div>
+
+      {locating && (
+        <p className="text-[11px] font-semibold text-blue-600">Mencari lokasi GPS akurat...</p>
+      )}
+      {gpsError && <p className="text-[11px] font-semibold text-[#d91424]">{gpsError}</p>}
     </div>
   );
 }
