@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
-import { IonIcon } from '@ionic/react';
+import { IonIcon, useIonViewWillEnter, useIonViewWillLeave } from '@ionic/react';
 import {
   alertCircleOutline,
   arrowBackOutline,
   checkmarkCircleOutline,
   closeOutline,
   informationCircleOutline,
+  locateOutline,
   locationOutline,
   navigateOutline,
   refreshOutline,
@@ -19,6 +20,13 @@ import { staffApi } from '../../data/staffApi';
 import { formatRupiah } from '../../domain/format';
 import type { SalesOrderSummary } from '../../domain/types';
 import { Card, Screen, SitePhotoCapture } from '../../shared/ui';
+import {
+  GPS_MAP_ZOOM,
+  OSM_MAX_NATIVE_ZOOM,
+  googleMapsDirUrl,
+  useLiveGpsPosition,
+  type GpsPosition,
+} from '../../shared/geo';
 
 const STATUS_LABEL: Record<string, string> = {
   PENDING_APPROVAL: 'Perlu Survei',
@@ -39,11 +47,6 @@ function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): nu
     Math.sin(dLng / 2) * Math.sin(dLng / 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return Math.round(R * c * 100) / 100;
-}
-
-/** Rute Google Maps dari lokasi HP saat ini ke titik proyek (sama seperti aplikasi sopir). */
-function googleMapsUrl(lat: number, lng: number): string {
-  return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`;
 }
 
 function escapeHtml(value: string): string {
@@ -75,10 +78,22 @@ export default function SalesOrderDetailPage() {
   const mapInstanceRef = useRef<L.Map | null>(null);
   const markerRef = useRef<L.Marker | null>(null);
   const polylineRef = useRef<L.Polyline | null>(null);
+  const gpsMarkerRef = useRef<L.CircleMarker | null>(null);
+  const gpsAccuracyRef = useRef<L.Circle | null>(null);
+  const centeredOnGpsRef = useRef(false);
+
+  // Lokasi GPS sales (akurasi tinggi) = titik awal peta & rute.
+  const [pageVisible, setPageVisible] = useState(true);
+  useIonViewWillEnter(() => setPageVisible(true));
+  useIonViewWillLeave(() => setPageVisible(false));
+  const { position: gps, error: gpsError } = useLiveGpsPosition(pageVisible);
+  const gpsRef = useRef<GpsPosition | null>(null);
+  gpsRef.current = gps;
 
   const plantLat = order?.plant?.lat ?? -5.112;
   const plantLng = order?.plant?.lng ?? 119.489;
   const liveDistance = haversineKm(plantLat, plantLng, lat, lng);
+  const distanceFromMe = gps ? haversineKm(gps.lat, gps.lng, lat, lng) : null;
 
   const fetchDetail = async () => {
     if (!uuid) return;
@@ -109,21 +124,22 @@ export default function SalesOrderDetailPage() {
     if (!mapContainerRef.current || !order) return;
 
     if (!mapInstanceRef.current) {
-      // Peta dikunci pada lokasi pesanan: tidak bisa digeser, zoom tetap berpusat di pin customer
+      // Titik awal peta = lokasi GPS sales (zoom 21). Sebelum GPS didapat, tampilkan lokasi customer.
+      // Pin customer tetap terkunci (tidak bisa digeser); peta bisa digeser untuk melihat sekitar.
+      const start = gpsRef.current;
       const map = L.map(mapContainerRef.current, {
-        center: [lat, lng],
-        zoom: 15,
+        center: start ? [start.lat, start.lng] : [lat, lng],
+        zoom: GPS_MAP_ZOOM,
+        maxZoom: GPS_MAP_ZOOM,
         zoomControl: true,
-        dragging: false,
-        touchZoom: 'center',
-        scrollWheelZoom: 'center',
-        doubleClickZoom: 'center',
         boxZoom: false,
         keyboard: false,
       });
+      centeredOnGpsRef.current = !!start;
 
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19,
+        maxZoom: GPS_MAP_ZOOM,
+        maxNativeZoom: OSM_MAX_NATIVE_ZOOM,
         attribution: '&copy; OpenStreetMap',
       }).addTo(map);
 
@@ -153,19 +169,20 @@ export default function SalesOrderDetailPage() {
       }).addTo(map);
 
       const pinAddress = escapeHtml(order.delivery_address || 'Alamat belum diisi');
-      marker.bindPopup(
+      marker.bindPopup(() =>
         `<div style="max-width:220px;font-size:12px;line-height:1.4">`
           + `<b>Lokasi Proyek Customer</b><br>`
           + `<span>${pinAddress}</span><br>`
           + `<span style="font-family:monospace;color:#475569">${lat.toFixed(6)}, ${lng.toFixed(6)}</span><br>`
-          + `<a href="${googleMapsUrl(lat, lng)}" target="_blank" rel="noreferrer" style="display:inline-block;margin-top:6px;font-weight:700;color:#2563eb">Rute ke Lokasi (Google Maps) ↗</a>`
+          + `<a href="${escapeHtml(googleMapsDirUrl(lat, lng, gpsRef.current))}"target="_blank" rel="noreferrer" style="display:inline-block;margin-top:6px;font-weight:700;color:#2563eb">Rute ke Lokasi (Google Maps) ↗</a>`
           + `</div>`,
       );
 
       markerRef.current = marker;
 
-      // Polyline route
-      const polyline = L.polyline([[plantLat, plantLng], [lat, lng]], {
+      // Garis rute: dari lokasi GPS sales (atau plant bila GPS belum ada) ke customer
+      const routeStart: L.LatLngExpression = start ? [start.lat, start.lng] : [plantLat, plantLng];
+      const polyline = L.polyline([routeStart, [lat, lng]], {
         color: '#ea580c',
         weight: 3,
         dashArray: '6, 6',
@@ -184,9 +201,61 @@ export default function SalesOrderDetailPage() {
       markerRef.current.setLatLng([lat, lng]);
     }
     if (polylineRef.current) {
-      polylineRef.current.setLatLngs([[plantLat, plantLng], [lat, lng]]);
+      const routeStart: L.LatLngExpression = gps ? [gps.lat, gps.lng] : [plantLat, plantLng];
+      polylineRef.current.setLatLngs([routeStart, [lat, lng]]);
     }
-  }, [lat, lng, plantLat, plantLng]);
+  }, [lat, lng, plantLat, plantLng, gps]);
+
+  // Titik lokasi GPS sales + lingkar akurasi; pusatkan peta (zoom 21) sekali saat fix pertama didapat.
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    if (!map || !gps) return;
+
+    const latLng: L.LatLngExpression = [gps.lat, gps.lng];
+    if (!gpsAccuracyRef.current) {
+      gpsAccuracyRef.current = L.circle(latLng, {
+        radius: gps.accuracy,
+        color: '#2563eb',
+        weight: 1,
+        fillColor: '#3b82f6',
+        fillOpacity: 0.12,
+        interactive: false,
+      }).addTo(map);
+    } else {
+      gpsAccuracyRef.current.setLatLng(latLng).setRadius(gps.accuracy);
+    }
+
+    if (!gpsMarkerRef.current) {
+      gpsMarkerRef.current = L.circleMarker(latLng, {
+        radius: 8,
+        color: '#ffffff',
+        weight: 3,
+        fillColor: '#2563eb',
+        fillOpacity: 1,
+      })
+        .bindPopup(() => {
+          const p = gpsRef.current;
+          return p
+            ? `<b>Lokasi Anda</b><br><span style="font-family:monospace">${p.lat.toFixed(6)}, ${p.lng.toFixed(6)}</span><br>Akurasi ±${Math.round(p.accuracy)} m`
+            : '<b>Lokasi Anda</b>';
+        })
+        .addTo(map);
+    } else {
+      gpsMarkerRef.current.setLatLng(latLng);
+    }
+
+    if (!centeredOnGpsRef.current) {
+      centeredOnGpsRef.current = true;
+      map.setView(latLng, GPS_MAP_ZOOM, { animate: false });
+    }
+  }, [gps, order]);
+
+  const centerOnMe = () => {
+    if (gps) mapInstanceRef.current?.setView([gps.lat, gps.lng], GPS_MAP_ZOOM, { animate: true });
+  };
+  const centerOnProject = () => {
+    mapInstanceRef.current?.setView([lat, lng], GPS_MAP_ZOOM, { animate: true });
+  };
 
   const handleApprove = async () => {
     if (!uuid) return;
@@ -326,13 +395,33 @@ export default function SalesOrderDetailPage() {
             <label className="font-extrabold text-slate-800">
               Verifikasi Akses Truk Mixer Besar (🚚)
             </label>
-            <span className="font-bold text-emerald-700">
-              Jarak: {liveDistance} km
+            <span className="text-right font-bold text-emerald-700">
+              Plant: {liveDistance} km
+              {distanceFromMe !== null && <> · Anda: {distanceFromMe} km</>}
             </span>
           </div>
 
           <div className="relative overflow-hidden rounded-2xl border-2 border-slate-300 bg-slate-100 shadow-sm h-64">
             <div ref={mapContainerRef} className="w-full h-full z-0" />
+            <div className="absolute bottom-2 right-2 z-[500] flex flex-col items-end gap-1.5">
+              <button
+                type="button"
+                onClick={centerOnMe}
+                disabled={!gps}
+                className="flex items-center gap-1 rounded-lg border border-slate-200 bg-white/95 px-2 py-1.5 text-[10px] font-bold text-blue-700 shadow-md disabled:opacity-60"
+              >
+                <IonIcon icon={locateOutline} className={`text-sm ${gps ? '' : 'animate-spin'}`} />
+                <span>{gps ? `Lokasi Saya (±${Math.round(gps.accuracy)} m)` : 'Mencari GPS...'}</span>
+              </button>
+              <button
+                type="button"
+                onClick={centerOnProject}
+                className="flex items-center gap-1 rounded-lg border border-slate-200 bg-white/95 px-2 py-1.5 text-[10px] font-bold text-[#d91424] shadow-md"
+              >
+                <IonIcon icon={locationOutline} className="text-sm" />
+                <span>Lokasi Proyek</span>
+              </button>
+            </div>
             {order.status === 'PENDING_APPROVAL' && (
               <div className="pointer-events-none absolute left-2 right-2 top-2 z-[500] ml-10 rounded-lg border border-slate-200 bg-white/90 px-2.5 py-1 text-[10px] font-bold text-slate-800 shadow-xs backdrop-blur-xs">
                 📍 Ketuk pin merah (🚚) untuk melihat alamat lengkap & koordinat lokasi customer.
@@ -340,7 +429,7 @@ export default function SalesOrderDetailPage() {
             )}
           </div>
           <a
-            href={googleMapsUrl(lat, lng)}
+            href={googleMapsDirUrl(lat, lng, gps)}
             target="_blank"
             rel="noreferrer"
             className="flex items-center justify-center gap-1.5 rounded-xl border border-blue-300 bg-blue-50 py-2.5 text-xs font-bold text-blue-700 hover:bg-blue-100 active:scale-[0.98] transition-all"
@@ -349,6 +438,7 @@ export default function SalesOrderDetailPage() {
             <span>Rute ke Lokasi Proyek (Google Maps)</span>
           </a>
           <p className="text-center font-mono text-[10px] text-slate-400">Koordinat: {lat.toFixed(6)}, {lng.toFixed(6)}</p>
+          {gpsError && <p className="text-center text-[10px] font-semibold text-[#d91424]">{gpsError}</p>}
         </div>
 
         {/* Foto bukti survei di lokasi */}

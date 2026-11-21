@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { IonIcon, useIonViewWillEnter } from '@ionic/react';
+import { IonIcon, useIonViewWillEnter, useIonViewWillLeave } from '@ionic/react';
 import {
   alertCircleOutline,
   callOutline,
@@ -18,6 +18,7 @@ import { getStaffUser, staffApi } from '../../data/staffApi';
 import type { DriverDeliverySummary, StaffUser } from '../../domain/types';
 import { Card, Screen, SitePhotoCapture } from '../../shared/ui';
 import PkmLogo from '../../shared/ui/PkmLogo';
+import { googleMapsDirUrl, useLiveGpsPosition } from '../../shared/geo';
 
 const VEHICLE_LABEL: Record<string, string> = {
   MIXER_TRUCK_7M3: 'Truk Mixer 7 m³',
@@ -40,6 +41,11 @@ export default function DriverDeliveriesPage() {
   const [deliveryNotes, setDeliveryNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
+
+  // Lokasi GPS sopir (akurasi tinggi) sebagai titik awal rute Google Maps.
+  const [pageVisible, setPageVisible] = useState(true);
+  useIonViewWillLeave(() => setPageVisible(false));
+  const { position: gps } = useLiveGpsPosition(pageVisible && tab === 'active');
 
   const fetchDeliveries = async (silent = false) => {
     if (!silent) setLoading(true);
@@ -65,6 +71,7 @@ export default function DriverDeliveriesPage() {
       return;
     }
     setUser(current);
+    setPageVisible(true);
     void fetchDeliveries();
   }, [tab]);
 
@@ -206,7 +213,7 @@ export default function DriverDeliveriesPage() {
             const firstItem = sj.items[0];
             const hasCoords = firstItem?.destination_lat && firstItem?.destination_lng;
             const mapsUrl = hasCoords
-              ? `https://www.google.com/maps/dir/?api=1&destination=${firstItem.destination_lat},${firstItem.destination_lng}`
+              ? googleMapsDirUrl(Number(firstItem.destination_lat), Number(firstItem.destination_lng), gps)
               : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(firstItem?.destination_address || '')}`;
 
             return (
