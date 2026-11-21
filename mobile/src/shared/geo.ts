@@ -2,8 +2,14 @@ import { useEffect, useState } from 'react';
 
 export type GpsPosition = { lat: number; lng: number; accuracy: number };
 
-/** Zoom peta saat memusatkan ke lokasi GPS sales / sopir. */
-export const GPS_MAP_ZOOM = 21;
+/** Zoom tampilan saat memusatkan peta ke lokasi GPS sales / sopir (cukup luas untuk melihat sekitar). */
+export const GPS_MAP_VIEW_ZOOM = 17;
+
+/**
+ * Batas zoom maksimum peta. Presisi titik tetap setara zoom 21 (koordinat GPS
+ * akurasi tinggi, 6 desimal ≈ 0,1 m) — pengguna tetap bisa zoom in sampai 21.
+ */
+export const GPS_MAP_MAX_ZOOM = 21;
 
 /** Tile OSM hanya tersedia s.d. z19; di atasnya Leaflet memperbesar tile z19. */
 export const OSM_MAX_NATIVE_ZOOM = 19;
