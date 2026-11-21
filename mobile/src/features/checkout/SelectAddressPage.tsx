@@ -128,15 +128,16 @@ export default function SelectAddressPage() {
               </h2>
             </div>
             <span className="text-[10px] font-mono text-slate-400 bg-slate-100 px-2 py-0.5 rounded-md">
-              {lat.toFixed(4)}, {lng.toFixed(4)}
+              {lat.toFixed(6)}, {lng.toFixed(6)}
             </span>
           </div>
 
           <DeliveryMapPicker 
             lat={lat} 
             lng={lng} 
-            onChange={handleLocationChange} 
+            onChange={handleLocationChange}
             mapHeightClassName="h-72 sm:h-80"
+            autoLocate={!saved}
           />
         </Card>
 
