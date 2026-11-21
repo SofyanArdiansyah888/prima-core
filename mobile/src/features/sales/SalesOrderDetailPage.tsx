@@ -21,7 +21,8 @@ import { formatRupiah } from '../../domain/format';
 import type { SalesOrderSummary } from '../../domain/types';
 import { Card, Screen, SitePhotoCapture } from '../../shared/ui';
 import {
-  GPS_MAP_ZOOM,
+  GPS_MAP_MAX_ZOOM,
+  GPS_MAP_VIEW_ZOOM,
   OSM_MAX_NATIVE_ZOOM,
   googleMapsDirUrl,
   useLiveGpsPosition,
@@ -124,13 +125,13 @@ export default function SalesOrderDetailPage() {
     if (!mapContainerRef.current || !order) return;
 
     if (!mapInstanceRef.current) {
-      // Titik awal peta = lokasi GPS sales (zoom 21). Sebelum GPS didapat, tampilkan lokasi customer.
+      // Titik awal peta = lokasi GPS sales (tampilan zoom 17, bisa zoom in s.d. 21). Sebelum GPS didapat, tampilkan lokasi customer.
       // Pin customer tetap terkunci (tidak bisa digeser); peta bisa digeser untuk melihat sekitar.
       const start = gpsRef.current;
       const map = L.map(mapContainerRef.current, {
         center: start ? [start.lat, start.lng] : [lat, lng],
-        zoom: GPS_MAP_ZOOM,
-        maxZoom: GPS_MAP_ZOOM,
+        zoom: GPS_MAP_VIEW_ZOOM,
+        maxZoom: GPS_MAP_MAX_ZOOM,
         zoomControl: true,
         boxZoom: false,
         keyboard: false,
@@ -138,7 +139,7 @@ export default function SalesOrderDetailPage() {
       centeredOnGpsRef.current = !!start;
 
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: GPS_MAP_ZOOM,
+        maxZoom: GPS_MAP_MAX_ZOOM,
         maxNativeZoom: OSM_MAX_NATIVE_ZOOM,
         attribution: '&copy; OpenStreetMap',
       }).addTo(map);
@@ -206,7 +207,7 @@ export default function SalesOrderDetailPage() {
     }
   }, [lat, lng, plantLat, plantLng, gps]);
 
-  // Titik lokasi GPS sales + lingkar akurasi; pusatkan peta (zoom 21) sekali saat fix pertama didapat.
+  // Titik lokasi GPS sales + lingkar akurasi; pusatkan peta sekali saat fix pertama didapat.
   useEffect(() => {
     const map = mapInstanceRef.current;
     if (!map || !gps) return;
@@ -246,15 +247,15 @@ export default function SalesOrderDetailPage() {
 
     if (!centeredOnGpsRef.current) {
       centeredOnGpsRef.current = true;
-      map.setView(latLng, GPS_MAP_ZOOM, { animate: false });
+      map.setView(latLng, GPS_MAP_VIEW_ZOOM, { animate: false });
     }
   }, [gps, order]);
 
   const centerOnMe = () => {
-    if (gps) mapInstanceRef.current?.setView([gps.lat, gps.lng], GPS_MAP_ZOOM, { animate: true });
+    if (gps) mapInstanceRef.current?.setView([gps.lat, gps.lng], GPS_MAP_VIEW_ZOOM, { animate: true });
   };
   const centerOnProject = () => {
-    mapInstanceRef.current?.setView([lat, lng], GPS_MAP_ZOOM, { animate: true });
+    mapInstanceRef.current?.setView([lat, lng], GPS_MAP_VIEW_ZOOM, { animate: true });
   };
 
   const handleApprove = async () => {
