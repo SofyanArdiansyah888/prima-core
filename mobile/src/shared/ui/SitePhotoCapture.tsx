@@ -3,6 +3,7 @@ import { IonIcon } from '@ionic/react';
 import { cameraOutline, checkmarkCircle, locationOutline, warningOutline } from 'ionicons/icons';
 import type { SitePhoto } from '../../domain/types';
 import type { SitePhotoUpload } from '../../data/staffApi';
+import { getAccuratePosition } from '../geo';
 
 type Props = {
   /** Judul kecil di atas tombol, mis. "Foto Survei Lokasi" */
@@ -19,21 +20,8 @@ type Props = {
   readOnly?: boolean;
 };
 
-type Position = { lat: number; lng: number; accuracy: number } | null;
-
-function getPosition(): Promise<Position> {
-  return new Promise((resolve) => {
-    if (!('geolocation' in navigator)) {
-      resolve(null);
-      return;
-    }
-    navigator.geolocation.getCurrentPosition(
-      (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy }),
-      () => resolve(null),
-      { enableHighAccuracy: true, timeout: 12000, maximumAge: 30000 },
-    );
-  });
-}
+/** Fix GPS baru dengan akurasi tinggi (≤15 m, tunggu maks 12 dtk lalu ambil yang terbaik). */
+const getPosition = () => getAccuratePosition(15, 12000);
 
 function loadImage(file: File): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
