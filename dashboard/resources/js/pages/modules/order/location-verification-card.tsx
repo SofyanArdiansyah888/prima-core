@@ -36,6 +36,18 @@ type OrderProps = {
     items?: { product?: { category?: string } | null }[];
 };
 
+type ApprovalQuote = {
+    distance_km: number;
+    gps_distance_km: number | null;
+    is_distance_manual: boolean;
+    delivery_fee: number;
+    concrete_pump_fee: number;
+    ppn: number;
+    total_price: number;
+};
+
+const rupiah = (value: number) => `Rp ${Math.round(value).toLocaleString('id-ID')}`;
+
 function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
     const R = 6371;
     const dLat = ((lat2 - lat1) * Math.PI) / 180;
@@ -65,6 +77,11 @@ export function LocationVerificationCard({ order }: { order: OrderProps }) {
     const [manualKm, setManualKm] = useState('');
     const [usesPump, setUsesPump] = useState<boolean>(Boolean(order.uses_concrete_pump));
     const pumpRate = order.items?.[0]?.product?.category === 'readymix' ? Number(order.batching_plant?.concrete_pump_fee ?? 0) : 0;
+    const manualKmValue = Number(manualKm);
+    const manualKmInvalid = manualKm.trim() !== '' && (!Number.isFinite(manualKmValue) || manualKmValue <= 0 || manualKmValue > 500);
+    // Pratinjau ongkir & total dari server (rumus sama dengan saat ACC)
+    const [quote, setQuote] = useState<ApprovalQuote | null>(null);
+    const [quoteLoading, setQuoteLoading] = useState(false);
 
     const mapContainerRef = useRef<HTMLDivElement>(null);
     const mapInstanceRef = useRef<L.Map | null>(null);
@@ -168,6 +185,49 @@ return;
         }
     }, [lat, lng, plantLat, plantLng]);
 
+    // Hitung ulang pratinjau ongkir saat jarak aktual, titik, atau CP berubah (debounce)
+    useEffect(() => {
+        if (manualKmInvalid) {
+            return;
+        }
+
+        const params = new URLSearchParams({ delivery_lat: String(lat), delivery_lng: String(lng) });
+
+        if (manualKm.trim() !== '') {
+            params.set('distance_km', String(manualKmValue));
+        }
+
+        if (pumpRate > 0 || order.uses_concrete_pump) {
+            params.set('uses_concrete_pump', usesPump ? '1' : '0');
+        }
+
+        const controller = new AbortController();
+        const timer = setTimeout(async () => {
+            setQuoteLoading(true);
+
+            try {
+                const res = await fetch(`/sales/orders/${order.uuid}/approval-quote?${params}`, {
+                    headers: { Accept: 'application/json' },
+                    signal: controller.signal,
+                });
+                setQuote(res.ok ? ((await res.json()).data as ApprovalQuote) : null);
+            } catch {
+                if (!controller.signal.aborted) {
+                    setQuote(null);
+                }
+            } finally {
+                if (!controller.signal.aborted) {
+                    setQuoteLoading(false);
+                }
+            }
+        }, 400);
+
+        return () => {
+            clearTimeout(timer);
+            controller.abort();
+        };
+    }, [lat, lng, manualKm, manualKmValue, manualKmInvalid, usesPump, pumpRate, order.uuid, order.uses_concrete_pump]);
+
     const handleReset = () => {
         setLat(originalLat);
         setLng(originalLng);
@@ -249,7 +309,7 @@ return;
                     <Button
                         type="button"
                         size="sm"
-                        disabled={submitting}
+                        disabled={submitting || manualKmInvalid}
                         onClick={handleApprove}
                         className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs h-8 shadow-xs"
                     >
@@ -339,11 +399,36 @@ return;
                             value={manualKm}
                             onChange={(e) => setManualKm(e.target.value)}
                             placeholder={`GPS: ${liveDistance} km`}
-                            className="w-full rounded-lg border border-slate-300 bg-white p-2 font-mono text-xs text-slate-900 focus:border-[#0c1d37] outline-none dark:bg-slate-900 dark:border-slate-700 dark:text-white"
+                            className={`w-full rounded-lg border bg-white p-2 font-mono text-xs text-slate-900 focus:border-[#0c1d37] outline-none dark:bg-slate-900 dark:text-white ${manualKmInvalid ? 'border-red-400' : 'border-slate-300 dark:border-slate-700'}`}
                         />
-                        <p className="mt-1 text-[11px] text-slate-500">
-                            Bila diisi, ongkir dihitung dari km ini (bukan garis lurus GPS).
+                        <p className={`mt-1 text-[11px] ${manualKmInvalid ? 'font-semibold text-[#d91424]' : 'text-slate-500'}`}>
+                            {manualKmInvalid ? 'Isi jarak antara 0,1 – 500 km.' : 'Bila diisi, ongkir dihitung dari km ini (bukan garis lurus GPS).'}
                         </p>
+                    </div>
+
+                    <div className="rounded-lg border border-emerald-200 bg-emerald-50/70 p-2.5 dark:border-emerald-900/60 dark:bg-emerald-950/20">
+                        <p className="text-[11px] font-bold uppercase tracking-wide text-emerald-800 dark:text-emerald-300">
+                            Ongkir saat ACC {quoteLoading && <span className="font-normal normal-case text-slate-500">· menghitung…</span>}
+                        </p>
+                        {quote && !manualKmInvalid ? (
+                            <div className={`mt-1 space-y-0.5 ${quoteLoading ? 'opacity-60' : ''}`}>
+                                <p className="text-slate-700 dark:text-slate-300">
+                                    Jarak dipakai: <strong>{quote.distance_km} km</strong>{' '}
+                                    <span className="text-slate-500">({quote.is_distance_manual ? 'jarak aktual' : 'GPS'})</span>
+                                </p>
+                                <p className="text-slate-700 dark:text-slate-300">
+                                    Ongkir: <strong>{rupiah(quote.delivery_fee)}</strong>
+                                    {Number(quote.delivery_fee) !== Number(order.delivery_fee) && (
+                                        <span className="ml-1 text-slate-400 line-through">{rupiah(Number(order.delivery_fee))}</span>
+                                    )}
+                                </p>
+                                <p className="text-slate-700 dark:text-slate-300">
+                                    Total tagihan: <strong>{rupiah(quote.total_price)}</strong>
+                                </p>
+                            </div>
+                        ) : (
+                            <p className="mt-1 text-slate-500">{manualKmInvalid ? 'Perbaiki jarak untuk melihat ongkir.' : 'Memuat…'}</p>
+                        )}
                     </div>
 
                     {(pumpRate > 0 || order.uses_concrete_pump) && (
@@ -372,7 +457,7 @@ return;
                     <div className="pt-2">
                         <Button
                             type="button"
-                            disabled={submitting}
+                            disabled={submitting || manualKmInvalid}
                             onClick={handleApprove}
                             className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs py-2.5 rounded-xl shadow-xs"
                         >

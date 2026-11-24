@@ -1,4 +1,4 @@
-import type { DriverDeliverySummary, SalesOrderSummary, SitePhoto, StaffUser } from '../domain/types';
+import type { DriverDeliverySummary, SalesApprovalQuote, SalesOrderSummary, SitePhoto, StaffUser } from '../domain/types';
 
 // Fallback sama dengan api.ts: build tanpa VITE_API_URL (mis. APK) tetap menembak server produksi.
 const API_URL = ((import.meta.env.VITE_API_URL as string | undefined) || 'https://pkm.orcaid.cloud').replace(/\/+$/, '');
@@ -124,6 +124,18 @@ export const staffApi = {
 
   getSalesOrderDetail(uuid: string) {
     return staffRequest<{ data: SalesOrderSummary }>(`/api/sales/v1/orders/${uuid}`);
+  },
+
+  /** Pratinjau ongkir & total bila di-ACC dengan jarak aktual / titik / CP ini (tidak menyimpan). */
+  getSalesApprovalQuote(
+    uuid: string,
+    input: { delivery_lat: number; delivery_lng: number; distance_km?: number | null; uses_concrete_pump?: boolean },
+    signal?: AbortSignal
+  ) {
+    const params = new URLSearchParams({ delivery_lat: String(input.delivery_lat), delivery_lng: String(input.delivery_lng) });
+    if (input.distance_km != null) params.set('distance_km', String(input.distance_km));
+    if (input.uses_concrete_pump !== undefined) params.set('uses_concrete_pump', input.uses_concrete_pump ? '1' : '0');
+    return staffRequest<{ data: SalesApprovalQuote }>(`/api/sales/v1/orders/${uuid}/approval-quote?${params}`, { signal });
   },
 
   approveSalesOrder(

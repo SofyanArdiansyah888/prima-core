@@ -14,6 +14,7 @@ Route::prefix('sales/v1')->group(function () {
         Route::get('orders/{order}', [SalesOrderApiController::class, 'show']);
         Route::post('orders/{order}/photos', [SalesOrderApiController::class, 'storePhoto'])->middleware('throttle:30,1');
         Route::post('orders/{order}/cash-payment', [SalesOrderApiController::class, 'recordCashPayment'])->middleware('throttle:10,1');
+        Route::get('orders/{order}/approval-quote', [SalesOrderApiController::class, 'approvalQuote']);
         Route::post('orders/{order}/approve', [SalesOrderApiController::class, 'approve']);
         Route::post('orders/{order}/reject', [SalesOrderApiController::class, 'reject']);
     });

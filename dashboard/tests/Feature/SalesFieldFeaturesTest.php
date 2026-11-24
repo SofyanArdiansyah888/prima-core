@@ -173,6 +173,37 @@ class SalesFieldFeaturesTest extends TestCase
         );
     }
 
+    public function test_approval_quote_previews_fee_from_actual_distance_without_saving(): void
+    {
+        $order = $this->placeOrder();
+        $other = $this->placeOrder();
+        $before = $order->only(['distance_km', 'delivery_fee', 'total_price', 'status']);
+        $token = $this->sales->createToken('sales')->plainTextToken;
+
+        $quote = $this->withToken($token)->getJson("/api/sales/v1/orders/{$order->uuid}/approval-quote?distance_km=12.5")
+            ->assertOk()
+            ->assertJsonPath('data.is_distance_manual', true)
+            ->assertJsonPath('data.distance_km', 12.5)
+            ->json('data');
+
+        $this->assertEquals(round(12.5 * 15000 * 10, -3), $quote['delivery_fee']);
+        $this->assertSame($before, $order->fresh()->only(['distance_km', 'delivery_fee', 'total_price', 'status']));
+
+        // Angka pratinjau = angka yang tersimpan saat ACC.
+        $this->withToken($token)->postJson("/api/sales/v1/orders/{$order->uuid}/approve", ['distance_km' => 12.5])->assertOk();
+        $order->refresh();
+        $this->assertEquals($quote['delivery_fee'], (float) $order->delivery_fee);
+        $this->assertEquals($quote['total_price'], (float) $order->total_price);
+
+        // Dashboard admin memakai endpoint pratinjau yang sama.
+        $this->app['auth']->forgetGuards();
+        $this->actingAs($this->admin)
+            ->getJson("/sales/orders/{$other->uuid}/approval-quote?distance_km=20")
+            ->assertOk()
+            ->assertJsonPath('data.distance_km', 20)
+            ->assertJsonPath('data.delivery_fee', 3000000);
+    }
+
     public function test_sales_can_toggle_concrete_pump_during_survey(): void
     {
         $order = $this->placeOrder(pump: false);
