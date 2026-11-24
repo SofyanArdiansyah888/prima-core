@@ -192,6 +192,19 @@ class SalesOrderApiController extends Controller
         ]);
     }
 
+    /**
+     * Pratinjau ongkir / total bila di-ACC dengan jarak aktual, titik, atau CP ini (tidak menyimpan).
+     */
+    public function approvalQuote(Request $request, Order $order, ApproveOrderSite $approveSite): JsonResponse
+    {
+        $this->authorizeAccess($request->user(), $order);
+
+        $quote = $approveSite->quote($order, $request->validate(ApproveOrderSite::rules()));
+        unset($quote['changes']);
+
+        return response()->json(['data' => $quote]);
+    }
+
     public function approve(Request $request, Order $order, ApproveOrderSite $approveSite): JsonResponse
     {
         $this->authorizeAccess($request->user(), $order);

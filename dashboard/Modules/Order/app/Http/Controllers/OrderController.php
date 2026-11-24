@@ -5,6 +5,7 @@ namespace Modules\Order\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -167,6 +168,19 @@ class OrderController extends Controller
         $order->load(['batchingPlant.branch', 'items.product', 'approver:id,name']);
 
         return Pdf::loadView('order::pdf.sales-order', compact('order'))->stream("SO-{$order->code}.pdf");
+    }
+
+    /**
+     * Pratinjau ongkir / total bila di-ACC dengan jarak aktual, titik, atau CP ini (tidak menyimpan).
+     */
+    public function approvalQuote(Request $request, Order $order, ApproveOrderSite $approveSite): JsonResponse
+    {
+        $this->ensurePlantAccess($order->batching_plant_id);
+
+        $quote = $approveSite->quote($order, $request->validate(ApproveOrderSite::rules()));
+        unset($quote['changes']);
+
+        return response()->json(['data' => $quote]);
     }
 
     public function approve(Request $request, Order $order, ApproveOrderSite $approveSite): RedirectResponse

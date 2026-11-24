@@ -225,6 +225,19 @@ export type CashPaymentInfo = {
   rejection_reason: string | null;
 };
 
+/** Pratinjau ongkir / total dari server bila pesanan di-ACC dengan input saat ini. */
+export type SalesApprovalQuote = {
+  distance_km: number;
+  gps_distance_km: number | null;
+  is_distance_manual: boolean;
+  delivery_fee: number;
+  uses_concrete_pump: boolean;
+  concrete_pump_fee: number;
+  subtotal: number;
+  ppn: number;
+  total_price: number;
+};
+
 export type SalesOrderSummary = {
   uuid: string;
   code: string;

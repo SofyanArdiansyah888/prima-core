@@ -18,7 +18,7 @@ import 'leaflet/dist/leaflet.css';
 import { useNavigate, useParams } from 'react-router-dom';
 import { staffApi } from '../../data/staffApi';
 import { formatRupiah } from '../../domain/format';
-import type { SalesOrderSummary } from '../../domain/types';
+import type { SalesApprovalQuote, SalesOrderSummary } from '../../domain/types';
 import { Card, Screen, SitePhotoCapture } from '../../shared/ui';
 import { CashPaymentCard } from './CashPaymentCard';
 import {
@@ -102,6 +102,40 @@ export default function SalesOrderDetailPage() {
   const pumpAvailable = (order?.concrete_pump_rate ?? 0) > 0 || Boolean(order?.uses_concrete_pump);
   const manualKmValue = Number(manualKm);
   const manualKmInvalid = manualKm.trim() !== '' && (!Number.isFinite(manualKmValue) || manualKmValue <= 0 || manualKmValue > 500);
+
+  // Pratinjau ongkir & total dari server (rumus sama dengan saat ACC)
+  const [quote, setQuote] = useState<SalesApprovalQuote | null>(null);
+  const [quoteLoading, setQuoteLoading] = useState(false);
+  const isPending = order?.status === 'PENDING_APPROVAL';
+
+  useEffect(() => {
+    if (!uuid || !isPending || manualKmInvalid) return;
+    const controller = new AbortController();
+    const timer = setTimeout(async () => {
+      setQuoteLoading(true);
+      try {
+        const res = await staffApi.getSalesApprovalQuote(
+          uuid,
+          {
+            delivery_lat: lat,
+            delivery_lng: lng,
+            distance_km: manualKm.trim() !== '' ? manualKmValue : null,
+            ...(pumpAvailable ? { uses_concrete_pump: usesPump } : {}),
+          },
+          controller.signal
+        );
+        setQuote(res.data);
+      } catch {
+        if (!controller.signal.aborted) setQuote(null);
+      } finally {
+        if (!controller.signal.aborted) setQuoteLoading(false);
+      }
+    }, 400);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [uuid, isPending, lat, lng, manualKm, manualKmValue, manualKmInvalid, usesPump, pumpAvailable]);
 
   const fetchDetail = async () => {
     if (!uuid) return;
@@ -518,6 +552,33 @@ export default function SalesOrderDetailPage() {
                   ? 'Isi jarak antara 0,1 – 500 km.'
                   : 'Isi bila jarak jalan sebenarnya berbeda dari garis lurus GPS. Ongkir dihitung ulang dari km ini saat ACC.'}
               </p>
+            </div>
+          )}
+
+          {order.status === 'PENDING_APPROVAL' && (
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-2.5">
+              <p className="text-[10px] font-black uppercase tracking-wide text-emerald-800">
+                Ongkir saat ACC {quoteLoading && <span className="font-normal normal-case text-slate-500">· menghitung…</span>}
+              </p>
+              {quote && !manualKmInvalid ? (
+                <div className={`mt-1 space-y-0.5 text-slate-700 ${quoteLoading ? 'opacity-60' : ''}`}>
+                  <p>
+                    Jarak dipakai: <strong>{quote.distance_km} km</strong>{' '}
+                    <span className="text-slate-500">({quote.is_distance_manual ? 'jarak aktual' : 'GPS'})</span>
+                  </p>
+                  <p>
+                    Ongkir: <strong>{formatRupiah(quote.delivery_fee)}</strong>
+                    {order.delivery_fee !== undefined && Number(quote.delivery_fee) !== Number(order.delivery_fee) && (
+                      <span className="ml-1 text-slate-400 line-through">{formatRupiah(order.delivery_fee)}</span>
+                    )}
+                  </p>
+                  <p>
+                    Total tagihan: <strong>{formatRupiah(quote.total_price)}</strong>
+                  </p>
+                </div>
+              ) : (
+                <p className="mt-1 text-slate-500">{manualKmInvalid ? 'Perbaiki jarak untuk melihat ongkir.' : 'Memuat…'}</p>
+              )}
             </div>
           )}
 
