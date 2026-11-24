@@ -8,6 +8,9 @@ import {
     Eye,
     FileSpreadsheet,
     Mail,
+    Printer,
+    Undo2,
+    Wallet,
     MapPin,
     Phone,
     Plus,
@@ -36,7 +39,12 @@ type OrderDetail = {
     delivery_lat: number | null;
     delivery_lng: number | null;
     distance_km: number;
+    gps_distance_km?: number | string | null;
+    is_distance_manual?: boolean;
     delivery_fee: number;
+    uses_concrete_pump?: boolean;
+    concrete_pump_fee?: number | string;
+    admin_fee?: number | string;
     subtotal: number;
     ppn: number;
     total_price: number;
@@ -127,8 +135,55 @@ const paymentLabels: Record<string, string> = {
     REFUNDED: 'Dikembalikan (Refund)',
 };
 
-export default function OrderShow({ order }: { order: OrderDetail }) {
+type CashPaymentInfo = {
+    status: 'PENDING_VERIFICATION' | 'VERIFIED' | 'REJECTED';
+    amount: number;
+    proof_url: string | null;
+    notes: string | null;
+    recorded_by: string | null;
+    recorded_at: string | null;
+    verified_by: string | null;
+    verified_at: string | null;
+    rejection_reason: string | null;
+} | null;
+
+type PaymentReturnRow = { uuid: string; code: string; status: string; status_label: string; amount: number; created_at: string | null };
+
+const rupiah = (v: number | string | null | undefined) => `Rp ${Number(v ?? 0).toLocaleString('id-ID', { maximumFractionDigits: 0 })}`;
+
+export default function OrderShow({
+    order,
+    cashPayment,
+    paymentReturns,
+    can,
+}: {
+    order: OrderDetail;
+    cashPayment: CashPaymentInfo;
+    paymentReturns: PaymentReturnRow[];
+    can: { verify_cash: boolean; create_return: boolean; view_returns: boolean };
+}) {
     const isAdmin = usePage().props.auth?.user?.role === 'admin';
+    const [cashRejectOpen, setCashRejectOpen] = useState(false);
+    const [cashRejectReason, setCashRejectReason] = useState('');
+    const [cashBusy, setCashBusy] = useState(false);
+
+    const verifyCash = () => {
+        setCashBusy(true);
+        router.post(`/sales/orders/${order.uuid}/cash-payment/verify`, {}, { preserveScroll: true, onFinish: () => setCashBusy(false) });
+    };
+
+    const rejectCash = () => {
+        setCashBusy(true);
+        router.post(
+            `/sales/orders/${order.uuid}/cash-payment/reject`,
+            { reason: cashRejectReason },
+            {
+                preserveScroll: true,
+                onSuccess: () => setCashRejectOpen(false),
+                onFinish: () => setCashBusy(false),
+            },
+        );
+    };
     const [cancelOpen, setCancelOpen] = useState(false);
     const [cancelForm, setCancelForm] = useState({ reason: '', refundAmount: '', refundReference: '' });
     const [cancelling, setCancelling] = useState(false);
@@ -244,6 +299,22 @@ export default function OrderShow({ order }: { order: OrderDetail }) {
                     </div>
 
                     <div className="flex items-center gap-2 flex-wrap">
+                        <Button asChild variant="outline" size="sm" className="h-8 gap-1.5 border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-100">
+                            <a href={`/sales/orders/${order.uuid}/print`} target="_blank" rel="noopener noreferrer" title="Cetak dokumen Sales Order (PDF)">
+                                <Printer className="size-3.5 text-slate-600" />
+                                <span>Print SO</span>
+                            </a>
+                        </Button>
+
+                        {can.create_return && (
+                            <Button asChild variant="outline" size="sm" className="h-8 gap-1.5 border-amber-200 bg-amber-50 text-xs font-bold text-amber-800 hover:bg-amber-100">
+                                <Link href={`/finance/payment-returns/create?order=${order.uuid}`}>
+                                    <Undo2 className="size-3.5" />
+                                    <span>Buat BA Retur</span>
+                                </Link>
+                            </Button>
+                        )}
+
                         {order.payment_method === 'MIDTRANS' && paymentBillable && (
                             <Button
                                 variant="outline"
@@ -341,6 +412,75 @@ export default function OrderShow({ order }: { order: OrderDetail }) {
                         )}
                     </div>
                 </div>
+
+                {/* Pembayaran tunai dari sales — menunggu verifikasi admin / keuangan */}
+                {cashPayment && cashPayment.status === 'PENDING_VERIFICATION' && (
+                    <div className="rounded-xl border-2 border-amber-300 bg-amber-50/70 p-5 dark:border-amber-800 dark:bg-amber-950/20">
+                        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                            <div className="flex items-start gap-3">
+                                <Wallet className="mt-0.5 size-5 shrink-0 text-amber-700" />
+                                <div className="space-y-1 text-sm">
+                                    <p className="font-bold text-amber-900 dark:text-amber-200">Pembayaran Tunai — Menunggu Verifikasi</p>
+                                    <p className="text-xs text-slate-700 dark:text-slate-300">
+                                        Sales <strong>{cashPayment.recorded_by ?? '—'}</strong> mencatat penerimaan tunai{' '}
+                                        <strong>{rupiah(cashPayment.amount)}</strong>
+                                        {cashPayment.recorded_at ? ` pada ${formatDateTime(cashPayment.recorded_at)}` : ''}.
+                                    </p>
+                                    {cashPayment.notes && <p className="text-xs text-slate-600 dark:text-slate-400">Catatan: {cashPayment.notes}</p>}
+                                    {cashPayment.proof_url && (
+                                        <a href={cashPayment.proof_url} target="_blank" rel="noopener noreferrer" className="inline-block">
+                                            <img src={cashPayment.proof_url} alt="Bukti pembayaran tunai" className="mt-2 h-32 rounded-lg border border-amber-200 object-cover" />
+                                        </a>
+                                    )}
+                                </div>
+                            </div>
+                            {can.verify_cash ? (
+                                <div className="flex shrink-0 gap-2">
+                                    <Button size="sm" disabled={cashBusy} onClick={verifyCash} className="h-9 bg-emerald-700 font-bold text-white hover:bg-emerald-800">
+                                        <CheckCircle2 className="mr-1.5 size-4" /> Verifikasi Lunas
+                                    </Button>
+                                    <Button
+                                        size="sm"
+                                        variant="outline"
+                                        disabled={cashBusy}
+                                        onClick={() => {
+                                            setCashRejectReason('');
+                                            setCashRejectOpen(true);
+                                        }}
+                                        className="h-9 border-red-200 bg-white font-bold text-[#d91424] hover:bg-red-50"
+                                    >
+                                        Tolak
+                                    </Button>
+                                </div>
+                            ) : (
+                                <span className="text-xs font-semibold text-amber-800">Menunggu verifikasi admin / keuangan</span>
+                            )}
+                        </div>
+                        {cashRejectOpen && (
+                            <div className="mt-4 space-y-2 rounded-lg border border-red-200 bg-white p-3 dark:border-red-900 dark:bg-slate-900">
+                                <label htmlFor="cash-reject-reason" className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                                    Alasan penolakan (dikirim ke catatan pesanan)
+                                </label>
+                                <textarea
+                                    id="cash-reject-reason"
+                                    rows={2}
+                                    value={cashRejectReason}
+                                    onChange={(e) => setCashRejectReason(e.target.value)}
+                                    className="w-full rounded-md border border-slate-200 p-2 text-sm dark:border-slate-700 dark:bg-slate-900"
+                                    placeholder="Contoh: nominal di kuitansi tidak sesuai"
+                                />
+                                <div className="flex gap-2">
+                                    <Button size="sm" disabled={cashBusy || !cashRejectReason.trim()} onClick={rejectCash} className="h-8 bg-[#d91424] text-white hover:bg-red-700">
+                                        Tolak Pembayaran Tunai
+                                    </Button>
+                                    <Button size="sm" variant="ghost" onClick={() => setCashRejectOpen(false)} className="h-8">
+                                        Batal
+                                    </Button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
 
                 {/* Location Verification & Adjustment Map for PENDING_APPROVAL */}
                 {order.status === 'PENDING_APPROVAL' && (
@@ -516,7 +656,18 @@ export default function OrderShow({ order }: { order: OrderDetail }) {
                                 <div className="rounded-lg bg-emerald-50/50 p-3 border border-emerald-100 dark:bg-emerald-950/20 dark:border-emerald-900 text-xs">
                                     <div className="flex justify-between">
                                         <span className="text-slate-600 dark:text-slate-400">Jarak Tempuh:</span>
-                                        <span className="font-bold text-slate-900 dark:text-white">{Number(order.distance_km)} Km</span>
+                                        <span className="font-bold text-slate-900 dark:text-white">
+                                            {Number(order.distance_km)} Km
+                                            {order.is_distance_manual && (
+                                                <span className="ml-1 font-normal text-slate-500">
+                                                    (input sales{order.gps_distance_km != null ? ` · GPS ${Number(order.gps_distance_km)} Km` : ''})
+                                                </span>
+                                            )}
+                                        </span>
+                                    </div>
+                                    <div className="flex justify-between mt-1">
+                                        <span className="text-slate-600 dark:text-slate-400">Concrete Pump (CP):</span>
+                                        <span className="font-bold text-slate-900 dark:text-white">{order.uses_concrete_pump ? 'Ya' : 'Tidak'}</span>
                                     </div>
                                     <div className="flex justify-between mt-1">
                                         <span className="text-slate-600 dark:text-slate-400">Ongkos Kirim Plant:</span>
@@ -539,6 +690,12 @@ export default function OrderShow({ order }: { order: OrderDetail }) {
                                 <span>Ongkos Kirim:</span>
                                 <span className="font-semibold text-slate-900 dark:text-white">Rp {Number(order.delivery_fee).toLocaleString('id-ID', { maximumFractionDigits: 0 })}</span>
                             </div>
+                            {Number(order.concrete_pump_fee ?? 0) > 0 && (
+                                <div className="flex justify-between text-xs text-slate-600 dark:text-slate-400">
+                                    <span>Concrete Pump (CP):</span>
+                                    <span className="font-semibold text-slate-900 dark:text-white">{rupiah(order.concrete_pump_fee)}</span>
+                                </div>
+                            )}
                             <div className="flex justify-between text-xs text-slate-600 dark:text-slate-400">
                                 <span>PPN (11%):</span>
                                 <span className="font-semibold text-slate-900 dark:text-white">Rp {Number(order.ppn).toLocaleString('id-ID', { maximumFractionDigits: 0 })}</span>
@@ -562,6 +719,32 @@ export default function OrderShow({ order }: { order: OrderDetail }) {
                                     {paymentBillable ? (paymentLabels[order.payment_status] ?? order.payment_status) : 'Belum Ditagih'}
                                 </span>
                             </div>
+
+                            {cashPayment && cashPayment.status !== 'PENDING_VERIFICATION' && (
+                                <div className="rounded-lg border border-slate-200 bg-slate-50 p-2.5 text-[11px] text-slate-600 dark:border-slate-800 dark:bg-slate-800/40 dark:text-slate-300">
+                                    {cashPayment.status === 'VERIFIED' ? (
+                                        <>Tunai {rupiah(cashPayment.amount)} diterima sales {cashPayment.recorded_by ?? '—'}, diverifikasi {cashPayment.verified_by ?? '—'}.</>
+                                    ) : (
+                                        <>Catatan tunai dari {cashPayment.recorded_by ?? 'sales'} ditolak: {cashPayment.rejection_reason}</>
+                                    )}
+                                </div>
+                            )}
+
+                            {can.view_returns && paymentReturns.length > 0 && (
+                                <div className="space-y-1.5 border-t border-slate-100 pt-2.5 dark:border-slate-800">
+                                    <span className="text-xs font-semibold text-slate-500">Berita Acara Retur:</span>
+                                    {paymentReturns.map((r) => (
+                                        <Link
+                                            key={r.uuid}
+                                            href={`/finance/payment-returns/${r.uuid}`}
+                                            className="flex items-center justify-between rounded-lg border border-slate-200 px-2.5 py-1.5 text-[11px] hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800"
+                                        >
+                                            <span className="font-mono font-bold text-slate-800 dark:text-slate-200">{r.code}</span>
+                                            <span className="text-slate-500">{r.status_label} · {rupiah(r.amount)}</span>
+                                        </Link>
+                                    ))}
+                                </div>
+                            )}
 
                             {order.payment_method === 'MIDTRANS' && (
                                 <div className="pt-2">
@@ -714,6 +897,11 @@ export default function OrderShow({ order }: { order: OrderDetail }) {
                                                     </div>
                                                     <Button asChild size="sm" variant="ghost" className="h-8 px-2 text-xs">
                                                         <Link href={`/production/work-orders/${wo.uuid}`}>Lihat SPK</Link>
+                                                    </Button>
+                                                    <Button asChild size="sm" variant="outline" className="h-8 gap-1 px-2 text-xs">
+                                                        <a href={`/production/work-orders/${wo.uuid}/print`} target="_blank" rel="noopener noreferrer" title="Cetak SPK (PDF)">
+                                                            <Printer className="size-3.5" /> Print SPK
+                                                        </a>
                                                     </Button>
                                                 </div>
                                             </div>

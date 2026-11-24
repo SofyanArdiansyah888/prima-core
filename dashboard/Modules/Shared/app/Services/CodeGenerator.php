@@ -67,6 +67,17 @@ class CodeGenerator
         return sprintf('SJ-%s-%d%s', $clean, $yearMonth, $seq);
     }
 
+    /** Berita Acara retur / pengembalian pembayaran: BA-RET-{REG}-{YYYYMM}{####}. */
+    public function nextPaymentReturnCode(?string $region = null): string
+    {
+        $reg = $region ? strtoupper(preg_replace('/[^A-Z0-9]/', '', $region) ?? '') : 'HQ';
+        $reg = substr($reg ?: 'HQ', 0, 6);
+        $yearMonth = (int) date('Ym');
+        $seq = $this->nextNumber('payment_return', $reg, $yearMonth, 4);
+
+        return sprintf('BA-RET-%s-%d%s', $reg, $yearMonth, $seq);
+    }
+
     public function nextBannerCode(): string
     {
         $seq = $this->nextNumber('banner', 'GEN', null, 2);

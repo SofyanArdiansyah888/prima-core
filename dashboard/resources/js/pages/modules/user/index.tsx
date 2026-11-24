@@ -25,6 +25,10 @@ const ROLE_BADGE: Record<string, { label: string; className: string }> = {
     user: { label: 'Operator Plant', className: 'border border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-300' },
     sales: { label: 'Sales Lapangan', className: 'border border-amber-500/30 bg-amber-500/10 text-amber-800 dark:text-amber-300' },
     driver: { label: 'Supir Armada', className: 'border border-slate-400/30 bg-slate-500/10 text-slate-700 dark:text-slate-300' },
+    manager: { label: 'Manager', className: 'border border-violet-500/30 bg-violet-500/10 text-violet-800 dark:text-violet-300' },
+    kepala_divisi: { label: 'Kepala Divisi', className: 'border border-indigo-500/30 bg-indigo-500/10 text-indigo-800 dark:text-indigo-300' },
+    keuangan: { label: 'Keuangan', className: 'border border-teal-500/30 bg-teal-500/10 text-teal-800 dark:text-teal-300' },
+    direksi: { label: 'Direksi', className: 'border border-rose-500/30 bg-rose-500/10 text-rose-800 dark:text-rose-300' },
 };
 
 type Paginated<T> = {

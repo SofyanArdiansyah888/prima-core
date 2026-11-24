@@ -40,11 +40,14 @@ class PaymentFeeCalculator
     }
 
     /**
-     * Nominal sebelum biaya layanan pembayaran (material + ongkir + PPN).
+     * Nominal sebelum biaya layanan pembayaran (material + ongkir + CP + PPN).
      */
     public function baseAmount(Order $order): float
     {
-        return round((float) $order->subtotal + (float) $order->delivery_fee + (float) $order->ppn, 2);
+        return round(
+            (float) $order->subtotal + (float) $order->delivery_fee + (float) $order->concrete_pump_fee + (float) $order->ppn,
+            2,
+        );
     }
 
     /**

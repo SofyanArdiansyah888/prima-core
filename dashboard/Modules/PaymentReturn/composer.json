@@ -1,0 +1,10 @@
+{
+    "name": "nwidart/paymentreturn",
+    "description": "",
+    "autoload": {
+        "psr-4": {
+            "Modules\\PaymentReturn\\": "app/",
+            "Modules\\PaymentReturn\\Database\\Seeders\\": "database/seeders/"
+        }
+    }
+}

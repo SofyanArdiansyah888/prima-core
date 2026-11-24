@@ -10,5 +10,6 @@
     "WorkOrder": true,
     "Dispatch": true,
     "DeliveryRate": true,
-    "Customer": true
+    "Customer": true,
+    "PaymentReturn": true
 }

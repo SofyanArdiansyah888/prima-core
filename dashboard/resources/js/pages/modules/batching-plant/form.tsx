@@ -20,6 +20,7 @@ type Plant = {
     lat: string | number | null;
     lng: string | number | null;
     daily_capacity_m3: number | null;
+    concrete_pump_fee: string | number | null;
     status: string;
     is_active: boolean;
 };
@@ -168,6 +169,26 @@ export default function PlantForm({
                                         />
                                         <InputError message={errors.daily_capacity_m3} />
                                     </div>
+                                </div>
+
+                                <div className="space-y-1.5">
+                                    <Label htmlFor="concrete_pump_fee" className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                                        Tarif Concrete Pump / CP (Rp per pesanan)
+                                    </Label>
+                                    <Input
+                                        id="concrete_pump_fee"
+                                        name="concrete_pump_fee"
+                                        type="number"
+                                        min={0}
+                                        step="1000"
+                                        defaultValue={plant?.concrete_pump_fee != null ? Number(plant.concrete_pump_fee) : ''}
+                                        placeholder="Contoh: 2500000"
+                                        className="h-10 border-slate-200 font-mono text-sm focus-visible:ring-emerald-500/20 focus-visible:border-emerald-600 dark:border-slate-800"
+                                    />
+                                    <p className="text-xs text-slate-500">
+                                        Biaya flat bila customer memilih pakai CP (dikenai PPN). Kosongkan / 0 bila plant tidak menyediakan CP.
+                                    </p>
+                                    <InputError message={errors.concrete_pump_fee} />
                                 </div>
 
                                 <div className="space-y-3 rounded-lg border border-slate-200/80 bg-slate-50/50 p-4 dark:border-slate-800 dark:bg-slate-800/40">

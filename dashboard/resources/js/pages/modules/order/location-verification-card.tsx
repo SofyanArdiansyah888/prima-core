@@ -25,12 +25,15 @@ type OrderProps = {
     distance_km: number;
     delivery_fee: number;
     survey_notes?: string | null;
+    uses_concrete_pump?: boolean;
     batching_plant?: {
         name: string;
         code: string;
         lat?: number | null;
         lng?: number | null;
+        concrete_pump_fee?: number | string | null;
     };
+    items?: { product?: { category?: string } | null }[];
 };
 
 function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
@@ -58,6 +61,10 @@ export function LocationVerificationCard({ order }: { order: OrderProps }) {
 
     const [rejectModalOpen, setRejectModalOpen] = useState(false);
     const [rejectionReason, setRejectionReason] = useState('');
+    // Jarak jalan manual (km) — kosong = pakai jarak GPS
+    const [manualKm, setManualKm] = useState('');
+    const [usesPump, setUsesPump] = useState<boolean>(Boolean(order.uses_concrete_pump));
+    const pumpRate = order.items?.[0]?.product?.category === 'readymix' ? Number(order.batching_plant?.concrete_pump_fee ?? 0) : 0;
 
     const mapContainerRef = useRef<HTMLDivElement>(null);
     const mapInstanceRef = useRef<L.Map | null>(null);
@@ -180,6 +187,8 @@ return;
                 delivery_lng: lng,
                 delivery_address: address,
                 survey_notes: notes,
+                distance_km: manualKm.trim() !== '' ? Number(manualKm) : null,
+                ...(pumpRate > 0 || order.uses_concrete_pump ? { uses_concrete_pump: usesPump } : {}),
             },
             {
                 onFinish: () => setSubmitting(false),
@@ -317,6 +326,35 @@ return;
                             />
                         </div>
                     </div>
+
+                    <div>
+                        <label htmlFor="manual-km" className="font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                            Jarak Jalan Aktual (km) — opsional:
+                        </label>
+                        <input
+                            id="manual-km"
+                            type="number"
+                            min={0}
+                            step="0.1"
+                            value={manualKm}
+                            onChange={(e) => setManualKm(e.target.value)}
+                            placeholder={`GPS: ${liveDistance} km`}
+                            className="w-full rounded-lg border border-slate-300 bg-white p-2 font-mono text-xs text-slate-900 focus:border-[#0c1d37] outline-none dark:bg-slate-900 dark:border-slate-700 dark:text-white"
+                        />
+                        <p className="mt-1 text-[11px] text-slate-500">
+                            Bila diisi, ongkir dihitung dari km ini (bukan garis lurus GPS).
+                        </p>
+                    </div>
+
+                    {(pumpRate > 0 || order.uses_concrete_pump) && (
+                        <label className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white p-2.5 dark:border-slate-700 dark:bg-slate-900">
+                            <input type="checkbox" checked={usesPump} onChange={(e) => setUsesPump(e.target.checked)} className="size-4" />
+                            <span className="font-semibold text-slate-800 dark:text-slate-200">
+                                Pakai Concrete Pump (CP)
+                                {pumpRate > 0 && <span className="ml-1 font-normal text-slate-500">· Rp {pumpRate.toLocaleString('id-ID')}</span>}
+                            </span>
+                        </label>
+                    )}
 
                     <div>
                         <label className="font-bold text-slate-700 dark:text-slate-300 block mb-1">

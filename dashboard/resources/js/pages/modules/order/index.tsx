@@ -30,6 +30,9 @@ type OrderRow = {
     payment_status: string;
     status: string;
     created_at: string;
+    cash_recorded_at?: string | null;
+    cash_verified_at?: string | null;
+    cash_rejection_reason?: string | null;
 };
 
 type Paginated<T> = {
@@ -71,6 +74,11 @@ function paymentBadge(o: OrderRow) {
 
     if (o.payment_status === 'REFUNDED') {
         return <Badge tone="slate">Refund</Badge>;
+    }
+
+    // Sales mencatat tunai di lapangan, menunggu verifikasi admin / keuangan
+    if (o.cash_recorded_at && !o.cash_verified_at && !o.cash_rejection_reason) {
+        return <Badge tone="purple">Tunai · verifikasi</Badge>;
     }
 
     return <Badge tone="amber">Belum bayar</Badge>;

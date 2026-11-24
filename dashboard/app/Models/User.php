@@ -125,6 +125,17 @@ class User extends Authenticatable implements PasskeyUser
         return $this->role === UserRole::Driver;
     }
 
+    public function isKeuangan(): bool
+    {
+        return $this->role === UserRole::Keuangan;
+    }
+
+    /** Admin atau keuangan: boleh memverifikasi pembayaran tunai & menandai dana retur dikembalikan. */
+    public function canManageFinance(): bool
+    {
+        return $this->isAdmin() || $this->isKeuangan();
+    }
+
     public function branch(): BelongsTo
     {
         return $this->belongsTo(Branch::class);

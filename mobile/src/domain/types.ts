@@ -58,6 +58,12 @@ export type Quote = {
   plant: { code: string; name: string };
   distance_km: number;
   delivery_fee: number;
+  /** Plant menyediakan Concrete Pump (CP) untuk pesanan ini */
+  concrete_pump_available?: boolean;
+  /** Tarif flat CP plant (per pesanan) */
+  concrete_pump_rate?: number;
+  uses_concrete_pump?: boolean;
+  concrete_pump_fee?: number;
   admin_fee: number;
   subtotal: number;
   ppn: number;
@@ -138,6 +144,10 @@ export type CustomerOrder = {
   delivery_lng: number | null;
   distance_km: number;
   delivery_fee: number;
+  uses_concrete_pump?: boolean;
+  concrete_pump_fee?: number;
+  /** Sales mencatat pembayaran tunai, menunggu verifikasi */
+  cash_payment_pending?: boolean;
   admin_fee: number;
   subtotal: number;
   ppn: number;
@@ -203,6 +213,18 @@ export type SitePhoto = {
   taken_at: string | null;
 };
 
+export type CashPaymentInfo = {
+  status: 'PENDING_VERIFICATION' | 'VERIFIED' | 'REJECTED';
+  amount: number;
+  proof_url: string | null;
+  notes: string | null;
+  recorded_by: string | null;
+  recorded_at: string | null;
+  verified_by: string | null;
+  verified_at: string | null;
+  rejection_reason: string | null;
+};
+
 export type SalesOrderSummary = {
   uuid: string;
   code: string;
@@ -213,10 +235,19 @@ export type SalesOrderSummary = {
   delivery_lat: number | null;
   delivery_lng: number | null;
   distance_km: number;
+  gps_distance_km?: number | null;
+  is_distance_manual?: boolean;
   subtotal?: number;
   delivery_fee?: number;
+  uses_concrete_pump?: boolean;
+  concrete_pump_fee?: number;
+  concrete_pump_rate?: number;
   ppn?: number;
+  admin_fee?: number;
   total_price: number;
+  payment_method?: string | null;
+  payment_status?: string;
+  cash_payment?: CashPaymentInfo | null;
   status: string;
   approved_at?: string | null;
   approver_name?: string | null;

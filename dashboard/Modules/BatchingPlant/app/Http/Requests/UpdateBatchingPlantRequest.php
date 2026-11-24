@@ -24,6 +24,7 @@ class UpdateBatchingPlantRequest extends FormRequest
             'lat' => ['nullable', 'numeric', 'between:-90,90'],
             'lng' => ['nullable', 'numeric', 'between:-180,180'],
             'daily_capacity_m3' => ['nullable', 'integer', 'min:0'],
+            'concrete_pump_fee' => ['nullable', 'numeric', 'min:0', 'max:999999999'],
             'status' => ['required', Rule::enum(PlantStatus::class)],
             'is_active' => ['sometimes', 'boolean'],
         ];
@@ -43,6 +44,7 @@ class UpdateBatchingPlantRequest extends FormRequest
     {
         $this->merge([
             'whatsapp' => $this->normalizeWhatsapp($this->input('whatsapp')),
+            'concrete_pump_fee' => $this->filled('concrete_pump_fee') ? $this->input('concrete_pump_fee') : 0,
         ]);
     }
 

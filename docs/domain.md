@@ -25,6 +25,7 @@ User
 | Cabang | `BR-{REGION}-{NN}` | `BR-SULSEL-01` |
 | Plant | `{BR_CODE}-BP-{NN}` | `BR-SULSEL-01-BP-01` |
 | User | `EMP-{SHORT}-{YYYY}{#####}` | `EMP-SULSEL-202600001`, admin `EMP-HQ-…` |
+| BA Retur Pembayaran | `BA-RET-{REG}-{YYYYMM}{####}` | `BA-RET-SULSEL-2026110001` |
 
 Generator: `Modules\Shared\Services\CodeGenerator` + tabel `document_sequences`.
 
@@ -34,6 +35,7 @@ Generator: `Modules\Shared\Services\CodeGenerator` + tabel `document_sequences`.
 - `user` (Operator Plant) — login dashboard; `branch_id` wajib; hanya transaksi plant yang ditugaskan
 - `sales` — hanya aplikasi mobile (tidak bisa login dashboard); hanya pesanan plant yang ditugaskan
 - `driver` — hanya aplikasi mobile; hanya surat jalan miliknya
+- `manager`, `kepala_divisi`, `keuangan`, `direksi` — login dashboard; penyetuju Berita Acara retur pembayaran sesuai tahap (berurutan). `keuangan` (dan admin) juga memverifikasi pembayaran tunai sales dan menandai dana retur sudah ditransfer. Biasanya diberi "Akses semua batching plant".
 
 ## Pemisahan data per batching plant
 

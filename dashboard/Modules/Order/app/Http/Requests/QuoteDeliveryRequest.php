@@ -24,6 +24,7 @@ class QuoteDeliveryRequest extends FormRequest
             'items.*.product_uuid' => ['required', 'uuid', 'exists:products,uuid'],
             'items.*.quantity' => ['required', 'numeric', 'min:0.1'],
             'items.*.notes' => ['nullable', 'string', 'max:255'],
+            'use_concrete_pump' => ['sometimes', 'boolean'],
         ];
     }
 }

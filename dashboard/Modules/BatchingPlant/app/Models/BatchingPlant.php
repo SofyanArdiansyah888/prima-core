@@ -31,6 +31,7 @@ class BatchingPlant extends Model
         'lat',
         'lng',
         'daily_capacity_m3',
+        'concrete_pump_fee',
         'status',
         'is_active',
     ];
@@ -41,6 +42,7 @@ class BatchingPlant extends Model
             'lat' => 'decimal:7',
             'lng' => 'decimal:7',
             'daily_capacity_m3' => 'integer',
+            'concrete_pump_fee' => 'decimal:2',
             'status' => PlantStatus::class,
             'is_active' => 'boolean',
         ];

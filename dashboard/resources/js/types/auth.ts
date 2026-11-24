@@ -5,7 +5,7 @@ export type User = {
     avatar?: string;
     email_verified_at: string | null;
     two_factor_enabled?: boolean;
-    role?: 'admin' | 'user' | 'sales' | 'driver' | string;
+    role?: 'admin' | 'user' | 'sales' | 'driver' | 'manager' | 'kepala_divisi' | 'keuangan' | 'direksi' | string;
     branch_id?: number | null;
     has_full_plant_access?: boolean;
     created_at: string;

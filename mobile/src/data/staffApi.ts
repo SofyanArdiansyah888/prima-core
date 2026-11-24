@@ -133,11 +133,26 @@ export const staffApi = {
       delivery_lng?: number;
       delivery_address?: string;
       survey_notes?: string;
+      /** Jarak jalan aktual (km) dari sales; menggantikan jarak GPS untuk ongkir */
+      distance_km?: number | null;
+      uses_concrete_pump?: boolean;
     }
   ) {
     return staffRequest<{ message: string; data: SalesOrderSummary }>(`/api/sales/v1/orders/${uuid}/approve`, {
       method: 'POST',
       body: JSON.stringify(payload),
+    });
+  },
+
+  /** Catat pembayaran tunai yang diterima sales di lapangan (perlu verifikasi admin / keuangan). */
+  recordCashPayment(uuid: string, input: { amount: number; photo: Blob; notes?: string }) {
+    const form = new FormData();
+    form.append('amount', String(input.amount));
+    form.append('photo', input.photo, `kuitansi-${Date.now()}.jpg`);
+    if (input.notes) form.append('notes', input.notes);
+    return staffRequest<{ message: string; data: SalesOrderSummary }>(`/api/sales/v1/orders/${uuid}/cash-payment`, {
+      method: 'POST',
+      body: form,
     });
   },
 

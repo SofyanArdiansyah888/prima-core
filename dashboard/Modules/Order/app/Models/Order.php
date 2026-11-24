@@ -36,7 +36,11 @@ class Order extends Model
         'delivery_lng',
         'batching_plant_id',
         'distance_km',
+        'gps_distance_km',
+        'is_distance_manual',
         'delivery_fee',
+        'uses_concrete_pump',
+        'concrete_pump_fee',
         'admin_fee',
         'subtotal',
         'ppn',
@@ -67,6 +71,14 @@ class Order extends Model
         'refund_reference',
         'po_number',
         'notes',
+        'cash_payment_amount',
+        'cash_payment_proof_path',
+        'cash_payment_notes',
+        'cash_recorded_by_id',
+        'cash_recorded_at',
+        'cash_verified_by_id',
+        'cash_verified_at',
+        'cash_rejection_reason',
     ];
 
     protected function casts(): array
@@ -75,7 +87,14 @@ class Order extends Model
             'delivery_lat' => 'decimal:7',
             'delivery_lng' => 'decimal:7',
             'distance_km' => 'decimal:2',
+            'gps_distance_km' => 'decimal:2',
+            'is_distance_manual' => 'boolean',
             'delivery_fee' => 'decimal:2',
+            'uses_concrete_pump' => 'boolean',
+            'concrete_pump_fee' => 'decimal:2',
+            'cash_payment_amount' => 'decimal:2',
+            'cash_recorded_at' => 'datetime',
+            'cash_verified_at' => 'datetime',
             'admin_fee' => 'decimal:2',
             'subtotal' => 'decimal:2',
             'ppn' => 'decimal:2',
@@ -129,6 +148,36 @@ class Order extends Model
         }
 
         return null;
+    }
+
+    /** Sales sudah mencatat pembayaran tunai, menunggu verifikasi admin/keuangan. */
+    public function hasPendingCashPayment(): bool
+    {
+        return $this->cash_recorded_at !== null
+            && $this->cash_verified_at === null
+            && $this->cash_rejection_reason === null
+            && ! $this->isPaid();
+    }
+
+    /**
+     * @param  Builder<self>  $query
+     */
+    public function scopePendingCashPayment($query): void
+    {
+        $query->whereNotNull('cash_recorded_at')
+            ->whereNull('cash_verified_at')
+            ->whereNull('cash_rejection_reason')
+            ->whereNotIn('payment_status', self::PAID_STATUSES);
+    }
+
+    public function cashRecorder(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'cash_recorded_by_id');
+    }
+
+    public function cashVerifier(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'cash_verified_by_id');
     }
 
     public function canceller(): BelongsTo

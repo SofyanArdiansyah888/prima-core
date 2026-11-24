@@ -27,7 +27,12 @@ class CustomerOrderController extends Controller
         $data = $request->validated();
 
         return response()->json([
-            'data' => $orders->quote((float) $data['delivery_lat'], (float) $data['delivery_lng'], $data['items']),
+            'data' => $orders->quote(
+                (float) $data['delivery_lat'],
+                (float) $data['delivery_lng'],
+                $data['items'],
+                (bool) ($data['use_concrete_pump'] ?? false),
+            ),
         ]);
     }
 
@@ -194,6 +199,12 @@ class CustomerOrderController extends Controller
                 'order' => 'Pesanan ini sudah lunas.',
             ]);
         }
+
+        if ($order->hasPendingCashPayment()) {
+            throw ValidationException::withMessages([
+                'order' => 'Pembayaran tunai Anda sudah dicatat sales dan sedang diverifikasi.',
+            ]);
+        }
     }
 
     public function webhook(Request $request, MidtransPaymentService $midtrans): JsonResponse
@@ -349,7 +360,8 @@ class CustomerOrderController extends Controller
         $hasFaktur = in_array($order->payment_status, ['PAID'], true) || in_array($order->status, ['CONFIRMED', 'PROCESSING', 'ON_DELIVERY', 'COMPLETED'], true);
         // Selaras dengan guard endpoint pay(): tagihan aktif setelah ACC sampai lunas.
         $canPay = ! in_array($order->status, ['PENDING_APPROVAL', 'CANCELLED'], true)
-            && in_array($order->payment_status, ['PENDING', 'FAILED'], true);
+            && in_array($order->payment_status, ['PENDING', 'FAILED'], true)
+            && ! $order->hasPendingCashPayment();
         $canCancel = false;
         $items = $order->relationLoaded('items') ? $order->items : collect();
         $allFulfilled = $items->isNotEmpty() && $items->every(fn ($i) => (float) $i->fulfilled_quantity >= (float) $i->quantity);
@@ -366,6 +378,9 @@ class CustomerOrderController extends Controller
             'delivery_lng' => $order->delivery_lng !== null ? (float) $order->delivery_lng : null,
             'distance_km' => (float) $order->distance_km,
             'delivery_fee' => (float) $order->delivery_fee,
+            'uses_concrete_pump' => (bool) $order->uses_concrete_pump,
+            'concrete_pump_fee' => (float) $order->concrete_pump_fee,
+            'cash_payment_pending' => $order->hasPendingCashPayment(),
             'admin_fee' => (float) $order->admin_fee,
             'subtotal' => (float) $order->subtotal,
             'ppn' => (float) $order->ppn,
