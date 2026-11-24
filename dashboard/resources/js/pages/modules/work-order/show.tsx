@@ -1,6 +1,6 @@
 import { Head, Link } from '@inertiajs/react';
 import { formatDate, formatDateTime } from '@/lib/utils';
-import { ArrowLeft, Building2, Calendar, Factory, FileSpreadsheet, Truck, User } from 'lucide-react';
+import { ArrowLeft, Building2, Calendar, Factory, FileSpreadsheet, Printer, Truck, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { dashboard } from '@/routes';
 
@@ -84,6 +84,11 @@ export default function WorkOrderShow({ workOrder }: { workOrder: WorkOrderDetai
                     </div>
 
                     <div className="flex items-center gap-2">
+                        <Button asChild size="sm" variant="outline" className="rounded-xl h-9.5 px-4 text-xs font-bold">
+                            <a href={`/production/work-orders/${workOrder.uuid}/print`} target="_blank" rel="noopener noreferrer" title="Cetak SPK (PDF)">
+                                <Printer className="size-3.5 mr-1.5" /> Print SPK
+                            </a>
+                        </Button>
                         <Button asChild size="sm" className="bg-[#0c1d37] hover:bg-[#162e55] text-white rounded-xl h-9.5 px-4 text-xs font-bold shadow-md shadow-[#0c1d37]/15">
                             <Link href={`/dispatch/surat-jalan/create?batching_plant_id=${workOrder.batching_plant.id}`}>
                                 <Truck className="size-3.5 mr-1.5" /> Terbitkan Surat Jalan

@@ -3,6 +3,8 @@
 namespace Modules\Order\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -12,7 +14,9 @@ use Modules\Order\Http\Requests\UpdateOrderRequest;
 use Modules\Order\Models\Order;
 use Modules\Order\Services\ApproveOrderSite;
 use Modules\Order\Services\CancelOrder;
+use Modules\Order\Services\CashPayment;
 use Modules\Order\Services\MidtransPaymentService;
+use Modules\PaymentReturn\Models\PaymentReturn;
 use Modules\Shared\Concerns\AuthorizesPlantAccess;
 
 class OrderController extends Controller
@@ -104,11 +108,65 @@ class OrderController extends Controller
             'workOrders.assignedUser',
             'suratJalanItems.suratJalan',
             'suratJalanItems.product',
+            'cashRecorder:id,name',
+            'cashVerifier:id,name',
         ]);
+
+        /** @var User $user */
+        $user = request()->user();
 
         return Inertia::render('modules/order/show', [
             'order' => $order,
+            'cashPayment' => CashPayment::summary($order),
+            'paymentReturns' => PaymentReturn::query()
+                ->where('order_id', $order->id)
+                ->orderByDesc('id')
+                ->get(['uuid', 'code', 'status', 'amount', 'created_at'])
+                ->map(fn (PaymentReturn $r) => [
+                    'uuid' => $r->uuid,
+                    'code' => $r->code,
+                    'status' => $r->status,
+                    'status_label' => PaymentReturn::statusLabel($r->status),
+                    'amount' => (float) $r->amount,
+                    'created_at' => $r->created_at?->toIso8601String(),
+                ]),
+            'can' => [
+                'verify_cash' => $user->canManageFinance(),
+                'create_return' => $user->isAdmin() && $order->isPaid(),
+                'view_returns' => $user->isAdmin() || ($user->role?->isApprover() ?? false),
+            ],
         ]);
+    }
+
+    public function verifyCashPayment(Request $request, Order $order, CashPayment $cash): RedirectResponse
+    {
+        abort_unless($request->user()?->canManageFinance(), 403, 'Hanya admin / keuangan yang dapat memverifikasi pembayaran tunai.');
+        $this->ensurePlantAccess($order->batching_plant_id);
+
+        $cash->verify($order, $request->user());
+
+        return back()->with('success', "Pembayaran tunai pesanan {$order->code} terverifikasi. Pesanan kini LUNAS.");
+    }
+
+    public function rejectCashPayment(Request $request, Order $order, CashPayment $cash): RedirectResponse
+    {
+        abort_unless($request->user()?->canManageFinance(), 403, 'Hanya admin / keuangan yang dapat memverifikasi pembayaran tunai.');
+        $this->ensurePlantAccess($order->batching_plant_id);
+
+        $data = $request->validate(['reason' => ['required', 'string', 'max:500']]);
+        $cash->reject($order, $request->user(), $data['reason']);
+
+        return back()->with('success', "Pembayaran tunai pesanan {$order->code} ditolak. Customer dapat membayar kembali secara online.");
+    }
+
+    /** Cetak Sales Order (SO) sebagai PDF di tab baru. */
+    public function print(Order $order): \Illuminate\Http\Response
+    {
+        $this->ensurePlantAccess($order->batching_plant_id);
+
+        $order->load(['batchingPlant.branch', 'items.product', 'approver:id,name']);
+
+        return Pdf::loadView('order::pdf.sales-order', compact('order'))->stream("SO-{$order->code}.pdf");
     }
 
     public function approve(Request $request, Order $order, ApproveOrderSite $approveSite): RedirectResponse
@@ -119,12 +177,7 @@ class OrderController extends Controller
             return back()->with('error', 'Hanya pesanan berstatus Menunggu Verifikasi Tempat yang dapat disetujui.');
         }
 
-        $validated = $request->validate([
-            'delivery_lat' => ['nullable', 'numeric', 'between:-90,90', 'required_with:delivery_lng'],
-            'delivery_lng' => ['nullable', 'numeric', 'between:-180,180', 'required_with:delivery_lat'],
-            'delivery_address' => ['nullable', 'string', 'max:500'],
-            'survey_notes' => ['nullable', 'string', 'max:1000'],
-        ]);
+        $validated = $request->validate(ApproveOrderSite::rules());
 
         $approveSite->approve($order, $request->user(), $validated);
 

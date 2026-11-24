@@ -13,6 +13,7 @@ import {
     FileSpreadsheet,
     FileText,
     Truck,
+    Undo2,
 } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavUser } from '@/components/nav-user';
@@ -62,6 +63,17 @@ const operationsNavItems: NavItem[] = [
         icon: Truck,
     },
 ];
+
+const financeNavItems: NavItem[] = [
+    {
+        title: 'Retur Pembayaran',
+        href: '/finance/payment-returns',
+        icon: Undo2,
+    },
+];
+
+/** Role yang boleh membuka menu retur (selain admin). */
+const RETURN_ROLES = ['manager', 'kepala_divisi', 'keuangan', 'direksi'];
 
 const reportNavItems: NavItem[] = [
     {
@@ -172,6 +184,7 @@ function NavSection({ label, items }: { label?: string; items: NavItem[] }) {
 export function AppSidebar() {
     const { auth } = usePage<{ auth: Auth }>().props;
     const isAdmin = auth?.user?.role === 'admin';
+    const canSeeReturns = isAdmin || RETURN_ROLES.includes(String(auth?.user?.role ?? ''));
 
     return (
         <Sidebar collapsible="icon" variant="inset" className="bg-[#0c1d37] text-white">
@@ -197,6 +210,7 @@ export function AppSidebar() {
             <SidebarContent className="space-y-1 py-2">
                 <NavSection items={overviewItems} />
                 <NavSection label="Operasional & Distribusi" items={operationsNavItems} />
+                {canSeeReturns && <NavSection label="Keuangan" items={financeNavItems} />}
                 <NavSection label="Laporan" items={reportNavItems} />
                 {isAdmin && <NavSection label="Master Data" items={masterNavItems} />}
             </SidebarContent>

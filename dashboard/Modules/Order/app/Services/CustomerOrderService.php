@@ -20,15 +20,19 @@ class CustomerOrderService
      * @param  list<array{product_uuid: string, quantity: float|int|string, notes?: ?string}>  $items
      * @return array<string, mixed>
      */
-    public function quote(float $lat, float $lng, array $items): array
+    public function quote(float $lat, float $lng, array $items, bool $useConcretePump = false): array
     {
-        $built = $this->build($lat, $lng, $items);
+        $built = $this->build($lat, $lng, $items, $useConcretePump);
 
         return [
             'category' => $built['category'],
             'plant' => $built['plant'],
             'distance_km' => $built['distance_km'],
             'delivery_fee' => $built['delivery_fee'],
+            'concrete_pump_available' => $built['concrete_pump_available'],
+            'concrete_pump_rate' => $built['concrete_pump_rate'],
+            'uses_concrete_pump' => $built['uses_concrete_pump'],
+            'concrete_pump_fee' => $built['concrete_pump_fee'],
             'admin_fee' => $built['admin_fee'],
             'subtotal' => $built['subtotal'],
             'ppn' => $built['ppn'],
@@ -47,6 +51,7 @@ class CustomerOrderService
             (float) $input['delivery_lat'],
             (float) $input['delivery_lng'],
             $input['items'],
+            (bool) ($input['use_concrete_pump'] ?? false),
         );
 
         $order = $this->placeOrder->place([
@@ -61,7 +66,10 @@ class CustomerOrderService
             'delivery_lng' => $input['delivery_lng'],
             'batching_plant_id' => $built['plant_id'],
             'distance_km' => $built['distance_km'],
+            'gps_distance_km' => $built['distance_km'],
             'delivery_fee' => $built['delivery_fee'],
+            'uses_concrete_pump' => $built['uses_concrete_pump'],
+            'concrete_pump_fee' => $built['concrete_pump_fee'],
             'admin_fee' => $built['admin_fee'],
             'payment_method' => $input['payment_method'],
             'payment_status' => 'PENDING',
@@ -78,7 +86,7 @@ class CustomerOrderService
      * @param  list<array{product_uuid: string, quantity: float|int|string, notes?: ?string}>  $items
      * @return array<string, mixed>
      */
-    private function build(float $lat, float $lng, array $items): array
+    private function build(float $lat, float $lng, array $items, bool $useConcretePump = false): array
     {
         $resolved = $this->resolveItems($items);
         $nearest = $this->distance->findNearestPlant($lat, $lng);
@@ -97,8 +105,16 @@ class CustomerOrderService
             $resolved['quantity'],
         );
 
+        $pumpRate = ConcretePump::rateFor($plant, $resolved['category']);
+        if ($useConcretePump && $pumpRate <= 0) {
+            throw ValidationException::withMessages([
+                'use_concrete_pump' => 'Concrete Pump (CP) tidak tersedia untuk pesanan ini.',
+            ]);
+        }
+        $pumpFee = $useConcretePump ? $pumpRate : 0.0;
+
         // Biaya layanan pembayaran baru dihitung saat pelanggan memilih metode pembayaran (PaymentFeeCalculator).
-        $totals = OrderTotals::fromLineAmounts($resolved['line_amounts'], (float) $fee['delivery_fee'], 0.0);
+        $totals = OrderTotals::fromLineAmounts($resolved['line_amounts'], (float) $fee['delivery_fee'], 0.0, $pumpFee);
 
         return [
             'category' => $resolved['category'],
@@ -109,6 +125,10 @@ class CustomerOrderService
             ],
             'distance_km' => (float) $nearest['distance_km'],
             'delivery_fee' => $totals['delivery_fee'],
+            'concrete_pump_available' => $pumpRate > 0,
+            'concrete_pump_rate' => $pumpRate,
+            'uses_concrete_pump' => $pumpFee > 0,
+            'concrete_pump_fee' => $totals['concrete_pump_fee'],
             'admin_fee' => $totals['admin_fee'],
             'subtotal' => $totals['subtotal'],
             'ppn' => $totals['ppn'],

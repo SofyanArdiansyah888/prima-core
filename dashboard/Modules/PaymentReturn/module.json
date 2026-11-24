@@ -1,0 +1,11 @@
+{
+    "name": "PaymentReturn",
+    "alias": "paymentreturn",
+    "description": "Berita Acara retur / pengembalian pembayaran dengan approval berjenjang",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\PaymentReturn\\Providers\\PaymentReturnServiceProvider"
+    ],
+    "files": []
+}

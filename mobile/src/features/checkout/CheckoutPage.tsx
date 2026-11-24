@@ -14,6 +14,7 @@ import { api } from '../../data/api';
 import { useAuth } from '../../data/auth';
 import { useCart } from '../../data/cart';
 import type { Quote } from '../../domain/types';
+import { formatRupiah } from '../../domain/format';
 import { 
   Card, 
   ErrorText, 
@@ -53,6 +54,8 @@ export default function CheckoutPage() {
   }, [location.state, customer]);
 
   const [notes, setNotes] = useState('');
+  // Concrete Pump (CP): layanan pompa cor dengan tarif flat per pesanan
+  const [usesPump, setUsesPump] = useState(false);
   const [quote, setQuote] = useState<Quote | null>(null);
   const [error, setError] = useState('');
   const [calculating, setCalculating] = useState(false);
@@ -115,6 +118,7 @@ export default function CheckoutPage() {
         delivery_lng: lng,
         payment_method: 'MIDTRANS',
         notes: notes || undefined,
+        use_concrete_pump: usesPump && Boolean(quote.concrete_pump_available),
         items: lines.map((line) => ({ product_uuid: line.product.uuid, quantity: line.quantity })),
       });
 
@@ -302,6 +306,32 @@ export default function CheckoutPage() {
             <span>Mendeteksi batching plant terdekat...</span>
           </div>
         ) : null}
+
+        {/* SECTION 2b: CONCRETE PUMP (CP) — hanya bila plant menyediakan CP untuk readymix */}
+        {quote?.concrete_pump_available && (
+          <Card className="p-4 border border-slate-200/90 shadow-xs">
+            <label className="flex cursor-pointer items-start gap-3">
+              <input
+                type="checkbox"
+                checked={usesPump}
+                onChange={(event) => setUsesPump(event.target.checked)}
+                className="mt-0.5 size-5 shrink-0 accent-[#ea580c]"
+              />
+              <span className="flex-1">
+                <span className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-extrabold text-[#0c1d37]">Pakai Concrete Pump (CP)</span>
+                  <span className="rounded-lg bg-orange-50 px-2 py-0.5 text-[11px] font-black text-[#ea580c]">
+                    +{formatRupiah(quote.concrete_pump_rate ?? 0)}
+                  </span>
+                </span>
+                <span className="mt-0.5 block text-[11px] leading-relaxed text-slate-500">
+                  Pompa cor untuk lokasi yang tidak terjangkau talang truk mixer (lantai atas, jarak jauh dari jalan).
+                  Tarif flat per pesanan, belum termasuk PPN 11%.
+                </span>
+              </span>
+            </label>
+          </Card>
+        )}
 
         {/* SECTION 3: METODE PEMBAYARAN */}
         <Card className="p-4 border border-slate-200/90 shadow-xs space-y-3">

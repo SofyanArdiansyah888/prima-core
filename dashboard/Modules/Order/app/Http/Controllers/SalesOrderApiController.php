@@ -11,6 +11,8 @@ use Illuminate\Validation\ValidationException;
 use Modules\Order\Models\Order;
 use Modules\Order\Models\SitePhoto;
 use Modules\Order\Services\ApproveOrderSite;
+use Modules\Order\Services\CashPayment;
+use Modules\Order\Services\ConcretePump;
 use Modules\Order\Services\StoreSitePhoto;
 use Modules\Shared\Enums\UserRole;
 
@@ -116,8 +118,10 @@ class SalesOrderApiController extends Controller
         $query = Order::query()
             ->visibleTo($user)
             ->with([
-                'batchingPlant:id,uuid,code,name,phone,whatsapp,lat,lng',
-                'items.product:id,uuid,code,name,unit',
+                'batchingPlant:id,uuid,code,name,phone,whatsapp,lat,lng,concrete_pump_fee',
+                'items.product:id,uuid,code,name,unit,category',
+                'cashRecorder:id,name',
+                'cashVerifier:id,name',
             ]);
 
         if ($tab === 'pending') {
@@ -147,6 +151,8 @@ class SalesOrderApiController extends Controller
             'items.product',
             'approver',
             'sitePhotos.user:id,name',
+            'cashRecorder:id,name',
+            'cashVerifier:id,name',
         ]);
 
         return response()->json([
@@ -167,16 +173,30 @@ class SalesOrderApiController extends Controller
         ], 201);
     }
 
+    public function recordCashPayment(Request $request, Order $order, CashPayment $cash): JsonResponse
+    {
+        $order->loadMissing('batchingPlant');
+        $this->authorizeAccess($request->user(), $order);
+
+        $data = $request->validate(CashPayment::rules(), [
+            'photo.required' => 'Foto kuitansi / bukti terima uang wajib diambil.',
+            'photo.image' => 'File harus berupa foto.',
+            'photo.max' => 'Ukuran foto maksimal 8 MB.',
+        ]);
+
+        $order = $cash->record($order, $request->user(), (float) $data['amount'], $request->file('photo'), $data['notes'] ?? null);
+
+        return response()->json([
+            'message' => 'Pembayaran tunai dicatat. Menunggu verifikasi admin / keuangan.',
+            'data' => $this->transform($order->fresh(['batchingPlant', 'items.product', 'approver', 'sitePhotos.user:id,name', 'cashRecorder', 'cashVerifier'])),
+        ]);
+    }
+
     public function approve(Request $request, Order $order, ApproveOrderSite $approveSite): JsonResponse
     {
         $this->authorizeAccess($request->user(), $order);
 
-        $validated = $request->validate([
-            'delivery_lat' => ['nullable', 'numeric', 'between:-90,90', 'required_with:delivery_lng'],
-            'delivery_lng' => ['nullable', 'numeric', 'between:-180,180', 'required_with:delivery_lat'],
-            'delivery_address' => ['nullable', 'string', 'max:500'],
-            'survey_notes' => ['nullable', 'string', 'max:1000'],
-        ]);
+        $validated = $request->validate(ApproveOrderSite::rules());
 
         $order = $approveSite->approve($order, $request->user(), $validated);
 
@@ -243,10 +263,19 @@ class SalesOrderApiController extends Controller
             'delivery_lat' => $order->delivery_lat !== null ? (float) $order->delivery_lat : null,
             'delivery_lng' => $order->delivery_lng !== null ? (float) $order->delivery_lng : null,
             'distance_km' => (float) $order->distance_km,
+            'gps_distance_km' => $order->gps_distance_km !== null ? (float) $order->gps_distance_km : null,
+            'is_distance_manual' => (bool) $order->is_distance_manual,
             'subtotal' => (float) $order->subtotal,
             'delivery_fee' => (float) $order->delivery_fee,
+            'uses_concrete_pump' => (bool) $order->uses_concrete_pump,
+            'concrete_pump_fee' => (float) $order->concrete_pump_fee,
+            'concrete_pump_rate' => ConcretePump::rateFor($order->batchingPlant, $order->items->first()?->product?->category),
             'ppn' => (float) $order->ppn,
+            'admin_fee' => (float) $order->admin_fee,
             'total_price' => (float) $order->total_price,
+            'payment_method' => $order->payment_method,
+            'payment_status' => $order->payment_status,
+            'cash_payment' => CashPayment::summary($order),
             'status' => $order->status,
             'approved_at' => $order->approved_at?->toIso8601String(),
             'approver_name' => $order->approver?->name,

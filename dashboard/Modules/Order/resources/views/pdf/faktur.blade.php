@@ -260,6 +260,12 @@
                         <td style="text-align: right; color: #64748b;">Ongkos Kirim Plant:</td>
                         <td style="text-align: right; font-weight: bold;">Rp {{ number_format((float) $order->delivery_fee, 0, ',', '.') }}</td>
                     </tr>
+                    @if((float) $order->concrete_pump_fee > 0)
+                    <tr>
+                        <td style="text-align: right; color: #64748b;">Concrete Pump (CP):</td>
+                        <td style="text-align: right; font-weight: bold;">Rp {{ number_format((float) $order->concrete_pump_fee, 0, ',', '.') }}</td>
+                    </tr>
+                    @endif
                     <tr>
                         <td style="text-align: right; color: #64748b;">Biaya Layanan Admin:</td>
                         <td style="text-align: right; font-weight: bold;">Rp {{ number_format((float) $order->admin_fee, 0, ',', '.') }}</td>

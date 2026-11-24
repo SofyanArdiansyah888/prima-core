@@ -20,6 +20,7 @@ import { staffApi } from '../../data/staffApi';
 import { formatRupiah } from '../../domain/format';
 import type { SalesOrderSummary } from '../../domain/types';
 import { Card, Screen, SitePhotoCapture } from '../../shared/ui';
+import { CashPaymentCard } from './CashPaymentCard';
 import {
   GPS_MAP_MAX_ZOOM,
   GPS_MAP_VIEW_ZOOM,
@@ -69,6 +70,9 @@ export default function SalesOrderDetailPage() {
   const [lng, setLng] = useState<number>(119.489);
   const [address, setAddress] = useState('');
   const [surveyNotes, setSurveyNotes] = useState('');
+  // Jarak jalan aktual (km) yang diisi sales; kosong = pakai jarak GPS
+  const [manualKm, setManualKm] = useState('');
+  const [usesPump, setUsesPump] = useState(false);
 
   // Rejection modal
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
@@ -95,6 +99,9 @@ export default function SalesOrderDetailPage() {
   const plantLng = order?.plant?.lng ?? 119.489;
   const liveDistance = haversineKm(plantLat, plantLng, lat, lng);
   const distanceFromMe = gps ? haversineKm(gps.lat, gps.lng, lat, lng) : null;
+  const pumpAvailable = (order?.concrete_pump_rate ?? 0) > 0 || Boolean(order?.uses_concrete_pump);
+  const manualKmValue = Number(manualKm);
+  const manualKmInvalid = manualKm.trim() !== '' && (!Number.isFinite(manualKmValue) || manualKmValue <= 0 || manualKmValue > 500);
 
   const fetchDetail = async () => {
     if (!uuid) return;
@@ -109,6 +116,8 @@ export default function SalesOrderDetailPage() {
       setLng(initialLng);
       setAddress(data.delivery_address || '');
       setSurveyNotes(data.survey_notes || '');
+      setManualKm(data.is_distance_manual ? String(data.distance_km) : '');
+      setUsesPump(Boolean(data.uses_concrete_pump));
     } catch (e: any) {
       setError(e.message || 'Gagal memuat detail pesanan.');
     } finally {
@@ -268,6 +277,8 @@ export default function SalesOrderDetailPage() {
         delivery_lng: lng,
         delivery_address: address,
         survey_notes: surveyNotes,
+        distance_km: manualKm.trim() !== '' ? Number(manualKm) : null,
+        ...(pumpAvailable ? { uses_concrete_pump: usesPump } : {}),
       });
       setSuccessMsg(res.message);
       setOrder(res.data);
@@ -384,11 +395,22 @@ export default function SalesOrderDetailPage() {
           <div className="mt-2.5 pt-2 border-t border-slate-100 text-xs text-slate-600 space-y-1">
             <p><strong>Proyek:</strong> {order.project_title}</p>
             <p><strong>Total Muatan:</strong> {order.items.map((i) => `${i.name} (${i.quantity} ${i.unit})`).join(', ')}</p>
+            <p>
+              <strong>Jarak:</strong> {order.distance_km} km
+              {order.is_distance_manual && order.gps_distance_km != null && (
+                <span className="text-slate-400"> (input sales · GPS {order.gps_distance_km} km)</span>
+              )}
+            </p>
+            {order.uses_concrete_pump && (
+              <p><strong>Concrete Pump (CP):</strong> Ya · {formatRupiah(order.concrete_pump_fee ?? 0)}</p>
+            )}
             {order.delivery_fee !== undefined && (
               <p><strong>Ongkir:</strong> {formatRupiah(order.delivery_fee)} · <strong>Total:</strong> {formatRupiah(order.total_price)}</p>
             )}
           </div>
         </Card>
+
+        <CashPaymentCard order={order} onUpdated={setOrder} />
 
         {/* Interactive Map Box */}
         <div className="space-y-1.5">
@@ -473,6 +495,50 @@ export default function SalesOrderDetailPage() {
             />
           </div>
 
+          {order.status === 'PENDING_APPROVAL' && (
+            <div>
+              <label htmlFor="manual-km" className="font-bold text-slate-700 block mb-1">
+                Jarak Jalan Aktual dari Plant (km):
+              </label>
+              <input
+                id="manual-km"
+                type="number"
+                inputMode="decimal"
+                min={0}
+                step="0.1"
+                value={manualKm}
+                onChange={(e) => setManualKm(e.target.value)}
+                placeholder={`Kosongkan untuk pakai GPS (${liveDistance} km)`}
+                className={`w-full rounded-xl border bg-white p-2.5 font-mono text-xs text-slate-900 outline-none focus:border-[#0c1d37] ${
+                  manualKmInvalid ? 'border-red-400' : 'border-slate-300'
+                }`}
+              />
+              <p className={`mt-1 text-[10px] ${manualKmInvalid ? 'text-[#d91424] font-semibold' : 'text-slate-500'}`}>
+                {manualKmInvalid
+                  ? 'Isi jarak antara 0,1 – 500 km.'
+                  : 'Isi bila jarak jalan sebenarnya berbeda dari garis lurus GPS. Ongkir dihitung ulang dari km ini saat ACC.'}
+              </p>
+            </div>
+          )}
+
+          {order.status === 'PENDING_APPROVAL' && pumpAvailable && (
+            <label className="flex items-start gap-2.5 rounded-xl border border-slate-300 bg-white p-2.5">
+              <input
+                type="checkbox"
+                checked={usesPump}
+                onChange={(e) => setUsesPump(e.target.checked)}
+                className="mt-0.5 size-4 accent-[#ea580c]"
+              />
+              <span>
+                <span className="font-bold text-slate-800">Pakai Concrete Pump (CP)</span>
+                {(order.concrete_pump_rate ?? 0) > 0 && (
+                  <span className="ml-1 text-slate-500">· {formatRupiah(order.concrete_pump_rate ?? 0)}</span>
+                )}
+                <span className="block text-[10px] text-slate-500">Centang bila hasil survei butuh pompa cor.</span>
+              </span>
+            </label>
+          )}
+
           <div>
             <label className="font-bold text-slate-700 block mb-1">
               Catatan Hasil Survei Lapangan:
@@ -492,7 +558,7 @@ export default function SalesOrderDetailPage() {
             <div className="pt-2 flex gap-2">
               <button
                 type="button"
-                disabled={submitting}
+                disabled={submitting || manualKmInvalid}
                 onClick={handleApprove}
                 className="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 py-3 px-4 text-xs font-black text-white shadow-md active:scale-[0.98] transition-all disabled:opacity-60 cursor-pointer"
               >

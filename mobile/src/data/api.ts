@@ -120,7 +120,12 @@ export const api = {
   product(uuid: string) {
     return request<{ data: Product }>(`/products/${uuid}`);
   },
-  quote(payload: { delivery_lat: number; delivery_lng: number; items: { product_uuid: string; quantity: number }[] }) {
+  quote(payload: {
+    delivery_lat: number;
+    delivery_lng: number;
+    use_concrete_pump?: boolean;
+    items: { product_uuid: string; quantity: number }[];
+  }) {
     return request<{ data: Quote }>('/delivery/quote', {
       method: 'POST',
       body: JSON.stringify(payload),
@@ -139,6 +144,7 @@ export const api = {
     delivery_lng: number;
     payment_method: string;
     notes?: string;
+    use_concrete_pump?: boolean;
     items: { product_uuid: string; quantity: number }[];
   }) {
     return request<{ data: CustomerOrder }>('/orders', {

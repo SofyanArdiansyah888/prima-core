@@ -82,7 +82,10 @@
 - Fitur: Sales Order pemesanan, auto-select batching plant terdekat, hitung ongkir otomatis, tracking pemenuhan per item, process stepper alur 4 tahap, dan riwayat ritase Surat Jalan.
 - Pembuatan SO dari dashboard saat ini di-hide/dinonaktifkan; seluruh pesanan baru masuk secara otomatis dari aplikasi mobile pelanggan (`customer_id`, `customer_type = B2C`) lewat `CustomerOrderService` / `PlaceOrder`.
 - Alur Status: `PENDING_APPROVAL` (menunggu verifikasi sales lapangan via mobile) ➔ `CONFIRMED` (disetujui sales & pembayaran aktif) ➔ `PROCESSING` (saat SPK terbit) ➔ `ON_DELIVERY` (saat SJ terbit) ➔ `COMPLETED` (dikonfirmasi selesai oleh pelanggan di mobile, atau otomatis selesai setelah 2x24 jam / 48 jam). Supir hanya menyelesaikan ritase Surat Jalan (e-POD), tidak otomatis menyelesaikan pesanan.
-- ACC verifikasi tempat (dashboard `orders.approve` & mobile `/api/sales/v1/orders/{uuid}/approve`) lewat satu service `Modules\Order\Services\ApproveOrderSite`: bila pin digeser, jarak, ongkir, PPN, dan total dihitung ulang.
+- ACC verifikasi tempat (dashboard `orders.approve` & mobile `/api/sales/v1/orders/{uuid}/approve`) lewat satu service `Modules\Order\Services\ApproveOrderSite` (aturan validasi `ApproveOrderSite::rules()`): bila pin digeser, sales mengisi **jarak jalan manual** (`distance_km`), atau pilihan **Concrete Pump** (`uses_concrete_pump`) diubah, maka jarak, ongkir, CP, PPN, dan total dihitung ulang. Jarak GPS asli disimpan di `orders.gps_distance_km`; `is_distance_manual` menandai jarak input sales.
+- Concrete Pump (CP): tarif flat per pesanan diatur per plant (`batching_plants.concrete_pump_fee`, Master Batching Plant). Hanya untuk kategori `readymix` (`Modules\Order\Services\ConcretePump`). Customer memilih via `use_concrete_pump` di quote/checkout; CP masuk dasar PPN (`OrderTotals`), item Midtrans `CONCRETE-PUMP`.
+- Pembayaran tunai lapangan: sales `POST /api/sales/v1/orders/{uuid}/cash-payment` (nominal = total + foto kuitansi) → `payment_method = CASH`, status tetap `PENDING`; admin/keuangan memverifikasi di detail pesanan (`orders.cash-payment.verify|reject`). Service `Modules\Order\Services\CashPayment`.
+- Print: Sales Order `GET /sales/orders/{uuid}/print` (blade `order::pdf.sales-order`), SPK `GET /production/work-orders/{uuid}/print` (blade `order::pdf.spk`) — dompdf, dibuka di tab baru.
 - Pembatalan pesanan hanya oleh admin (`POST /sales/orders/{uuid}/cancel`, service `CancelOrder`); pesanan lunas wajib catat refund. Endpoint batal pelanggan selalu menolak (422).
 - SPK & Surat Jalan wajib pesanan lunas: `Order::readyForProduction()` / `Order::productionBlockReason()`.
 - Test alur end-to-end mobile + dashboard: `tests/Feature/MobileTransactionFlowTest.php`.
@@ -104,6 +107,16 @@
 - Fitur: Ritase armada, jembatan timbang (gross/tare/netto), telematics IoT, partial delivery, multi-drop combined customer, dan cetak Surat Jalan resmi Tonasa. Penerbitan SJ memicu status order `ON_DELIVERY`; penyelesaian seluruh SJ hanya mengisi `orders.delivered_at` (order selesai lewat konfirmasi pelanggan / auto-finish 48 jam). Form SJ memilih supir terdaftar (`driver_id`) agar SJ muncul di app supir.
 - API supir mobile: `/api/driver/v1` (`DriverDeliveryApiController`, middleware `EnsureDriver`).
 - Tidak ada `apiResource` master di `/api/v1/*`: guard `auth:sanctum` juga meloloskan token pelanggan/sales/supir, jadi master data hanya lewat web admin.
+
+## PaymentReturn
+
+- Routes: `/finance/payment-returns` (index, create `?order={uuid}`, store, show, `approve`, `reject`, `refund`, `print`)
+- Controller: `Modules\PaymentReturn\Http\Controllers\PaymentReturnController`
+- Model: `PaymentReturn`, `PaymentReturnItem`, `PaymentReturnApproval` (`Modules\PaymentReturn\Models`)
+- Service: `Modules\PaymentReturn\Services\PaymentReturnWorkflow`
+- Pages: `resources/js/pages/modules/payment-return/{index,form,show}.tsx`; PDF `paymentreturn::pdf.berita-acara-retur`
+- Fitur: Berita Acara retur **pembayaran sebagian** per volume (mis. pesan 10 m³, terpakai 8 m³ → retur 2 m³). Nominal = Σ(volume × harga satuan) + PPN 11%; ongkir & CP tidak dikembalikan. Dibuat admin dari detail pesanan lunas; approval berurutan Manager → Kepala Divisi → Keuangan → Direksi (satu tolak = `REJECTED`), lalu keuangan/admin menandai dana ditransfer (`REFUNDED`) → `orders.refund_amount` bertambah; `payment_status = REFUNDED` hanya bila seluruh tagihan dikembalikan.
+- Kode: `BA-RET-{REG}-{YYYYMM}{####}` via `CodeGenerator::nextPaymentReturnCode()`. Data dibatasi per plant (`ScopedByPlant`).
 
 ## Report
 

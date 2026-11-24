@@ -77,6 +77,8 @@ Status pembayaran disederhanakan menjadi **3 status standar**:
 - **Tombol "Cek Midtrans"**: Dashboard dan Mobile menyediakan tombol sinkronisasi langsung untuk mengecek status transaksi ke API Midtrans secara real-time.
 - **`REFUNDED`**: dicatat admin saat membatalkan pesanan lunas (nominal, referensi transfer, waktu, petugas). Dana dikembalikan manual (transfer / dashboard Midtrans); sinkron Midtrans tidak menimpa status ini.
 - **Kompatibilitas Lama**: Nilai lama `APPROVED_CREDIT` diperlakukan sebagai `PAID`, dan `CHALLENGE` sebagai `PENDING`.
+- **Tunai di lapangan**: sales mencatat tunai (nominal = total + foto kuitansi) → `payment_method = CASH`, `payment_status` tetap `PENDING` dan customer tidak bisa membayar Midtrans (`can_pay = false`). Admin/keuangan **verifikasi** → `PAID` (+ `paid_at`); **tolak** → kembali `MIDTRANS` dengan `cash_rejection_reason`.
+- **Retur sebagian (Berita Acara)**: status BA `PENDING_MANAGER` ➔ `PENDING_KADIV` ➔ `PENDING_FINANCE` ➔ `PENDING_DIRECTOR` ➔ `APPROVED` ➔ `REFUNDED` (atau `REJECTED` di tahap mana pun). Saat `REFUNDED`, `orders.refund_amount` bertambah; pesanan tetap `PAID` kecuali seluruh tagihan dikembalikan (➔ `REFUNDED`).
 
 ---
 

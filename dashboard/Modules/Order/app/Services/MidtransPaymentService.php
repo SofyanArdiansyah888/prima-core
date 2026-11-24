@@ -84,6 +84,15 @@ class MidtransPaymentService
             ];
         }
 
+        if ((float) $order->concrete_pump_fee > 0) {
+            $items[] = [
+                'id' => 'CONCRETE-PUMP',
+                'price' => (int) round((float) $order->concrete_pump_fee),
+                'quantity' => 1,
+                'name' => 'Sewa Concrete Pump (CP)',
+            ];
+        }
+
         if ((float) $order->ppn > 0) {
             $items[] = [
                 'id' => 'PPN-11',

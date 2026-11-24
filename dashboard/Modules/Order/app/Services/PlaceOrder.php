@@ -37,7 +37,8 @@ class PlaceOrder
             }
 
             $adminFee = isset($data['admin_fee']) ? (float) $data['admin_fee'] : (float) config('services.midtrans.admin_fee', 4500);
-            $totals = OrderTotals::fromLineAmounts($lineAmounts, (float) $data['delivery_fee'], $adminFee);
+            $pumpFee = ! empty($data['uses_concrete_pump']) ? (float) ($data['concrete_pump_fee'] ?? 0) : 0.0;
+            $totals = OrderTotals::fromLineAmounts($lineAmounts, (float) $data['delivery_fee'], $adminFee, $pumpFee);
 
             $order = Order::query()->create([
                 'code' => $orderCode,
@@ -52,7 +53,10 @@ class PlaceOrder
                 'delivery_lng' => $data['delivery_lng'] ?? null,
                 'batching_plant_id' => $plant->id,
                 'distance_km' => $data['distance_km'] ?? 0,
+                'gps_distance_km' => $data['gps_distance_km'] ?? ($data['distance_km'] ?? null),
                 'delivery_fee' => $totals['delivery_fee'],
+                'uses_concrete_pump' => $pumpFee > 0,
+                'concrete_pump_fee' => $totals['concrete_pump_fee'],
                 'admin_fee' => $totals['admin_fee'],
                 'subtotal' => $totals['subtotal'],
                 'ppn' => $totals['ppn'],

@@ -25,6 +25,7 @@ class StoreBatchingPlantRequest extends FormRequest
             'lat' => ['nullable', 'numeric', 'between:-90,90'],
             'lng' => ['nullable', 'numeric', 'between:-180,180'],
             'daily_capacity_m3' => ['nullable', 'integer', 'min:0'],
+            'concrete_pump_fee' => ['nullable', 'numeric', 'min:0', 'max:999999999'],
             'status' => ['required', Rule::enum(PlantStatus::class)],
             'is_active' => ['sometimes', 'boolean'],
         ];
@@ -42,7 +43,10 @@ class StoreBatchingPlantRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
-        $merge = ['whatsapp' => $this->normalizeWhatsapp($this->input('whatsapp'))];
+        $merge = [
+            'whatsapp' => $this->normalizeWhatsapp($this->input('whatsapp')),
+            'concrete_pump_fee' => $this->filled('concrete_pump_fee') ? $this->input('concrete_pump_fee') : 0,
+        ];
 
         if ($this->filled('code')) {
             $merge['code'] = strtoupper((string) $this->input('code'));

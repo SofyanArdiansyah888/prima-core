@@ -4,6 +4,7 @@ namespace Modules\WorkOrder\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -155,6 +156,18 @@ class WorkOrderController extends Controller
         return Inertia::render('modules/work-order/show', [
             'workOrder' => $workOrder,
         ]);
+    }
+
+    /** Cetak SPK (Surat Perintah Kerja) sebagai PDF di tab baru — memakai template yang sama dengan unduhan customer. */
+    public function print(WorkOrder $workOrder): \Illuminate\Http\Response
+    {
+        $this->ensurePlantAccess($workOrder->batching_plant_id);
+
+        $workOrder->load(['product', 'assignedUser', 'batchingPlant', 'order.batchingPlant']);
+        $order = $workOrder->order;
+        abort_if($order === null, 404, 'SPK ini tidak terhubung ke Sales Order.');
+
+        return Pdf::loadView('order::pdf.spk', compact('order', 'workOrder'))->stream("SPK-{$workOrder->code}.pdf");
     }
 
     public function destroy(WorkOrder $workOrder): RedirectResponse

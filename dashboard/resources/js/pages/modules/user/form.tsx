@@ -280,7 +280,7 @@ export default function UserForm({
                                     <p className="rounded-lg border border-emerald-200 bg-emerald-50/60 p-3.5 text-xs text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-300">
                                         Admin selalu dapat mengakses data transaksi seluruh batching plant.
                                     </p>
-                                ) : role === 'user' || role === 'sales' ? (
+                                ) : role !== 'driver' ? (
                                     <div className="flex items-center gap-3 rounded-lg border border-slate-200/80 bg-slate-50/50 p-3.5 dark:border-slate-800 dark:bg-slate-800/40">
                                         <Checkbox
                                             id="has_full_plant_access"

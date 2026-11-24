@@ -666,6 +666,19 @@ export default function OrderDetailPage() {
                   <span>Metode</span>
                   <span className="font-bold text-slate-900">{order.payment_method === 'MIDTRANS' ? 'Midtrans' : order.payment_method_label}</span>
                 </div>
+                {order.uses_concrete_pump && (
+                  <div className="flex justify-between gap-3 text-slate-600">
+                    <span>Concrete Pump (CP)</span>
+                    <span className="font-bold text-slate-900">
+                      {showPrice ? formatRupiah(order.concrete_pump_fee ?? 0) : 'Ya'}
+                    </span>
+                  </div>
+                )}
+                {order.cash_payment_pending && (
+                  <div className="rounded-lg border border-purple-200 bg-purple-50 px-2.5 py-1.5 text-[11px] font-semibold text-purple-800">
+                    Pembayaran tunai Anda sudah dicatat sales dan sedang diverifikasi.
+                  </div>
+                )}
                 {showPrice ? (
                 <div className="border-t border-slate-200 pt-2">
                   <div className="flex justify-between gap-3 text-[12px] font-extrabold text-[#0c1d37]">
